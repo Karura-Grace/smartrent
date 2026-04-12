@@ -1,0 +1,120 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Send Notices · SmartRent{% endblock %}
+{% block role_name %}Landlord{% endblock %}
+{% block page_title %}Send Notices{% endblock %}
+{% block page_sub %}Broadcast to Tenants{% endblock %}
+{% block extra_styles %}
+.hero{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%)}
+.nav-item.active{background:#f0fdfa;color:#0f766e}.nav-item.active::before{background:#0f766e}
+.nav-item:hover{background:#f0fdfa;color:#0f766e}
+.btn-primary{background:#0f766e}.btn-primary:hover{background:#065f46}
+.card-action{color:#0f766e;background:#f0fdfa}
+.notice-layout{display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start}
+.recipient-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding-right:4px}
+.recipient-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.13s}
+.recipient-item:hover{background:var(--blue-50);border-color:var(--blue-100)}
+.recipient-item input[type=checkbox]{accent-color:#0f766e;width:14px;height:14px}
+.recipient-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0f766e,#10b981);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0}
+.recipient-name{font-size:12.5px;font-weight:600;color:var(--text)}
+.recipient-unit{font-size:11px;color:var(--text-3)}
+.template-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.tmpl-btn{padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font-family:'Plus Jakarta Sans',sans-serif;font-size:11.5px;font-weight:600;color:var(--text-2);cursor:pointer;transition:all 0.13s;text-align:left}
+.tmpl-btn:hover{background:#f0fdfa;border-color:#0f766e;color:#0f766e}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:5px}
+.form-input{width:100%;padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.13s}
+.form-input:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,0.1)}
+@media(max-width:900px){.notice-layout{grid-template-columns:1fr}}
+{% endblock %}
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Notices</div>
+    <h1>Send Notices</h1>
+    <p>Broadcast announcements, reminders and alerts to your tenants.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi"><span class="hero-kpi-label">Sent This Month</span><span class="hero-kpi-value">12</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">Recipients</span><span class="hero-kpi-value">20 Tenants</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">Last Sent</span><span class="hero-kpi-value">Mar 20, 2025</span></div>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="notice-layout">
+    <div>
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-head"><span class="card-title">Compose Notice</span></div>
+            <div class="form-group">
+                <label class="form-label">Quick Templates</label>
+                <div class="template-grid">
+                    <button class="tmpl-btn" onclick="useTemplate('rent')">💳 Rent Reminder</button>
+                    <button class="tmpl-btn" onclick="useTemplate('maintenance')">🔧 Maintenance Alert</button>
+                    <button class="tmpl-btn" onclick="useTemplate('water')">💧 Water Outage</button>
+                    <button class="tmpl-btn" onclick="useTemplate('general')">📢 General Notice</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Subject</label>
+                <input type="text" class="form-input" id="noticeSubject" placeholder="e.g. Rent Due Reminder — March 2025">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea class="form-input" id="noticeBody" rows="7" placeholder="Type your message here..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Send Via</label>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" checked style="accent-color:#0f766e"> SMS</label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:#0f766e"> Email</label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:#0f766e"> In-App</label>
+                </div>
+            </div>
+            <button class="btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="sendNotice()">
+                <i data-lucide="send" width="15" height="15"></i> Send Notice
+            </button>
+        </div>
+        <div class="card">
+            <div class="card-head"><span class="card-title">Sent History</span></div>
+            <table class="tbl">
+                <thead><tr><th>Date</th><th>Subject</th><th>Recipients</th><th>Via</th></tr></thead>
+                <tbody>
+                    <tr><td>Mar 20</td><td>Water outage notice</td><td>All — 20</td><td><span class="badge b-blue">SMS</span></td></tr>
+                    <tr><td>Mar 15</td><td>Rent reminder — March</td><td>All — 20</td><td><span class="badge b-blue">SMS</span></td></tr>
+                    <tr><td>Mar 5</td><td>Maintenance scheduled</td><td>Sunset Apts — 8</td><td><span class="badge b-blue">SMS</span></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card" style="position:sticky;top:calc(var(--topbar-h) + 28px)">
+        <div class="card-head"><span class="card-title">Select Recipients</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="btn-outline" style="flex:1;justify-content:center;font-size:12px" onclick="selectAll(true)">Select All</button>
+            <button class="btn-outline" style="flex:1;justify-content:center;font-size:12px" onclick="selectAll(false)">Clear</button>
+        </div>
+        <div class="recipient-list" id="recipientList">
+            {% for t in [('Jane Mwangi','A-12','JM'),('Kevin Otieno','B-03','KO'),('Lucy Njeri','B-11','LN'),('Amina Hassan','C-07','AH'),('Brian Kamau','A-45','BK'),('Peter Odhiambo','D-02','PO')] %}
+            <label class="recipient-item">
+                <input type="checkbox" class="rec-check" checked>
+                <div class="recipient-avatar">{{ t[2] }}</div>
+                <div><div class="recipient-name">{{ t[0] }}</div><div class="recipient-unit">{{ t[1] }}</div></div>
+            </label>
+            {% endfor %}
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-lt);font-size:12px;color:var(--text-3)">
+            <span id="recipientCount">6</span> recipients selected
+        </div>
+    </div>
+</div>
+<script>
+const templates = {
+    rent: {subject:'Rent Due Reminder — March 2025', body:'Dear Tenant,\n\nThis is a friendly reminder that your rent of KES 25,000 is due on March 30, 2025.\n\nPlease ensure payment is made on time to avoid late fees.\n\nThank you,\n{{ user.user_name }}'},
+    maintenance: {subject:'Scheduled Maintenance Notice', body:'Dear Tenant,\n\nPlease be informed that maintenance work will be carried out in your area on [DATE] from [TIME].\n\nWe apologize for any inconvenience.\n\nThank you,\n{{ user.user_name }}'},
+    water: {subject:'Water Outage Notice', body:'Dear Tenant,\n\nWe wish to inform you that there will be a water outage on [DATE] from [START TIME] to [END TIME] due to maintenance works.\n\nPlease make necessary arrangements.\n\nThank you,\n{{ user.user_name }}'},
+    general: {subject:'General Notice', body:'Dear Tenant,\n\n[Your message here]\n\nThank you,\n{{ user.user_name }}'}
+};
+function useTemplate(t){document.getElementById('noticeSubject').value=templates[t].subject;document.getElementById('noticeBody').value=templates[t].body}
+function selectAll(v){document.querySelectorAll('.rec-check').forEach(c=>c.checked=v);updateCount()}
+function updateCount(){const n=document.querySelectorAll('.rec-check:checked').length;document.getElementById('recipientCount').textContent=n}
+document.querySelectorAll('.rec-check').forEach(c=>c.addEventListener('change',updateCount))
+function sendNotice(){const recips=document.querySelectorAll('.rec-check:checked').length;if(!recips){alert('Please select at least one recipient.');return}const subj=document.getElementById('noticeSubject').value;if(!subj){alert('Please enter a subject.');return}alert('Notice sent to '+recips+' tenant(s) successfully!')}
+</script>
+{% endblock %}

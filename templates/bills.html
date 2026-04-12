@@ -1,0 +1,644 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Bills · SmartRent{% endblock %}
+{% block role_name %}Tenant{% endblock %}
+{% block page_title %}Bills{% endblock %}
+
+
+{% block nav_main %}
+{% if user.role == 'tenant' %}
+    <a href="{{ url_for('tenant.tenant_dashboard') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="layout-dashboard"></i></div>
+        <span class="nav-txt">Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('tenant.payments') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="credit-card"></i></div>
+        <span class="nav-txt">Payments</span>
+    </a>
+
+    <a href="{{ url_for('tenant.bills') }}" class="nav-item active">
+        <div class="nav-ico"><i data-lucide="file-text"></i></div>
+        <span class="nav-txt">My bills</span>
+    </a>
+
+{% elif user.role == 'landlord' %}
+    <a href="{{ url_for('landlord.landlord_dashboard') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="layout-dashboard"></i></div>
+        <span class="nav-txt">Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('landlord.properties') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="building"></i></div>
+        <span class="nav-txt">Properties</span>
+    </a>
+
+    <a href="{{ url_for('landlord.tenants') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="users"></i></div>
+        <span class="nav-txt">tenants</span>
+    </a>
+
+{% elif user.role == 'service_provider' %}
+    <a href="{{ url_for('service_provider.service_dashboard') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="layout-dashboard"></i></div>
+        <span class="nav-txt">Dashboard</span>
+    </a>
+{% endif %}
+{% endblock %}
+
+{% block extra_styles %}
+.bill-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.bill-stack {
+    display: grid;
+    gap: 16px;
+}
+
+.bill-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.bill-summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: var(--sh-sm);
+    padding: 16px 18px;
+}
+
+.bill-summary-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.bill-summary-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bill-summary-flag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+
+.bill-summary-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    margin-bottom: 3px;
+}
+
+.bill-summary-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.bill-summary-note {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 3px;
+}
+
+.bill-list {
+    display: grid;
+    gap: 12px;
+}
+
+.bill-row {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 16px;
+    transition: border-color var(--ease), transform var(--ease), box-shadow var(--ease);
+}
+
+.bill-row:hover {
+    border-color: var(--blue-200, #bfdbfe);
+    box-shadow: var(--sh-sm);
+    transform: translateY(-1px);
+}
+
+.bill-row-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.bill-row-title-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.bill-row-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.bill-row-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.bill-row-sub {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 3px;
+}
+
+.bill-row-amount {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.bill-row-amount .label {
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 4px;
+}
+
+.bill-row-amount .value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+}
+
+.bill-row-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.bill-meta-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.bill-meta-label {
+    font-size: 10.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 4px;
+}
+
+.bill-meta-value {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.bill-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-lt);
+}
+
+.bill-inline-note {
+    font-size: 11.5px;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bill-action-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mini-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.13s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.mini-btn:hover {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.mini-btn.primary {
+    background: var(--blue-600);
+    border-color: var(--blue-600);
+    color: white;
+}
+
+.mini-btn.primary:hover {
+    background: var(--blue-700);
+    border-color: var(--blue-700);
+}
+
+.insight-card {
+    position: sticky;
+    top: 80px;
+}
+
+.due-list,
+.tip-list {
+    list-style: none;
+    display: grid;
+    gap: 10px;
+}
+
+.due-item,
+.tip-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-lt);
+}
+
+.due-item:last-child,
+.tip-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.due-bullet,
+.tip-bullet {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.due-copy,
+.tip-copy {
+    min-width: 0;
+}
+
+.due-copy strong,
+.tip-copy strong {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text);
+}
+
+.due-copy span,
+.tip-copy span {
+    display: block;
+    font-size: 11.5px;
+    color: var(--text-3);
+    margin-top: 3px;
+    line-height: 1.5;
+}
+
+.pay-cta {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--blue-50), #eef2ff);
+    border: 1px solid var(--blue-100);
+}
+
+.pay-cta-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue-600);
+    margin-bottom: 6px;
+}
+
+.pay-cta-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+}
+
+.history-note {
+    font-size: 12px;
+    color: var(--text-3);
+}
+
+@media (max-width: 980px) {
+    .bill-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .insight-card {
+        position: static;
+    }
+}
+
+@media (max-width: 640px) {
+    .bill-row-head,
+    .bill-row-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bill-row-amount {
+        text-align: left;
+    }
+
+    .bill-row-meta {
+        grid-template-columns: 1fr;
+    }
+
+    .bill-action-group {
+        width: 100%;
+    }
+
+    .bill-action-group .mini-btn {
+        justify-content: center;
+        flex: 1;
+    }
+}
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Tenant Billing</div>
+    <h1>Keep up with rent, utilities, and service charges</h1>
+    <p>Review what is due, spot urgent balances quickly, and head straight to payment when you're ready.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Tenant</span>
+            <span class="hero-kpi-value">{{ user.user_name }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Current Unit</span>
+            <span class="hero-kpi-value">{{ tenant_unit }} · {{ property_name }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Next Rent Due</span>
+            <span class="hero-kpi-value">{{ next_due_date }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Outstanding Total</span>
+            <span class="hero-kpi-value">{{ outstanding_total }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="bill-summary-grid">
+    <div class="bill-summary-card">
+        <div class="bill-summary-top">
+            <div class="bill-summary-icon ico-red"><i data-lucide="wallet" width="18" height="18"></i></div>
+            <span class="bill-summary-flag down">{{ unpaid_count }} open</span>
+        </div>
+        <div class="bill-summary-value">{{ outstanding_total }}</div>
+        <div class="bill-summary-label">Total Outstanding</div>
+        <div class="bill-summary-note">Rent and utilities currently waiting for payment.</div>
+    </div>
+
+    <div class="bill-summary-card">
+        <div class="bill-summary-top">
+            <div class="bill-summary-icon ico-orange"><i data-lucide="alert-circle" width="18" height="18"></i></div>
+            <span class="bill-summary-flag flat">{{ unpaid_count }} open</span>
+        </div>
+        <div class="bill-summary-value">{{ unpaid_count }}</div>
+        <div class="bill-summary-label">Unpaid Items</div>
+        <div class="bill-summary-note">Active bills pulled from your transaction history.</div>
+    </div>
+
+    <div class="bill-summary-card">
+        <div class="bill-summary-top">
+            <div class="bill-summary-icon ico-green"><i data-lucide="check-circle-2" width="18" height="18"></i></div>
+            <span class="bill-summary-flag up">Last payment</span>
+        </div>
+        <div class="bill-summary-value">{{ last_payment_display }}</div>
+        <div class="bill-summary-label">Last Payment</div>
+        <div class="bill-summary-note">Your most recent transaction from the database.</div>
+    </div>
+
+    <div class="bill-summary-card">
+        <div class="bill-summary-top">
+            <div class="bill-summary-icon ico-blue"><i data-lucide="calendar-days" width="18" height="18"></i></div>
+            <span class="bill-summary-flag b-blue">Next due</span>
+        </div>
+        <div class="bill-summary-value">{{ next_due_date }}</div>
+        <div class="bill-summary-label">Rent Deadline</div>
+        <div class="bill-summary-note">Upcoming due date based on your current billed items.</div>
+    </div>
+</div>
+
+<div class="bill-shell">
+    <div class="bill-stack">
+        <div class="card">
+            <div class="card-head">
+                <span class="card-title">Current Bills</span>
+                <a href="{{ url_for('tenant.payments') }}" class="card-action" style="text-decoration:none;">Go to payments</a>
+            </div>
+
+            <div class="bill-list">
+                {% if active_bills %}
+                    {% for bill in active_bills %}
+                    <div class="bill-row">
+                        <div class="bill-row-head">
+                        <div class="bill-row-title-wrap">
+                            <div class="bill-row-icon {{ bill.icon_bg }}">
+                                <i data-lucide="{{ bill.icon }}" width="18" height="18"></i>
+                            </div>
+                            <div>
+                                <div class="bill-row-title">{{ bill.name }}</div>
+                                <div class="bill-row-sub">{{ bill.note }}</div>
+                            </div>
+                        </div>
+
+                        <div class="bill-row-amount">
+                            <span class="label">Amount</span>
+                            <span class="value">{{ bill.amount_display }}</span>
+                        </div>
+                    </div>
+
+                    <div class="bill-row-meta">
+                        <div class="bill-meta-box">
+                            <div class="bill-meta-label">Billing Period</div>
+                            <div class="bill-meta-value">{{ bill.period }}</div>
+                        </div>
+                        <div class="bill-meta-box">
+                            <div class="bill-meta-label">Category</div>
+                            <div class="bill-meta-value">{{ bill.category }}</div>
+                        </div>
+                        <div class="bill-meta-box">
+                            <div class="bill-meta-label">Status</div>
+                            <div class="bill-meta-value"><span class="badge {{ bill.status_class }}">{{ bill.status }}</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bill-row-actions">
+                        <div class="bill-inline-note">
+                            <i data-lucide="calendar-clock" width="14" height="14"></i>
+                            Due {{ bill.due }}
+                        </div>
+
+                        <div class="bill-action-group">
+                            <button class="mini-btn" type="button" onclick="alert('Receipt and bill download coming soon.')">
+                                <i data-lucide="download" width="14" height="14"></i>
+                                Download
+                            </button>
+                            <a href="{{ url_for('tenant.payments') }}" class="mini-btn primary">
+                                <i data-lucide="credit-card" width="14" height="14"></i>
+                                Pay now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                    <div class="empty-state" style="padding:24px;text-align:center;">No active bills found.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <span class="card-title">Recent Billing History</span>
+                <span class="history-note">Latest posted charges and confirmations</span>
+            </div>
+
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Bill</th>
+                        <th>Period</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Method</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in bill_history %}
+                    <tr>
+                        <td style="white-space:nowrap;color:var(--text-3);font-size:12px;">{{ item.date }}</td>
+                        <td style="font-weight:600;">{{ item.name }}</td>
+                        <td>{{ item.period }}</td>
+                        <td style="font-weight:600;">{{ item.amount }}</td>
+                        <td><span class="badge {{ 'b-green' if item.status == 'Paid' else 'b-amber' }}">{{ item.status }}</span></td>
+                        <td><span class="badge b-blue">{{ item.method }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card insight-card">
+        <div class="card-head">
+            <span class="card-title">Billing Insights</span>
+        </div>
+
+        <ul class="due-list">
+            <li class="due-item">
+                <div class="due-bullet ico-red"><i data-lucide="clock-3" width="16" height="16"></i></div>
+                <div class="due-copy">
+                    <strong>Monthly rent is the priority item</strong>
+                    <span>Clear the overdue rent first to keep your account in good standing.</span>
+                </div>
+            </li>
+            <li class="due-item">
+                <div class="due-bullet ico-orange"><i data-lucide="zap" width="16" height="16"></i></div>
+                <div class="due-copy">
+                    <strong>Utilities update near month end</strong>
+                    <span>Electricity and water charges are usually posted after meter readings.</span>
+                </div>
+            </li>
+            <li class="due-item">
+                <div class="due-bullet ico-green"><i data-lucide="badge-check" width="16" height="16"></i></div>
+                <div class="due-copy">
+                    <strong>Service charge is already settled</strong>
+                    <span>No extra building maintenance fee is due right now.</span>
+                </div>
+            </li>
+        </ul>
+
+        <div class="pay-cta">
+            <div class="pay-cta-label">Ready To Clear Your Balance?</div>
+            <div class="pay-cta-value">{{ outstanding_total }}</div>
+            <a href="{{ url_for('tenant.payments') }}" class="btn-primary" style="width:100%;justify-content:center;">
+                <i data-lucide="arrow-right" width="15" height="15"></i>
+                Open Payment Options
+            </a>
+        </div>
+
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-lt);">
+            <div class="sec-title" style="margin-bottom:10px;">Helpful Tips</div>
+            <ul class="tip-list">
+                <li class="tip-item">
+                    <div class="tip-bullet ico-blue"><i data-lucide="receipt" width="16" height="16"></i></div>
+                    <div class="tip-copy">
+                        <strong>Keep your receipts</strong>
+                        <span>Save confirmations after each M-Pesa payment for faster support.</span>
+                    </div>
+                </li>
+                <li class="tip-item">
+                    <div class="tip-bullet ico-purple"><i data-lucide="message-circle-more" width="16" height="16"></i></div>
+                    <div class="tip-copy">
+                        <strong>Question a charge quickly</strong>
+                        <span>Raise any billing issue before the next payment cycle closes.</span>
+                    </div>
+                </li>
+                <li class="tip-item">
+                    <div class="tip-bullet ico-green"><i data-lucide="shield-check" width="16" height="16"></i></div>
+                    <div class="tip-copy">
+                        <strong>Use SmartRent payments</strong>
+                        <span>They make it easier to match your payment to the right unit and month.</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

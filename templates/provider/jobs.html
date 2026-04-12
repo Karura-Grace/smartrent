@@ -1,0 +1,215 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}My Jobs · SmartRent{% endblock %}
+{% block role_name %}Service Provider{% endblock %}
+{% block page_title %}My Jobs{% endblock %}
+{% block page_sub %}Assigned Work Queue{% endblock %}
+
+{% block extra_styles %}
+.hero { background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%); }
+.nav-item.active { background: #fff7ed; color: #c2410c; }
+.nav-item.active::before { background: #c2410c; }
+.nav-item:hover { background: #fff7ed; color: #c2410c; }
+.btn-primary { background: #c2410c; }
+.btn-primary:hover { background: #9a3412; }
+.card-action { color: #c2410c; background: #fff7ed; }
+.card-action:hover { background: #fed7aa; }
+
+.filter-bar {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.filter-btn {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text-2); cursor: pointer; transition: all 0.13s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.filter-btn:hover, .filter-btn.active {
+    background: #c2410c; color: white; border-color: #c2410c;
+}
+.job-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.job-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    border: none; cursor: pointer; transition: opacity 0.15s;
+    font-family: 'Plus Jakarta Sans', sans-serif; text-decoration: none;
+}
+.job-btn:hover { opacity: 0.8; }
+.job-btn-done  { background: #dcfce7; color: #166534; }
+.job-btn-photo { background: #dbeafe; color: #1e40af; }
+.job-btn-msg   { background: #fff7ed; color: #9a3412; }
+.empty-state {
+    text-align: center; padding: 48px 20px;
+    color: var(--text-3); font-size: 13px;
+}
+.empty-state i { display: block; margin: 0 auto 12px; opacity: 0.3; }
+{% endblock %}
+
+{% block nav_main %}
+<a href="{{ url_for('service.service_dashboard') }}" class="nav-item">
+    <div class="nav-ico"><i data-lucide="layout-dashboard" width="16" height="16"></i></div>
+    <span class="nav-txt">Dashboard</span>
+</a>
+<a href="{{ url_for('service.jobs') }}" class="nav-item active">
+    <div class="nav-ico"><i data-lucide="clipboard-list" width="16" height="16"></i></div>
+    <span class="nav-txt">My Jobs</span>
+    {% if open_count is defined and open_count > 0 %}
+    <span class="nav-pill">{{ open_count }}</span>
+    {% endif %}
+</a>
+<a href="{{ url_for('service.jobs') }}" class="nav-item">
+    <div class="nav-ico"><i data-lucide="check-circle" width="16" height="16"></i></div>
+    <span class="nav-txt">Completed Jobs</span>
+</a>
+<a href="{{ url_for('service.jobs') }}" class="nav-item">
+    <div class="nav-ico"><i data-lucide="banknote" width="16" height="16"></i></div>
+    <span class="nav-txt">Earnings</span>
+</a>
+{% endblock %}
+
+{% block nav_management %}
+<a href="{{ url_for('service.schedule') }}" class="nav-item">
+    <div class="nav-ico"><i data-lucide="calendar-days" width="16" height="16"></i></div>
+    <span class="nav-txt">Schedule</span>
+</a>
+<a href="{{ url_for('service.reviews') }}" class="nav-item">
+    <div class="nav-ico"><i data-lucide="star" width="16" height="16"></i></div>
+    <span class="nav-txt">Reviews & Ratings</span>
+</a>
+<a href="{{ url_for('service.work_photos') }}" class="nav-item">
+    <div class="nav-ico"><i data-lucide="camera" width="16" height="16"></i></div>
+    <span class="nav-txt">Work Photos</span>
+</a>
+<a href="{{ url_for('service.messages') }}" class="nav-item">
+    <div class="nav-ico"><i data-lucide="message-square" width="16" height="16"></i></div>
+    <span class="nav-txt">Messages</span>
+    {% if unread_count is defined and unread_count > 0 %}
+    <span class="nav-pill">{{ unread_count }}</span>
+    {% endif %}
+</a>
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Service Provider Portal</div>
+    <h1>My Jobs</h1>
+    <p>All jobs assigned to you. Mark done when complete and upload a photo as proof.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Open</span>
+            <span class="hero-kpi-value">{{ jobs | selectattr('status', 'ne', 'completed') | list | length }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Urgent</span>
+            <span class="hero-kpi-value">{{ jobs | selectattr('priority', 'eq', 'urgent') | list | length }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">In Progress</span>
+            <span class="hero-kpi-value">{{ jobs | selectattr('status', 'eq', 'in_progress') | list | length }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Completed</span>
+            <span class="hero-kpi-value">{{ jobs | selectattr('status', 'eq', 'completed') | list | length }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Filter bar -->
+<div class="filter-bar">
+    <a href="{{ url_for('service.jobs') }}" class="filter-btn {% if not request.args.get('status') %}active{% endif %}">All Jobs</a>
+    <a href="{{ url_for('service.jobs', status='urgent') }}" class="filter-btn {% if request.args.get('status') == 'urgent' %}active{% endif %}">
+        <i data-lucide="alert-circle" width="11" height="11" style="display:inline;vertical-align:-1px;margin-right:3px"></i>Urgent
+    </a>
+    <a href="{{ url_for('service.jobs', status='assigned') }}" class="filter-btn {% if request.args.get('status') == 'assigned' %}active{% endif %}">Assigned</a>
+    <a href="{{ url_for('service.jobs', status='in_progress') }}" class="filter-btn {% if request.args.get('status') == 'in_progress' %}active{% endif %}">In Progress</a>
+    <a href="{{ url_for('service.jobs', status='completed') }}" class="filter-btn {% if request.args.get('status') == 'completed' %}active{% endif %}">Completed</a>
+</div>
+
+<div class="card">
+    <div class="card-head">
+        <span class="card-title">
+            <i data-lucide="clipboard-list" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:5px;color:#c2410c"></i>
+            Assigned Jobs
+        </span>
+        <span style="font-size:12px;color:var(--text-3)">{{ jobs | length }} job(s)</span>
+    </div>
+
+    {% if jobs %}
+    <table class="tbl">
+        <thead>
+            <tr>
+                <th>Property / Unit</th>
+                <th>Issue</th>
+                <th>Priority</th>
+                <th>Scheduled</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>
+                    <strong>{{ job.property_name }}</strong>
+                    <div style="font-size:11px;color:var(--text-3)">Unit {{ job.unit }}</div>
+                </td>
+                <td>{{ job.description }}</td>
+                <td>
+                    {% if job.priority == 'urgent' %}
+                        <span class="badge b-red">Urgent</span>
+                    {% elif job.priority == 'medium' %}
+                        <span class="badge b-amber">Medium</span>
+                    {% else %}
+                        <span class="badge b-gray">Low</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:12px;color:var(--text-2)">
+                    {% if job.scheduled_date %}
+                        {{ job.scheduled_date.strftime('%d %b %Y') }}
+                    {% else %}
+                        <span style="color:var(--text-3)">Not set</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if job.status == 'completed' %}
+                        <span class="badge b-green">Completed</span>
+                    {% elif job.status == 'in_progress' %}
+                        <span class="badge b-amber">In Progress</span>
+                    {% else %}
+                        <span class="badge b-blue">Assigned</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="job-actions">
+                        {% if job.status != 'completed' %}
+                        <form method="POST" action="{{ url_for('service.complete_job', job_id=job.id) }}" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="job-btn job-btn-done"
+                                onclick="return confirm('Mark this job as done?')">
+                                <i data-lucide="check" width="11" height="11"></i> Done
+                            </button>
+                        </form>
+                        {% endif %}
+                        <a href="{{ url_for('service.job_photos', job_id=job.id) }}" class="job-btn job-btn-photo">
+                            <i data-lucide="camera" width="11" height="11"></i> Photo
+                        </a>
+                        <a href="{{ url_for('service.messages', job_id=job.id) }}" class="job-btn job-btn-msg">
+                            <i data-lucide="message-square" width="11" height="11"></i> Msg
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <i data-lucide="clipboard-check" width="40" height="40"></i>
+        No jobs found for this filter.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - SmartRent</title>
+  <style>
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+       
+    body { 
+      min-height: 100vh;
+      display: flex;
+      align-items: center; 
+      justify-content: center; 
+      background-image: url("{{ url_for('static', filename='images/b.jpg') }}");
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+      backdrop-filter: blur(4px);
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(200, 158, 228, 0.3) 0%, rgba(24, 8, 129, 0.7) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap { 
+      background: #0c0316; 
+      border-radius: 30px; 
+      padding: 18px 25px; 
+      width: 540px; 
+      max-width: 100%; 
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    
+    .brand { font-size: 11px; color: #e71cee; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; position: relative; display: inline-block; }
+    .brand::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 1.5px;
+      background: #ffffff;
+      border-radius: 2px;
+    }
+    .hello { font-family: 'Brush Script MT', cursive; font-size: 36px; color: #fff6ff; margin-bottom: 2px; display: block; }
+    .tagline { font-size: 11px; color: #a89fd8; margin-bottom: 12px; }
+    h1 { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 2px; }
+    .step-dots { display: flex; gap: 5px; margin-bottom: 10px; align-items: center; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s; }
+    .dot.active { background: #a78bfa; width: 18px; border-radius: 4px; }
+    .dot.done { background: #34d399; }
+    .step-label { font-size: 10px; color: #a89fd8; margin-left: 6px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field { position: relative; margin-bottom: 10px; }
+    .field label { display: block; font-size: 10px; color: #a89fd8; margin-bottom: 3px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 8px 12px; background: #2d1f5e;
+      border: 1.5px solid #3d2d7a; border-radius: 8px; color: #fff;
+      font-size: 13px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; appearance: none;
+    }
+    .field input::placeholder, .field textarea::placeholder { color: #6b5fa0; font-size: 12px; }
+    .field select option { background: #2d1f5e; color: #fff; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #a78bfa; box-shadow: 0 0 0 3px rgba(167,139,250,0.15); }
+    .field input.valid { border-color: #34d399; }
+    .field input.error { border-color: #f87171; }
+    .vcheck { position: absolute; right: 12px; bottom: 9px; font-size: 11px; color: #34d399; opacity: 0; transition: opacity 0.2s; }
+    .vcheck.show { opacity: 1; }
+    .pwtog { position: absolute; right: 12px; bottom: 8px; background: none; border: none; cursor: pointer; font-size: 13px; color: #a89fd8; padding: 0; }
+    .pw-bars { display: flex; gap: 3px; margin-top: 4px; }
+    .pw-bar { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,0.1); transition: background 0.3s; }
+    .errmsg { font-size: 10px; color: #f87171; margin-top: 2px; padding-left: 2px; display: none; }
+    .flash-error { background: rgba(248,113,113,0.12); border: 1px solid #f87171; color: #f87171; border-radius: 8px; padding: 8px 12px; font-size: 12px; margin-bottom: 12px; }
+    .flash-success { background: rgba(52,211,153,0.12); border: 1px solid #34d399; color: #34d399; border-radius: 8px; padding: 8px 12px; font-size: 12px; margin-bottom: 12px; }
+    .role-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+    .role-card { background: #2d1f5e; border: 1.5px solid #3d2d7a; border-radius: 8px; padding: 8px 6px; cursor: pointer; text-align: center; transition: all 0.2s; }
+    .role-card:hover { border-color: #a78bfa; }
+    .role-card.sel { border-color: #a78bfa; background: #3d2d7a; box-shadow: 0 0 0 2px rgba(167,139,250,0.2); }
+    .role-card .ri { font-size: 18px; margin-bottom: 3px; }
+    .role-card .rl { font-size: 11px; font-weight: 700; color: #e2d9f3; }
+    .role-card .rs { font-size: 9px; color: #a89fd8; margin-top: 1px; }
+    .check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; color: #c4b5fd; cursor: pointer; }
+    .check-row input[type="checkbox"] { width: 13px; height: 13px; accent-color: #a78bfa; cursor: pointer; }
+    .check-row a { color: #a78bfa; text-decoration: underline; }
+    .btn { width: 100%; padding: 9px; background: #7c3aed; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 1px; transition: all 0.2s; margin-top: 6px; }
+    .btn:hover { background: #6d28d9; transform: translateY(-1px); }
+    .btn:active { transform: scale(0.98); }
+    .back-btn { background: none; border: none; cursor: pointer; font-size: 11px; color: #a89fd8; padding: 0; margin-bottom: 8px; display: flex; align-items: center; gap: 3px; }
+    .back-btn:hover { color: #e2d9f3; }
+    .login-link { text-align: center; margin-top: 10px; font-size: 11px; color: #ff6ae6; }
+    .login-link a { color: #c4b5fd; font-weight: 700; text-decoration: none; border-bottom: 1px solid #c4b5fd; }
+    .step { display: none; }
+    .step.active { display: block; }
+    .success { text-align: center; padding: 30px 20px; display: none; }
+    .success .bigcheck { font-size: 48px; margin-bottom: 12px; color: #34d399; }
+    .success h2 { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+    .success p { font-size: 12px; color: #a89fd8; }
+    .divider { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+    .divider span { font-size: 10px; color: #6b5fa0; white-space: nowrap; }
+    .divider hr { flex: 1; border: none; border-top: 1px solid #3d2d7a; }
+    .phone-wrap { display: flex; gap: 6px; }
+    .phone-wrap .dial { width: 100px; flex-shrink: 0; margin-bottom: 0; }
+    .phone-wrap .num { flex: 1; margin-bottom: 0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">SmartRent</div>
+  <span class="hello">hello</span>
+  <p class="tagline">Create your account &mdash; first month free</p>
+
+  {# Flask flash messages #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="step-dots" id="dots">
+    <div class="dot active" id="d0"></div>
+    <div class="dot" id="d1"></div>
+    <div class="dot" id="d2"></div>
+    <span class="step-label" id="slabel">Personal details</span>
+  </div>
+
+  <div class="success" id="successWrap">
+    <div class="bigcheck">&#10004;</div>
+    <h2>Welcome to SmartRent!</h2>
+    <p>Your account has been created. Check your email to verify.</p>
+  </div>
+
+  {# The single form wraps all steps — Flask receives one POST on final submit #}
+  <form id="regForm" method="POST" action="{{ url_for('auth.register') }}">
+    {{ csrf_token() if csrf_token is defined }}
+
+    {# ── Step 1: Personal Details ── #}
+    <div class="step active" id="step0">
+      <h1>Personal details</h1>
+      <p style="font-size:11px;color:#a89fd8;margin-bottom:10px;">Tell us a bit about yourself</p>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="first_name">First name *</label>
+          <input type="text" id="firstName" name="first_name" placeholder="Jane"
+                 value="{{ request.form.get('first_name', '') }}" oninput="val('firstName')">
+          <span class="vcheck" id="chk-firstName">&#10003;</span>
+        </div>
+        <div class="field">
+          <label for="last_name">Last name *</label>
+          <input type="text" id="lastName" name="last_name" placeholder="Doe"
+                 value="{{ request.form.get('last_name', '') }}" oninput="val('lastName')">
+          <span class="vcheck" id="chk-lastName">&#10003;</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email address *</label>
+        <input type="email" id="email" name="email" placeholder="jane@example.com"
+               value="{{ request.form.get('email', '') }}" oninput="val('email')">
+        <span class="vcheck" id="chk-email">&#10003;</span>
+      </div>
+      <div class="errmsg" id="err-email">Please enter a valid email address</div>
+
+      <div class="field">
+        <label>Phone number *</label>
+        <div class="phone-wrap">
+          <div class="field dial">
+            <select id="dialCode" name="dial_code">
+              <option value="+254" {% if request.form.get('dial_code', '+254') == '+254' %}selected{% endif %}>&#127472;&#127466; +254</option>
+              <option value="+1"   {% if request.form.get('dial_code') == '+1' %}selected{% endif %}>&#127482;&#127480; +1</option>
+              <option value="+44"  {% if request.form.get('dial_code') == '+44' %}selected{% endif %}>&#127468;&#127463; +44</option>
+              <option value="+27"  {% if request.form.get('dial_code') == '+27' %}selected{% endif %}>&#127487;&#127462; +27</option>
+              <option value="+234" {% if request.form.get('dial_code') == '+234' %}selected{% endif %}>&#127475;&#127468; +234</option>
+              <option value="+91"  {% if request.form.get('dial_code') == '+91' %}selected{% endif %}>&#127470;&#127475; +91</option>
+              <option value="+971" {% if request.form.get('dial_code') == '+971' %}selected{% endif %}>&#127462;&#127466; +971</option>
+            </select>
+          </div>
+          <div class="field num">
+            <input type="tel" id="phone" name="phone" placeholder="712 345 678"
+                   value="{{ request.form.get('phone', '') }}" oninput="val('phone')">
+            <span class="vcheck" id="chk-phone">&#10003;</span>
+          </div>
+        </div>
+      </div>
+      <div class="errmsg" id="err-phone">Enter a valid phone number</div>
+
+      <div class="field">
+        <label for="dob">Date of birth</label>
+        <input type="date" id="dob" name="dob" style="color-scheme:dark;"
+               value="{{ request.form.get('dob', '') }}">
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="newsletter" name="newsletter"
+               {% if request.form.get('newsletter') %}checked{% endif %}>
+        <label for="newsletter">Subscribe to SmartRent newsletter &amp; updates</label>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="terms" name="terms"
+               {% if request.form.get('terms') %}checked{% endif %}>
+        <label for="terms">I agree to the <a href="#">terms &amp; personal data processing</a> *</label>
+      </div>
+
+      <button class="btn" type="button" onclick="next(0)">Next &rarr;</button>
+      <div class="login-link">Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></div>
+    </div>
+
+    {# ── Step 2: Role & Location ── #}
+    <div class="step" id="step1">
+      <button class="back-btn" type="button" onclick="back(0)">&#8592; Back</button>
+      <h1>Your role</h1>
+      <p style="font-size:11px;color:#a89fd8;margin-bottom:10px;">How will you use SmartRent?</p>
+
+      <div class="role-grid">
+        <div class="role-card" onclick="pickRole('tenant', this)">
+          <div class="ri">&#127968;</div>
+          <div class="rl">Tenant</div>
+          <div class="rs">Looking for a property</div>
+        </div>
+        <div class="role-card" onclick="pickRole('landlord', this)">
+          <div class="ri">&#128273;</div>
+          <div class="rl">Landlord</div>
+          <div class="rs">Have property to rent</div>
+        </div>
+        <div class="role-card" onclick="pickRole('service_provider', this)">
+          <div class="ri">&#128295;</div>
+          <div class="rl">Service Provider</div>
+          <div class="rs">Plumbing, electric &amp; more</div>
+        </div>
+        <div class="role-card" onclick="pickRole('agent', this)">
+          <div class="ri">&#129309;</div>
+          <div class="rl">Agent</div>
+          <div class="rs">Manage listings &amp; clients</div>
+        </div>
+      </div>
+      <div class="errmsg" id="err-role" style="display:block;opacity:0;">Please select a role to continue</div>
+      <input type="hidden" id="roleInput" name="role" value="{{ request.form.get('role', '') }}">
+
+      <div class="divider"><hr><span>Additional info</span><hr></div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="country">Country</label>
+          <select id="country" name="country">
+            <option value="">Select country</option>
+            {% set sel_country = request.form.get('country', 'KE') %}
+            <option value="KE" {% if sel_country == 'KE' %}selected{% endif %}>Kenya</option>
+            <option value="UG" {% if sel_country == 'UG' %}selected{% endif %}>Uganda</option>
+            <option value="TZ" {% if sel_country == 'TZ' %}selected{% endif %}>Tanzania</option>
+            <option value="ZA" {% if sel_country == 'ZA' %}selected{% endif %}>South Africa</option>
+            <option value="NG" {% if sel_country == 'NG' %}selected{% endif %}>Nigeria</option>
+            <option value="GH" {% if sel_country == 'GH' %}selected{% endif %}>Ghana</option>
+            <option value="US" {% if sel_country == 'US' %}selected{% endif %}>United States</option>
+            <option value="GB" {% if sel_country == 'GB' %}selected{% endif %}>United Kingdom</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="city">City / Town</label>
+          <input type="text" id="city" name="city" placeholder="Nairobi"
+                 value="{{ request.form.get('city', '') }}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="id_number">National ID / Passport number</label>
+        <input type="text" id="idnum" name="id_number" placeholder="National ID or passport"
+               value="{{ request.form.get('id_number', '') }}">
+      </div>
+
+      <button class="btn" type="button" onclick="next(1)">Next &rarr;</button>
+    </div>
+
+    {# ── Step 3: Password ── #}
+    <div class="step" id="step2">
+      <button class="back-btn" type="button" onclick="back(1)">&#8592; Back</button>
+      <h1>Secure your account</h1>
+      <p style="font-size:11px;color:#a89fd8;margin-bottom:10px;">Choose a strong password</p>
+
+      <div class="field">
+        <label for="password">Password *</label>
+        <input type="password" id="password" name="password" placeholder="Minimum 6 characters" oninput="checkPw()">
+        <button class="pwtog" type="button" onclick="togPw('password', this)">&#128065;</button>
+      </div>
+      <div class="pw-bars">
+        <div class="pw-bar" id="b0"></div>
+        <div class="pw-bar" id="b1"></div>
+        <div class="pw-bar" id="b2"></div>
+        <div class="pw-bar" id="b3"></div>
+      </div>
+      <div class="errmsg" id="err-password">Minimum 6 characters required</div>
+
+      <div class="field" style="margin-top:8px;">
+        <label for="confirm_password">Confirm password *</label>
+        <input type="password" id="confirmPw" name="confirm_password"
+               placeholder="Re-enter your password" oninput="val('confirmPw')">
+        <button class="pwtog" type="button" onclick="togPw('confirmPw', this)">&#128065;</button>
+        <span class="vcheck" id="chk-confirmPw">&#10003;</span>
+      </div>
+      <div class="errmsg" id="err-confirmPw">Passwords do not match</div>
+
+      <div class="field" style="margin-top:2px;">
+        <label for="referral_code">Referral code
+          <span style="color:#6b5fa0;text-transform:none;font-size:9px;">(optional)</span>
+        </label>
+        <input type="text" id="referral" name="referral_code" placeholder="e.g. SMART2024"
+               value="{{ request.form.get('referral_code', '') }}">
+      </div>
+
+      <button class="btn" type="submit" onclick="return submitForm()" style="margin-top:4px;">
+        Create account &#127881;
+      </button>
+      <div class="login-link">Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></div>
+    </div>
+
+  </form>{# end #regForm #}
+
+</div>{# end .wrap #}
+
+<script>
+  let role = '{{ request.form.get("role", "") }}';
+
+  /* Re-highlight role card on page reload after validation error */
+  (function () {
+    if (role) {
+      document.querySelectorAll('.role-card').forEach(function (card) {
+        if (card.getAttribute('onclick').includes("'" + role + "'")) {
+          card.classList.add('sel');
+        }
+      });
+    }
+  })();
+
+  function val(id) {
+    const el  = document.getElementById(id);
+    const chk = document.getElementById('chk-' + id);
+    const err = document.getElementById('err-' + id);
+    let ok = false;
+    if (id === 'email')     ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value);
+    else if (id === 'phone') ok = /^[0-9\s\-]{6,}$/.test(el.value);
+    else if (id === 'confirmPw') ok = el.value === document.getElementById('password').value && el.value.length > 0;
+    else ok = el.value.trim().length > 0;
+    if (el.value) { el.className = ok ? 'valid' : 'error'; } else { el.className = ''; }
+    if (chk) chk.className = 'vcheck' + (ok ? ' show' : '');
+    if (err) err.style.display = (!ok && el.value) ? 'block' : 'none';
+    return ok;
+  }
+
+  function checkPw() {
+    const pw   = document.getElementById('password').value;
+    const bars = ['b0', 'b1', 'b2', 'b3'].map(function (i) { return document.getElementById(i); });
+    let s = 0;
+    if (pw.length >= 6)  s++;
+    if (pw.length >= 10) s++;
+    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    const cols = ['#f87171', '#fb923c', '#facc15', '#34d399'];
+    bars.forEach(function (b, i) { b.style.background = i < s ? cols[s - 1] : 'rgba(255,255,255,0.1)'; });
+    document.getElementById('err-password').style.display = pw.length > 0 && pw.length < 6 ? 'block' : 'none';
+  }
+
+  function togPw(id, btn) {
+    const el = document.getElementById(id);
+    el.type  = el.type === 'password' ? 'text' : 'password';
+    btn.innerHTML = el.type === 'password' ? '&#128065;' : '&#128064;';
+  }
+
+  function pickRole(r, card) {
+    role = r;
+    document.querySelectorAll('.role-card').forEach(function (c) { c.classList.remove('sel'); });
+    card.classList.add('sel');
+    document.getElementById('err-role').style.opacity = '0';
+    document.getElementById('roleInput').value = r;
+  }
+
+  const labels = ['Personal details', 'Your role', 'Secure account'];
+
+  function updateDots(s) {
+    for (let i = 0; i < 3; i++) {
+      const d = document.getElementById('d' + i);
+      d.className = 'dot' + (i < s ? ' done' : '') + (i === s ? ' active' : '');
+    }
+    document.getElementById('slabel').textContent = labels[s];
+  }
+
+  function next(from) {
+    if (from === 0) {
+      const ok = val('firstName') & val('lastName') & val('email') & val('phone');
+      if (!ok) return;
+      if (!document.getElementById('terms').checked) {
+        alert('Please agree to the terms to continue.');
+        return;
+      }
+    }
+    if (from === 1) {
+      if (!role) {
+        document.getElementById('err-role').style.opacity = '1';
+        return;
+      }
+    }
+    document.getElementById('step' + from).classList.remove('active');
+    document.getElementById('step' + (from + 1)).classList.add('active');
+    updateDots(from + 1);
+  }
+
+  function back(to) {
+    document.getElementById('step' + (to + 1)).classList.remove('active');
+    document.getElementById('step' + to).classList.add('active');
+    updateDots(to);
+  }
+
+  function submitForm() {
+    const pw  = document.getElementById('password').value;
+    const cpw = val('confirmPw');
+    if (pw.length < 6) {
+      document.getElementById('err-password').style.display = 'block';
+      return false;
+    }
+    if (!cpw) return false;
+    /* All good — allow the native <form> POST to Flask */
+    return true;
+  }
+</script>
+</body>
+</html>

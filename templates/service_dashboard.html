@@ -1,0 +1,521 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Dashboard · SmartRent{% endblock %}
+{% block role_name %}Service Provider{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}Service Provider Overview{% endblock %}
+
+{% block extra_styles %}
+.hero { background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%); }
+.hero::after { background: radial-gradient(circle, rgba(251,191,36,0.18) 0%, transparent 65%); }
+.nav-item.active { background: #fff7ed; color: #c2410c; }
+.nav-item.active::before { background: #c2410c; }
+.nav-item:hover { background: #fff7ed; color: #c2410c; }
+.btn-primary { background: #c2410c; }
+.btn-primary:hover { background: #9a3412; }
+.card-action { color: #c2410c; background: #fff7ed; }
+.card-action:hover { background: #fed7aa; }
+
+/* ── Job status action buttons ── */
+.job-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.job-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    border: none; cursor: pointer; transition: opacity 0.15s;
+}
+.job-btn:hover { opacity: 0.85; }
+.job-btn-done   { background: #dcfce7; color: #166534; }
+.job-btn-photo  { background: #dbeafe; color: #1e40af; }
+.job-btn-msg    { background: #fff7ed; color: #9a3412; }
+.job-btn-nav    { background: #f3f4f6; color: #374151; }
+
+/* ── Photo upload card ── */
+.photo-upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--r);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+.photo-upload-zone:hover { border-color: #c2410c; background: #fff7ed; }
+.photo-upload-zone input[type="file"] { display: none; }
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 12px; }
+.photo-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+
+/* ── Earnings mini-chart ── */
+.earn-bar-wrap { display: flex; align-items: flex-end; gap: 5px; height: 60px; margin: 12px 0 4px; }
+.earn-bar { flex: 1; border-radius: 3px 3px 0 0; background: #fed7aa; transition: background 0.2s; cursor: default; position: relative; }
+.earn-bar.current { background: #c2410c; }
+.earn-bar:hover { background: #9a3412; }
+.earn-labels { display: flex; gap: 5px; }
+.earn-lbl { flex: 1; text-align: center; font-size: 9px; color: var(--text-3); }
+
+/* ── Rating stars ── */
+.stars { display: flex; gap: 2px; }
+.star-filled { color: #f59e0b; }
+.star-empty  { color: var(--border); }
+
+/* ── Status pill colours ── */
+.b-orange { background: #ffedd5; color: #9a3412; }
+
+/* ── Portfolio toggle ── */
+.toggle-wrap { display: flex; align-items: center; gap: 8px; }
+.toggle { position: relative; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+    position: absolute; inset: 0; background: var(--border);
+    border-radius: 20px; cursor: pointer; transition: background 0.2s;
+}
+.toggle-slider::before {
+    content: ''; position: absolute; width: 14px; height: 14px;
+    left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: #c2410c; }
+.toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+{% endblock %}
+
+{% block nav_main %}
+<a href="/provider/jobs" class="nav-item {% if request.path == '/provider/jobs' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="clipboard-list" width="16" height="16"></i></div>
+    <span class="nav-txt">My Jobs</span>
+    <span class="nav-pill">5</span>
+</a>
+<a href="/provider/jobs/completed" class="nav-item {% if request.path == '/provider/jobs/completed' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="check-circle" width="16" height="16"></i></div>
+    <span class="nav-txt">Completed Jobs</span>
+</a>
+<a href="/provider/earnings" class="nav-item {% if request.path == '/provider/earnings' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="banknote" width="16" height="16"></i></div>
+    <span class="nav-txt">Earnings</span>
+</a>
+{% endblock %}
+
+{% block nav_management %}
+<a href="/provider/schedule" class="nav-item {% if request.path == '/provider/schedule' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="calendar-days" width="16" height="16"></i></div>
+    <span class="nav-txt">Schedule</span>
+</a>
+<a href="/provider/reviews" class="nav-item {% if request.path == '/provider/reviews' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="star" width="16" height="16"></i></div>
+    <span class="nav-txt">Reviews & Ratings</span>
+</a>
+<a href="/provider/photos" class="nav-item {% if request.path == '/provider/photos' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="camera" width="16" height="16"></i></div>
+    <span class="nav-txt">Work Photos</span>
+</a>
+<a href="/provider/messages" class="nav-item {% if request.path == '/provider/messages' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="message-square" width="16" height="16"></i></div>
+    <span class="nav-txt">Messages</span>
+    {% if unread_count is defined and unread_count > 0 %}
+    <span class="nav-pill">{{ unread_count }}</span>
+    {% endif %}
+</a>
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Service Provider Portal</div>
+    <h1>Ready to work, {{ user.user_name }} 🔧</h1>
+    <p>Your job queue and earnings overview for March 2025.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Email</span>
+            <span class="hero-kpi-value">{{ user.user_email }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Specialty</span>
+            <span class="hero-kpi-value">Plumbing & Electrical</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Rating</span>
+            <span class="hero-kpi-value">⭐ 4.8 / 5.0</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Status</span>
+            <span class="hero-kpi-value">✓ Available</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── KPI stat cards ── -->
+<div class="stats-grid">
+
+    <div class="stat-card">
+        <div class="stat-top">
+            <div class="stat-ico ico-green">
+                <i data-lucide="banknote" width="18" height="18" style="color:#15803d"></i>
+            </div>
+            <span class="stat-trend up">↑ 8 jobs</span>
+        </div>
+        <div class="stat-val">KES 38,500</div>
+        <div class="stat-name">Earnings This Month</div>
+        <div class="stat-hint">March 2025 · 8 completed jobs</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-top">
+            <div class="stat-ico ico-red">
+                <i data-lucide="clipboard-list" width="18" height="18" style="color:#dc2626"></i>
+            </div>
+            <span class="stat-trend down">2 Urgent</span>
+        </div>
+        <div class="stat-val">5</div>
+        <div class="stat-name">Open Jobs</div>
+        <div class="stat-hint">Assigned and awaiting action</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-top">
+            <div class="stat-ico ico-orange">
+                <i data-lucide="star" width="18" height="18" style="color:#d97706"></i>
+            </div>
+            <span class="stat-trend up">Top Rated</span>
+        </div>
+        <div class="stat-val">4.8</div>
+        <div class="stat-name">Average Rating</div>
+        <div class="stat-hint">Based on 42 reviews</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-top">
+            <div class="stat-ico ico-blue">
+                <i data-lucide="check-circle" width="18" height="18" style="color:#2563eb"></i>
+            </div>
+            <span class="stat-trend up">↑ 100% rate</span>
+        </div>
+        <div class="stat-val">8</div>
+        <div class="stat-name">Jobs Completed</div>
+        <div class="stat-hint">This month, zero rejected</div>
+    </div>
+
+</div>
+
+<!-- ── Main content grid ── -->
+<div class="content-grid">
+
+    <!-- ── Assigned Jobs table ── -->
+    <div class="card">
+        <div class="card-head">
+            <span class="card-title">Assigned Jobs</span>
+            <a href="/provider/jobs" class="card-action" style="display:inline-flex;align-items:center;gap:4px;">
+                <i data-lucide="arrow-right" width="12" height="12"></i> View All
+            </a>
+        </div>
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Property</th>
+                    <th>Issue</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td><strong>Sunset Apts A-12</strong></td>
+                    <td>Burst pipe</td>
+                    <td><span class="badge b-red">Urgent</span></td>
+                    <td><span class="badge b-amber">In Progress</span></td>
+                    <td>
+                        <div class="job-actions">
+                            <form method="POST" action="/provider/jobs/1/complete" style="display:inline">
+                                <button type="submit" class="job-btn job-btn-done">
+                                    <i data-lucide="check" width="11" height="11"></i> Done
+                                </button>
+                            </form>
+                            <a href="/provider/jobs/1/photo" class="job-btn job-btn-photo">
+                                <i data-lucide="camera" width="11" height="11"></i> Photo
+                            </a>
+                            <a href="/provider/messages/1" class="job-btn job-btn-msg">
+                                <i data-lucide="message-square" width="11" height="11"></i> Msg
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td><strong>Sunrise Apts B-04</strong></td>
+                    <td>No power socket</td>
+                    <td><span class="badge b-amber">Medium</span></td>
+                    <td><span class="badge b-blue">Assigned</span></td>
+                    <td>
+                        <div class="job-actions">
+                            <form method="POST" action="/provider/jobs/2/complete" style="display:inline">
+                                <button type="submit" class="job-btn job-btn-done">
+                                    <i data-lucide="check" width="11" height="11"></i> Done
+                                </button>
+                            </form>
+                            <a href="/provider/jobs/2/photo" class="job-btn job-btn-photo">
+                                <i data-lucide="camera" width="11" height="11"></i> Photo
+                            </a>
+                            <a href="/provider/messages/2" class="job-btn job-btn-msg">
+                                <i data-lucide="message-square" width="11" height="11"></i> Msg
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td><strong>Greenview C-09</strong></td>
+                    <td>Broken door lock</td>
+                    <td><span class="badge b-gray">Low</span></td>
+                    <td><span class="badge b-blue">Assigned</span></td>
+                    <td>
+                        <div class="job-actions">
+                            <form method="POST" action="/provider/jobs/3/complete" style="display:inline">
+                                <button type="submit" class="job-btn job-btn-done">
+                                    <i data-lucide="check" width="11" height="11"></i> Done
+                                </button>
+                            </form>
+                            <a href="/provider/jobs/3/photo" class="job-btn job-btn-photo">
+                                <i data-lucide="camera" width="11" height="11"></i> Photo
+                            </a>
+                            <a href="/provider/messages/3" class="job-btn job-btn-msg">
+                                <i data-lucide="message-square" width="11" height="11"></i> Msg
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td><strong>Sunset Apts A-45</strong></td>
+                    <td>Leaking tap</td>
+                    <td><span class="badge b-gray">Low</span></td>
+                    <td><span class="badge b-green">Completed</span></td>
+                    <td>
+                        <div class="job-actions">
+                            <a href="/provider/jobs/4/photo" class="job-btn job-btn-photo">
+                                <i data-lucide="camera" width="11" height="11"></i> Photo
+                            </a>
+                            <a href="/provider/messages/4" class="job-btn job-btn-msg">
+                                <i data-lucide="message-square" width="11" height="11"></i> Msg
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td><strong>Sunrise Apts D-01</strong></td>
+                    <td>Faulty wiring</td>
+                    <td><span class="badge b-red">Urgent</span></td>
+                    <td><span class="badge b-blue">Assigned</span></td>
+                    <td>
+                        <div class="job-actions">
+                            <form method="POST" action="/provider/jobs/5/complete" style="display:inline">
+                                <button type="submit" class="job-btn job-btn-done">
+                                    <i data-lucide="check" width="11" height="11"></i> Done
+                                </button>
+                            </form>
+                            <a href="/provider/jobs/5/photo" class="job-btn job-btn-photo">
+                                <i data-lucide="camera" width="11" height="11"></i> Photo
+                            </a>
+                            <a href="/provider/messages/5" class="job-btn job-btn-msg">
+                                <i data-lucide="message-square" width="11" height="11"></i> Msg
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ── Right column ── -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-head"><span class="card-title">Quick Actions</span></div>
+            <div class="qa-grid">
+                <a href="/provider/jobs" class="qa-btn" style="text-decoration:none">
+                    <div class="qa-ico"><i data-lucide="clipboard-list" width="20" height="20" style="color:#c2410c"></i></div>
+                    <div class="qa-name">All Jobs</div>
+                    <div class="qa-desc">View full queue</div>
+                </a>
+                <a href="/provider/schedule" class="qa-btn" style="text-decoration:none">
+                    <div class="qa-ico"><i data-lucide="calendar-days" width="20" height="20" style="color:#2563eb"></i></div>
+                    <div class="qa-name">Schedule</div>
+                    <div class="qa-desc">View your calendar</div>
+                </a>
+                <a href="/provider/photos/upload" class="qa-btn" style="text-decoration:none">
+                    <div class="qa-ico"><i data-lucide="camera" width="20" height="20" style="color:#15803d"></i></div>
+                    <div class="qa-name">Upload Photo</div>
+                    <div class="qa-desc">Post your work</div>
+                </a>
+                <a href="/provider/messages" class="qa-btn" style="text-decoration:none">
+                    <div class="qa-ico"><i data-lucide="message-square" width="20" height="20" style="color:#d97706"></i></div>
+                    <div class="qa-name">Messages</div>
+                    <div class="qa-desc">Contact landlord</div>
+                </a>
+            </div>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-lt)">
+                <a href="/provider/jobs" class="btn-primary" style="width:100%;justify-content:center;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                    <i data-lucide="clipboard-list" width="14" height="14"></i> View Full Job Queue
+                </a>
+            </div>
+        </div>
+
+        <!-- Earnings mini summary -->
+        <div class="card">
+            <div class="card-head">
+                <span class="card-title">Earnings — 2025</span>
+                <a href="/provider/earnings" class="card-action" style="display:inline-flex;align-items:center;gap:4px;">
+                    <i data-lucide="arrow-right" width="12" height="12"></i> Full Report
+                </a>
+            </div>
+            <div class="earn-bar-wrap">
+                <div class="earn-bar" style="height:75%" title="KES 32,000"></div>
+                <div class="earn-bar" style="height:85%" title="KES 36,500"></div>
+                <div class="earn-bar current" style="height:90%" title="KES 38,500"></div>
+                <div class="earn-bar" style="height:20%;opacity:0.3"></div>
+                <div class="earn-bar" style="height:20%;opacity:0.3"></div>
+                <div class="earn-bar" style="height:20%;opacity:0.3"></div>
+            </div>
+            <div class="earn-labels">
+                <div class="earn-lbl">Jan</div>
+                <div class="earn-lbl">Feb</div>
+                <div class="earn-lbl">Mar</div>
+                <div class="earn-lbl">Apr</div>
+                <div class="earn-lbl">May</div>
+                <div class="earn-lbl">Jun</div>
+            </div>
+            <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:12px;">
+                <span style="color:var(--text-3)">YTD Total</span>
+                <strong>KES 107,000</strong>
+            </div>
+        </div>
+
+        <!-- Recent Reviews -->
+        <div class="card">
+            <div class="card-head">
+                <span class="card-title">Recent Reviews</span>
+                <a href="/provider/reviews" class="card-action" style="display:inline-flex;align-items:center;gap:4px;">
+                    <i data-lucide="arrow-right" width="12" height="12"></i> All
+                </a>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:12px">
+
+                <div style="padding-bottom:12px;border-bottom:1px solid var(--border-lt)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                        <span style="font-size:12px;font-weight:600">Sunset Apts A-45</span>
+                        <div class="stars">
+                            <i data-lucide="star" width="12" height="12" class="star-filled" style="fill:#f59e0b;color:#f59e0b"></i>
+                            <i data-lucide="star" width="12" height="12" class="star-filled" style="fill:#f59e0b;color:#f59e0b"></i>
+                            <i data-lucide="star" width="12" height="12" class="star-filled" style="fill:#f59e0b;color:#f59e0b"></i>
+                            <i data-lucide="star" width="12" height="12" class="star-filled" style="fill:#f59e0b;color:#f59e0b"></i>
+                            <i data-lucide="star" width="12" height="12" class="star-filled" style="fill:#f59e0b;color:#f59e0b"></i>
+                        </div>
+                    </div>
+                    <p style="font-size:11.5px;color:var(--text-3);line-height:1.5">"Fixed the leaking tap quickly and left the place clean. Very professional."</p>
+                    <span style="font-size:10px;color:var(--text-3)">Tenant · 2 days ago</span>
+                </div>
+
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                        <span style="font-size:12px;font-weight:600">Greenview B-02</span>
+                        <div class="stars">
+                            <i data-lucide="star" width="12" height="12" style="fill:#f59e0b;color:#f59e0b"></i>
+                            <i data-lucide="star" width="12" height="12" style="fill:#f59e0b;color:#f59e0b"></i>
+                            <i data-lucide="star" width="12" height="12" style="fill:#f59e0b;color:#f59e0b"></i>
+                            <i data-lucide="star" width="12" height="12" style="fill:#f59e0b;color:#f59e0b"></i>
+                            <i data-lucide="star" width="12" height="12" style="color:var(--border)"></i>
+                        </div>
+                    </div>
+                    <p style="font-size:11.5px;color:var(--text-3);line-height:1.5">"Good work on the wiring. Arrived on time and explained everything clearly."</p>
+                    <span style="font-size:10px;color:var(--text-3)">Tenant · 5 days ago</span>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Work Portfolio upload section ── -->
+<div class="card" style="margin-top:0">
+    <div class="card-head">
+        <span class="card-title">
+            <i data-lucide="camera" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:4px;color:#c2410c"></i>
+            Work Portfolio
+        </span>
+        <a href="/providers/{{ user.id }}/portfolio" class="card-action" style="display:inline-flex;align-items:center;gap:4px;" target="_blank">
+            <i data-lucide="eye" width="12" height="12"></i> Tenant View
+        </a>
+    </div>
+    <p style="font-size:12px;color:var(--text-3);margin-bottom:14px">
+        Photos you mark as <strong>public</strong> appear on your portfolio page — tenants can view your work before a job is assigned.
+    </p>
+
+    <!-- Upload form -->
+    <form method="POST" action="/provider/photos/upload" enctype="multipart/form-data">
+        <div class="photo-upload-zone" onclick="document.getElementById('photo-input').click()">
+            <input type="file" id="photo-input" name="photo" accept="image/*" onchange="previewPhoto(this)">
+            <i data-lucide="upload-cloud" width="28" height="28" style="color:#c2410c;margin-bottom:8px"></i>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">Click to upload a work photo</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:4px">JPG, PNG up to 5MB</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+            <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text-3);display:block;margin-bottom:4px">Caption</label>
+                <input type="text" name="caption" placeholder="e.g. Replaced burst pipe, Sunset A-12" style="width:100%;font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text-3);display:block;margin-bottom:4px">Visibility</label>
+                <div class="toggle-wrap" style="margin-top:6px">
+                    <label class="toggle">
+                        <input type="checkbox" name="is_public" value="1" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span style="font-size:12px;color:var(--text-3)">Public (visible to tenants)</span>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top:10px">
+            <button type="submit" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;">
+                <i data-lucide="upload" width="14" height="14"></i> Upload Photo
+            </button>
+        </div>
+    </form>
+
+    <!-- Existing photos grid (replace with real DB loop when ready) -->
+    {% if work_photos %}
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border-lt)">
+        <div style="font-size:12px;font-weight:600;color:var(--text-3);margin-bottom:8px">Your uploaded photos</div>
+        <div class="photo-grid">
+            {% for photo in work_photos %}
+            <div style="position:relative">
+                <img src="/static/uploads/work/{{ photo.image_path }}" alt="{{ photo.caption }}" class="photo-thumb">
+                <span style="position:absolute;top:3px;right:3px;font-size:9px;padding:2px 5px;border-radius:4px;{{ 'background:#dcfce7;color:#166534' if photo.is_public else 'background:#f3f4f6;color:#6b7280' }}">
+                    {{ 'Public' if photo.is_public else 'Private' }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function previewPhoto(input) {
+    if (input.files && input.files[0]) {
+        const zone = input.closest('.photo-upload-zone');
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            zone.style.backgroundImage = 'url(' + e.target.result + ')';
+            zone.style.backgroundSize = 'cover';
+            zone.style.backgroundPosition = 'center';
+            zone.style.minHeight = '100px';
+            zone.querySelectorAll('i, div').forEach(el => el.style.opacity = '0.15');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

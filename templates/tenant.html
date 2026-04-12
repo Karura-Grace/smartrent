@@ -1,0 +1,604 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Tenants · SmartRent{% endblock %}
+{% block role_name %}Landlord{% endblock %}
+{% block page_title %}Tenants{% endblock %}
+{% block page_sub %}Manage Tenants{% endblock %}
+
+{% block extra_styles %}
+.hero { background: var(--purple-dark); }
+
+/* ── Filter Bar ─────────────────────────────────── */
+.filter-bar {
+  display: flex; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+}
+.search-wrap { position: relative; flex: 1; min-width: 260px; }
+.search-wrap svg {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%); color: var(--text-3); pointer-events: none;
+}
+.filter-input {
+  width: 100%; padding: 10px 12px 10px 36px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  font-size: 13px; color: var(--text); background: white;
+  outline: none; transition: all 0.2s; box-sizing: border-box;
+}
+.filter-input:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15,118,110,0.1);
+}
+.filter-select {
+  padding: 10px 14px; border: 1.5px solid var(--border);
+  border-radius: 12px; font-size: 13px; color: var(--text-2);
+  background: white; cursor: pointer; outline: none; min-width: 160px;
+}
+.btn-primary {
+  background: #480454; color: white; border: none;
+  padding: 10px 20px; border-radius: 12px; font-size: 13px;
+  font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+}
+.btn-primary:hover { background: #065f46; transform: translateY(-1px); }
+.btn-outline {
+  background: white; border: 1.5px solid var(--border);
+  padding: 8px 16px; border-radius: 10px;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.btn-outline:hover { border-color: #0f766e; color: #0f766e; }
+
+/* ── Tenant Table ────────────────────────────────── */
+.tenant-table-container {
+  background: white; border: 1px solid var(--border);
+  border-radius: 20px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.tenant-table { width: 100%; border-collapse: collapse; }
+.tenant-table th {
+  text-align: left; padding: 16px 20px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-3); background: var(--gray-50);
+  border-bottom: 1px solid var(--border);
+}
+.tenant-table td {
+  padding: 16px 20px; font-size: 13px; color: var(--text);
+  border-bottom: 1px solid var(--border-lt); vertical-align: middle;
+}
+.tenant-table tbody tr { cursor: pointer; transition: background 0.15s; }
+.tenant-table tbody tr:hover { background: #f0fdfa; }
+.tenant-table tbody tr:last-child td { border-bottom: none; }
+
+.tenant-name-cell { display: flex; align-items: center; gap: 12px; }
+.tenant-avatar {
+  width: 36px; height: 36px; border-radius: 12px;
+  background: linear-gradient(135deg, #30064d, #8f0e9d);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.tenant-info { display: flex; flex-direction: column; }
+.tenant-name { font-weight: 700; color: var(--text); }
+.tenant-email { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+.badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: inline-block; }
+.b-green  { background: #d1fae5; color: #065f46; }
+.b-amber  { background: #fef3c7; color: #92400e; }
+.b-red    { background: #fee2e2; color: #991b1b; }
+
+.status-badge { display: inline-flex; align-items: center; gap: 6px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; }
+.status-dot.active   { background: #22c55e; }
+.status-dot.expiring { background: #f59e0b; }
+.status-dot.inactive { background: #ef4444; }
+
+.rent-mono { font-family: var(--mono); font-weight: 600; color: var(--text); }
+.action-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+.action-btn {
+  padding: 6px 12px; border-radius: 8px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; border: 1px solid var(--border);
+  background: white; color: var(--text-2);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.action-btn:hover { background: #f0fdfa; border-color: #99f6e4; color: #0f766e; }
+.action-btn.danger:hover { background: #fef2f2; border-color: #fecaca; color: #ef4444; }
+
+/* ── Modals ──────────────────────────────────────── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: white; border-radius: 24px;
+  width: 100%; max-width: 560px; max-height: 90vh;
+  overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  animation: modalSlideUp 0.25s ease;
+}
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.modal-header {
+  padding: 24px 28px 16px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-header h3 { font-size: 18px; font-weight: 700; color: var(--text); }
+.modal-close { cursor: pointer; color: var(--text-3); transition: color 0.15s; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 24px 28px; }
+.modal-footer {
+  padding: 16px 28px 24px; border-top: 1px solid var(--border);
+  display: flex; gap: 12px; justify-content: flex-end;
+}
+
+/* ── Form elements ───────────────────────────────── */
+.form-group  { margin-bottom: 18px; }
+.form-label  { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.form-input  {
+  width: 100%; padding: 10px 14px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  font-size: 13px; color: var(--text); background: white;
+  outline: none; transition: all 0.2s; box-sizing: border-box;
+}
+.form-input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,0.1); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── Detail view ─────────────────────────────────── */
+.detail-section { margin-bottom: 24px; }
+.detail-section-title {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.detail-item { display: flex; flex-direction: column; gap: 4px; }
+.detail-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); }
+.detail-value { font-size: 14px; font-weight: 500; color: var(--text); }
+.detail-value.mono { font-family: var(--mono); font-weight: 600; color: #0f766e; }
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 900px) {
+  .tenant-table th:nth-child(3), .tenant-table td:nth-child(3) { display: none; }
+}
+@media (max-width: 700px) {
+  .tenant-table th:nth-child(4), .tenant-table td:nth-child(4) { display: none; }
+  .hero-kpis { grid-template-columns: repeat(2, 1fr); }
+  .form-row  { grid-template-columns: 1fr; gap: 0; }
+  .modal-body { padding: 20px; }
+}
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+  <div class="hero-eye">Tenants</div>
+  <h1>Manage Tenants</h1>
+  <p>View, add, edit and remove tenants across all your properties.</p>
+  <div class="hero-kpis">
+    <div class="hero-kpi">
+      <span class="hero-kpi-label">Total Tenants</span>
+      <span class="hero-kpi-value">{{ tenant | length }}</span>
+    </div>
+    <div class="hero-kpi">
+      <span class="hero-kpi-label">New This Month</span>
+      <span class="hero-kpi-value">{{ stats.new_this_month | default(0) }}</span>
+    </div>
+    <div class="hero-kpi">
+      <span class="hero-kpi-label">Expiring Leases</span>
+      <span class="hero-kpi-value">{{ stats.expiring_leases | default(0) }}</span>
+    </div>
+    <div class="hero-kpi">
+      <span class="hero-kpi-label">Vacancies</span>
+      <span class="hero-kpi-value">{{ stats.vacant | default(0) }}</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{# ── Flash messages ───────────────────────────────── #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div style="margin-bottom:16px; padding:12px 16px; border-radius:10px; font-size:13px;
+           background:{% if category=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
+           color:{% if category=='success' %}#065f46{% else %}#991b1b{% endif %};">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+{# ── Filter bar ───────────────────────────────────── #}
+<div class="filter-bar">
+  <div class="search-wrap">
+    <i data-lucide="search" width="14" height="14"></i>
+    <input type="text" class="filter-input" id="searchInput" placeholder="Search tenant, unit, or phone...">
+  </div>
+  <select class="filter-select" id="propertyFilter">
+    <option value="all">All Properties</option>
+    {% for p in properties %}
+      <option value="{{ p.name | lower }}">{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn-primary" onclick="openModal('addTenantModal')">
+    <i data-lucide="user-plus" width="14" height="14"></i> Add Tenant
+  </button>
+</div>
+
+{# ── Tenant table ─────────────────────────────────── #}
+<div class="tenant-table-container">
+  <table class="tenant-table">
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Unit / Property</th>
+        <th>Contact</th>
+        <th>Rent</th>
+        <th>Lease</th>
+        <th>Status</th>
+        <th style="text-align:right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tenantTableBody">
+      {% if tenant %}
+        {% for t in tenant %}
+        <tr onclick="viewTenantDetails({{ t.id }})">
+          <td>
+            <div class="tenant-name-cell">
+              <div class="tenant-avatar">{{ t.name[:2].upper() if t.name else 'N/A' }}</div>
+              <div class="tenant-info">
+                <div class="tenant-name">{{ t.name or 'Unnamed' }}</div>
+                <div class="tenant-email">{{ t.email or '—' }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div>{{ t.unit_number or '—' }}</div>
+            <div style="font-size:11px; color:var(--text-3);">{{ t.property_name or '—' }}</div>
+          </td>
+          <td>{{ t.phone or '—' }}</td>
+          <td class="rent-mono">KES {{ "{:,.0f}".format(t.rent or 0) }}</td>
+          <td style="font-size:12px;">
+            {{ t.lease_start or '—' }}<br>
+            <small style="color:var(--text-3);">{{ t.lease_end or '—' }}</small>
+          </td>
+          <td>
+            <div class="status-badge">
+              <span class="status-dot {{ t.status_color or 'active' }}"></span>
+              <span class="badge {% if t.status_color == 'active' %}b-green{% elif t.status_color == 'expiring' %}b-amber{% else %}b-red{% endif %}">
+                {{ t.status or 'Active' }}
+              </span>
+            </div>
+          </td>
+          <td style="text-align:right;">
+            <div class="action-buttons" onclick="event.stopPropagation()">
+              <button class="action-btn" onclick="openEditModal({{ t.id }})">
+                <i data-lucide="pencil" width="12" height="12"></i> Edit
+              </button>
+              <form method="POST" action="{{ url_for('landlord.delete_tenant', tenant_id=t.id) }}"
+                    onsubmit="return confirm('Remove {{ t.name | e }}? This cannot be undone.');"
+                    style="display:inline;">
+                <button class="action-btn danger" type="submit">
+                  <i data-lucide="trash-2" width="12" height="12"></i> Remove
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center; padding:40px; color:var(--text-3);">
+            No tenants found.
+            <button class="btn-primary" onclick="openModal('addTenantModal')" style="margin-left:8px;">
+              Add first tenant
+            </button>
+          </td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+
+{# ══════════════════════════════════════════════════ #}
+{#   MODALS                                           #}
+{# ══════════════════════════════════════════════════ #}
+
+{# ── Add Tenant Modal ─────────────────────────────── #}
+<div class="modal-overlay" id="addTenantModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add New Tenant</h3>
+      <div class="modal-close" onclick="closeModal('addTenantModal')">
+        <i data-lucide="x" width="20" height="20"></i>
+      </div>
+    </div>
+    <form method="POST" action="{{ url_for('landlord.add_tenant') }}">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" name="name" class="form-input" required placeholder="e.g. John Doe">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone *</label>
+            <input type="tel" name="phone" class="form-input" required placeholder="e.g. 0712 345 678">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-input" placeholder="optional">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Property *</label>
+            <select name="property_id" class="form-input" required>
+              <option value="">— Select Property —</option>
+              {% for p in properties %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit *</label>
+            <input type="text" name="unit" class="form-input" required placeholder="e.g. A-101">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Lease Start</label>
+            <input type="date" name="lease_start" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Lease End</label>
+            <input type="date" name="lease_end" class="form-input">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monthly Rent (KES) *</label>
+          <input type="number" name="amount" class="form-input" required min="0" placeholder="e.g. 18000">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('addTenantModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="user-plus" width="14" height="14"></i> Add Tenant
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+{# ── View Tenant Modal ────────────────────────────── #}
+<div class="modal-overlay" id="viewTenantModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Tenant Details</h3>
+      <div class="modal-close" onclick="closeModal('viewTenantModal')">
+        <i data-lucide="x" width="20" height="20"></i>
+      </div>
+    </div>
+    <div class="modal-body" id="viewTenantContent"></div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('viewTenantModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+
+{# ── Edit Tenant Modal ────────────────────────────── #}
+<div class="modal-overlay" id="editTenantModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Edit Tenant</h3>
+      <div class="modal-close" onclick="closeModal('editTenantModal')">
+        <i data-lucide="x" width="20" height="20"></i>
+      </div>
+    </div>
+    <form method="POST" id="editTenantForm">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" name="name" id="editName" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone *</label>
+            <input type="tel" name="phone" id="editPhone" class="form-input" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" id="editEmail" class="form-input">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Property</label>
+            <select name="property_id" id="editProperty" class="form-input">
+              <option value="">— Select Property —</option>
+              {% for p in properties %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit</label>
+            <input type="text" name="unit" id="editUnit" class="form-input">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Lease Start</label>
+            <input type="date" name="lease_start" id="editLeaseStart" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Lease End</label>
+            <input type="date" name="lease_end" id="editLeaseEnd" class="form-input">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monthly Rent (KES)</label>
+          <input type="number" name="amount" id="editRent" class="form-input" min="0">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('editTenantModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="check" width="14" height="14"></i> Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════ #}
+{#   JAVASCRIPT                                       #}
+{# ══════════════════════════════════════════════════ #}
+<script>
+// ── Tenant data from backend (real DB data only) ─
+const tenantData = {{ tenant | tojson | safe }};
+// Sanity check — no hardcoded fallbacks, all data is live from DB
+
+// ── Modal helpers ────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+  if (window.lucide) lucide.createIcons();
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('show');
+  });
+});
+
+// ── View tenant details ──────────────────────────
+function viewTenantDetails(tenantId) {
+  const t = tenantData.find(x => x.id == tenantId);
+  if (!t) return;
+
+  const fmtDate = val => {
+    if (!val || val === '—') return '—';
+    const d = new Date(val);
+    return isNaN(d) ? val : d.toLocaleDateString('en-KE', { year:'numeric', month:'long', day:'numeric' });
+  };
+
+  document.getElementById('viewTenantContent').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">Personal Information</div>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="detail-label">Full Name</span>
+          <span class="detail-value">${t.name || '—'}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Phone</span>
+          <span class="detail-value">${t.phone || '—'}</span>
+        </div>
+        <div class="detail-item" style="grid-column:1/-1;">
+          <span class="detail-label">Email</span>
+          <span class="detail-value">${t.email || '—'}</span>
+        </div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Property Details</div>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="detail-label">Property</span>
+          <span class="detail-value">${t.property_name || '—'}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Unit Number</span>
+          <span class="detail-value">${t.unit_number || '—'}</span>
+        </div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Lease &amp; Payment</div>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="detail-label">Lease Start</span>
+          <span class="detail-value">${fmtDate(t.lease_start)}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Lease End</span>
+          <span class="detail-value">${fmtDate(t.lease_end)}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Monthly Rent</span>
+          <span class="detail-value mono">KES ${Number(t.rent || 0).toLocaleString()}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Status</span>
+          <span class="detail-value">
+            <span class="badge ${t.status_color === 'active' ? 'b-green' : t.status_color === 'expiring' ? 'b-amber' : 'b-red'}">
+              ${t.status || 'Active'}
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+  `;
+  openModal('viewTenantModal');
+}
+
+// ── Open edit modal and populate ─────────────────
+function openEditModal(tenantId) {
+  const t = tenantData.find(x => x.id == tenantId);
+  if (!t) return;
+
+  // Point the form to the correct edit URL
+  document.getElementById('editTenantForm').action = `/tenants/edit/${t.id}`;
+
+  document.getElementById('editName').value       = t.name        || '';
+  document.getElementById('editPhone').value      = t.phone       || '';
+  document.getElementById('editEmail').value      = t.email       || '';
+  document.getElementById('editUnit').value       = t.unit_number || '';
+  document.getElementById('editLeaseStart').value = t.lease_start !== '—' ? t.lease_start : '';
+  document.getElementById('editLeaseEnd').value   = t.lease_end   !== '—' ? t.lease_end   : '';
+  document.getElementById('editRent').value       = t.rent        || 0;
+
+  // Select the correct property option
+  const sel = document.getElementById('editProperty');
+  [...sel.options].forEach(o => { o.selected = (o.text === t.property_name); });
+
+  openModal('editTenantModal');
+}
+
+// ── Search & filter ──────────────────────────────
+document.getElementById('searchInput').addEventListener('input', filterTenants);
+document.getElementById('propertyFilter').addEventListener('change', filterTenants);
+
+function filterTenants() {
+  const q    = document.getElementById('searchInput').value.toLowerCase();
+  const prop = document.getElementById('propertyFilter').value.toLowerCase();
+
+  document.querySelectorAll('#tenantTableBody tr').forEach(row => {
+    const name     = row.querySelector('.tenant-name')?.innerText.toLowerCase()  || '';
+    const email    = row.querySelector('.tenant-email')?.innerText.toLowerCase() || '';
+    const phone    = row.cells[2]?.innerText.toLowerCase() || '';
+    const unit     = row.cells[1]?.querySelector('div:first-child')?.innerText.toLowerCase() || '';
+    const propName = row.cells[1]?.querySelector('div:last-child')?.innerText.toLowerCase()  || '';
+
+    const matchSearch = !q || name.includes(q) || email.includes(q) || phone.includes(q) || unit.includes(q);
+    const matchProp   = prop === 'all' || propName.includes(prop);
+
+    row.style.display = matchSearch && matchProp ? '' : 'none';
+  });
+}
+
+// ── Init Lucide icons on load ────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,470 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Rent Collection · SmartRent{% endblock %}
+{% block role_name %}Landlord{% endblock %}
+{% block page_title %}Rent Collection{% endblock %}
+{% block page_sub %}{{ stats.month | default('This Month') }}{% endblock %}
+
+{% block extra_styles %}
+.hero { background: linear-gradient(135deg, #0f766e 0%, #065f46 100%); }
+.btn-primary { background: #0f766e; }
+.btn-primary:hover { background: #065f46; box-shadow: 0 4px 12px rgba(15,118,110,0.35); }
+
+/* Filter bar */
+.filter-bar {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 20px;
+}
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap svg {
+  position: absolute; left: 11px; top: 50%;
+  transform: translateY(-50%); color: var(--text-3); pointer-events: none;
+}
+.filter-input {
+  width: 100%; padding: 9px 14px 9px 36px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-family: inherit; font-size: 13px; color: var(--text);
+  background: var(--surface); outline: none; box-sizing: border-box;
+  transition: border-color 0.13s;
+}
+.filter-input:focus { border-color: #0f766e; }
+.filter-select {
+  padding: 9px 14px; border: 1.5px solid var(--border);
+  border-radius: 8px; font-family: inherit;
+  font-size: 13px; color: var(--text-2);
+  background: var(--surface); cursor: pointer; outline: none;
+}
+.filter-select:focus { border-color: #0f766e; }
+
+/* Progress bar */
+.progress-bar-wrap {
+  background: var(--border-lt); border-radius: 99px;
+  height: 8px; overflow: hidden; margin-top: 8px;
+}
+.progress-bar {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #0f766e, #10b981);
+  transition: width 0.6s ease;
+}
+
+/* Table action buttons */
+.tbl-actions { display: flex; gap: 6px; }
+.tbl-btn {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+  font-family: inherit; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.13s;
+  background: var(--surface); color: var(--text-2);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.tbl-btn:hover           { background: var(--bg); color: var(--text); }
+.tbl-btn.success:hover   { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.tbl-btn.warn:hover      { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+.tbl-btn.danger:hover    { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 500;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border-radius: 16px;
+  padding: 28px 30px; width: 100%; max-width: 480px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+  max-height: 90vh; overflow-y: auto;
+  animation: slideUp 0.22s ease both;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform:none; opacity:1; } }
+.modal-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.modal-sub   { font-size: 13px; color: var(--text-3); margin-bottom: 20px; }
+.modal-footer { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
+.form-input {
+  width: 100%; padding: 9px 13px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-family: inherit; font-size: 13.5px; color: var(--text);
+  background: var(--surface); outline: none;
+  transition: border-color 0.13s; box-sizing: border-box;
+}
+.form-input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,0.1); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+  <div class="hero-eye">Rent Collection</div>
+  <h1>Rent Collection</h1>
+  <p>Track and manage all tenant rent payments.</p>
+  <div class="hero-kpis">
+    <div class="hero-kpi">
+      <span class="hero-kpi-label">Collected</span>
+      <span class="hero-kpi-value">KES {{ "{:,.0f}".format(stats.collected) }}</span>
+    </div>
+    <div class="hero-kpi">
+      <span class="hero-kpi-label">Outstanding</span>
+      <span class="hero-kpi-value">KES {{ "{:,.0f}".format(stats.outstanding) }}</span>
+    </div>
+    <div class="hero-kpi">
+      <span class="hero-kpi-label">Units Paid</span>
+      <span class="hero-kpi-value">{{ stats.units_paid }} / {{ stats.total_units }}</span>
+    </div>
+    <div class="hero-kpi">
+      <span class="hero-kpi-label">Collection Rate</span>
+      <span class="hero-kpi-value">{{ stats.collection_rate }}%</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{# ── Flash messages ───────────────────────────────── #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div style="margin-bottom:16px; padding:12px 16px; border-radius:10px; font-size:13px;
+           background:{% if category=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
+           color:{% if category=='success' %}#065f46{% else %}#991b1b{% endif %};">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+{# ── Stat cards ───────────────────────────────────── #}
+<div class="stats-grid" style="margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-top">
+      <div class="stat-ico ico-green"><i data-lucide="check-circle" width="18" height="18" style="color:#15803d"></i></div>
+      <span class="stat-trend up">{{ stats.units_paid }} units</span>
+    </div>
+    <div class="stat-val">KES {{ "{:,.0f}".format(stats.collected) }}</div>
+    <div class="stat-name">Total Collected</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" style="width:{{ stats.collection_rate }}%"></div>
+    </div>
+    <div class="stat-hint" style="margin-top:6px;">{{ stats.collection_rate }}% collection rate</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div class="stat-ico ico-red"><i data-lucide="clock" width="18" height="18" style="color:#dc2626"></i></div>
+      <span class="stat-trend down">{{ stats.total_units - stats.units_paid }} units</span>
+    </div>
+    <div class="stat-val">KES {{ "{:,.0f}".format(stats.outstanding) }}</div>
+    <div class="stat-name">Outstanding</div>
+    <div class="stat-hint">{{ stats.overdue_count }} overdue</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div class="stat-ico ico-orange"><i data-lucide="alert-triangle" width="18" height="18" style="color:#d97706"></i></div>
+      <span class="stat-trend down">Action needed</span>
+    </div>
+    <div class="stat-val">{{ stats.overdue_count }}</div>
+    <div class="stat-name">Overdue Tenants</div>
+    <div class="stat-hint">Send reminders below</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div class="stat-ico ico-blue"><i data-lucide="users" width="18" height="18" style="color:#2563eb"></i></div>
+      <span class="stat-trend flat">Total</span>
+    </div>
+    <div class="stat-val">{{ stats.total_units }}</div>
+    <div class="stat-name">Total Payment Records</div>
+    <div class="stat-hint">All tenants tracked</div>
+  </div>
+</div>
+
+{# ── Filter bar ───────────────────────────────────── #}
+<div class="filter-bar">
+  <div class="search-wrap">
+    <i data-lucide="search" width="14" height="14"></i>
+    <input type="text" class="filter-input" id="searchInput"
+           placeholder="Search tenant or unit..." oninput="filterTable()">
+  </div>
+  <select class="filter-select" id="statusFilter" onchange="filterTable()">
+    <option value="">All Statuses</option>
+    <option value="Paid">Paid</option>
+    <option value="Pending">Pending</option>
+    <option value="Overdue">Overdue</option>
+  </select>
+  <select class="filter-select" id="propertyFilter" onchange="filterTable()">
+    <option value="">All Properties</option>
+    {% for p in properties %}
+      <option value="{{ p.name | lower }}">{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn-primary" onclick="openModal('recordModal')">
+    <i data-lucide="plus" width="14" height="14"></i> Record Payment
+  </button>
+</div>
+
+{# ── Main table ───────────────────────────────────── #}
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">All Payment Records</span>
+    <button class="card-action" onclick="sendAllReminders()">
+      <i data-lucide="send" width="12" height="12" style="display:inline;margin-right:3px;vertical-align:-1px;"></i>
+      Send Reminders
+    </button>
+  </div>
+  <table class="tbl" id="rentTable">
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Unit</th>
+        <th>Property</th>
+        <th>Amount</th>
+        <th>Paid On</th>
+        <th>Method</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="rentTableBody">
+      {% if payments %}
+        {% for p in payments %}
+        <tr data-status="{{ p.status }}" data-property="{{ p.property_name | lower }}">
+          <td>
+            <strong>{{ p.full_name or '—' }}</strong>
+            <div style="font-size:11px; color:var(--text-3);">{{ p.phone or '—' }}</div>
+          </td>
+          <td>{{ p.unit or '—' }}</td>
+          <td>{{ p.property_name or '—' }}</td>
+          <td><strong>KES {{ "{:,.0f}".format(p.amount) }}</strong></td>
+          <td>{{ p.paid_on or '—' }}</td>
+          <td>
+            {% if p.method and p.method != '—' %}
+              <span class="badge b-green">{{ p.method }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="badge
+              {% if p.status == 'Paid' %}b-green
+              {% elif p.status == 'Pending' %}b-amber
+              {% else %}b-red{% endif %}">
+              {{ p.status }}
+            </span>
+          </td>
+          <td>
+            <div class="tbl-actions">
+              {% if p.status == 'Paid' %}
+                <button class="tbl-btn"
+                  onclick="viewReceipt('{{ p.full_name | e }}', {{ p.amount }}, '{{ p.paid_on }}', '{{ p.method }}', '{{ p.reference or '' }}')">
+                  <i data-lucide="receipt" width="11" height="11"></i> Receipt
+                </button>
+              {% else %}
+                <form method="POST"
+                      action="{{ url_for('landlord.update_payment_status', payment_id=p.userid) }}"
+                      style="display:inline;" id="markForm{{ p.userid }}">
+                  <input type="hidden" name="status" value="Paid">
+                  <button class="tbl-btn success" type="submit"
+                          onclick="return confirm('Mark {{ p.full_name | e }} as paid?');">
+                    <i data-lucide="check" width="11" height="11"></i> Mark Paid
+                  </button>
+                </form>
+                <button class="tbl-btn warn"
+                        onclick="sendReminder('{{ p.full_name | e }}', '{{ p.phone }}')">
+                  <i data-lucide="send" width="11" height="11"></i> Remind
+                </button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="8" style="text-align:center; padding:40px; color:var(--text-3);">
+            No payment records found.
+            <button class="btn-primary" onclick="openModal('recordModal')" style="margin-left:8px;">
+              Record first payment
+            </button>
+          </td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+
+{# ══════════════════════════════════════════════════ #}
+{#   RECORD PAYMENT MODAL                            #}
+{# ══════════════════════════════════════════════════ #}
+<div class="modal-overlay" id="recordModal">
+  <div class="modal">
+    <div class="modal-title">Record Manual Payment</div>
+    <div class="modal-sub">Record a cash or bank transfer payment for a tenant.</div>
+    <form method="POST" action="{{ url_for('landlord.record_payment') }}">
+      <div class="form-group">
+        <label class="form-label">Select Tenant (auto-fill)</label>
+        <select class="form-input" id="tenantSelect" onchange="fillTenantInfo(this)">
+          <option value="">— Select from existing tenants —</option>
+          {% for t in tenants %}
+            <option value="{{ t.id }}"
+                    data-name="{{ t.name | e }}"
+                    data-unit="{{ t.unit or '' }}"
+                    data-phone="{{ t.phone or '' }}"
+                    data-property="{{ t.property_id or '' }}">
+              {{ t.name }} — {{ t.unit or 'No unit' }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" name="full_name" id="payFullName" class="form-input"
+                 required placeholder="e.g. Jane Mwangi">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone No</label>
+          <input type="text" name="phone" id="payPhone" class="form-input"
+                 placeholder="e.g. 0712 345 678">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unit</label>
+          <input type="text" name="unit" id="payUnit" class="form-input" placeholder="e.g. A-12">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Property</label>
+          <select name="property_id" id="payProperty" class="form-input">
+            <option value="">— Select —</option>
+            {% for p in properties %}
+              <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (KES) *</label>
+        <input type="number" name="amount" class="form-input"
+               required min="0" placeholder="e.g. 18000">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Payment Method</label>
+          <select name="method" class="form-input">
+            <option>Cash</option>
+            <option>M-Pesa Manual</option>
+            <option>Bank Transfer</option>
+            <option>Cheque</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date Received</label>
+          <input type="date" name="paid_on" class="form-input">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reference / Receipt No.</label>
+        <input type="text" name="reference" class="form-input"
+               placeholder="e.g. CASH-2025-031">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('recordModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="check" width="14" height="14"></i> Save Payment
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Receipt modal ────────────────────────────────── #}
+<div class="modal-overlay" id="receiptModal">
+  <div class="modal">
+    <div class="modal-title">Payment Receipt</div>
+    <div class="modal-sub">Official payment confirmation</div>
+    <div id="receiptContent" style="background:var(--bg); border-radius:10px; padding:18px; font-size:13px; line-height:2;">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('receiptModal')">Close</button>
+      <button class="btn-primary" onclick="window.print()">
+        <i data-lucide="printer" width="14" height="14"></i> Print
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* ── Modal helpers ──────────────────────────────── */
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+  if (window.lucide) lucide.createIcons();
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); });
+});
+
+/* ── Auto-fill from tenant dropdown ─────────────── */
+function fillTenantInfo(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) return;
+  document.getElementById('payFullName').value = opt.dataset.name   || '';
+  document.getElementById('payUnit').value     = opt.dataset.unit    || '';
+  document.getElementById('payPhone').value    = opt.dataset.phone   || '';
+  const propSel = document.getElementById('payProperty');
+  [...propSel.options].forEach(o => {
+    o.selected = (o.value === opt.dataset.property);
+  });
+}
+
+/* ── Table filter ───────────────────────────────── */
+function filterTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  const prop   = document.getElementById('propertyFilter').value.toLowerCase();
+
+  document.querySelectorAll('#rentTableBody tr').forEach(row => {
+    const text      = row.textContent.toLowerCase();
+    const rowStatus = row.dataset.status || '';
+    const rowProp   = row.dataset.property || '';
+
+    const matchSearch = !search || text.includes(search);
+    const matchStatus = !status || rowStatus === status;
+    const matchProp   = !prop   || rowProp.includes(prop);
+
+    row.style.display = matchSearch && matchStatus && matchProp ? '' : 'none';
+  });
+}
+
+/* ── View receipt ───────────────────────────────── */
+function viewReceipt(name, amount, paidOn, method, ref) {
+  document.getElementById('receiptContent').innerHTML = `
+    <div style="text-align:center; margin-bottom:12px;">
+      <div style="font-size:18px; font-weight:800; color:var(--text);">SmartRent</div>
+      <div style="font-size:11px; color:var(--text-3);">Official Payment Receipt</div>
+    </div>
+    <hr style="border:none; border-top:1px solid var(--border); margin:10px 0;">
+    <div><span style="color:var(--text-3); font-size:11px;">TENANT</span><br><strong>${name}</strong></div>
+    <div><span style="color:var(--text-3); font-size:11px;">AMOUNT</span><br><strong style="color:#0f766e;">KES ${Number(amount).toLocaleString()}</strong></div>
+    <div><span style="color:var(--text-3); font-size:11px;">DATE</span><br><strong>${paidOn}</strong></div>
+    <div><span style="color:var(--text-3); font-size:11px;">METHOD</span><br><strong>${method}</strong></div>
+    <div><span style="color:var(--text-3); font-size:11px;">REFERENCE</span><br><strong>${ref || 'N/A'}</strong></div>
+    <hr style="border:none; border-top:1px solid var(--border); margin:10px 0;">
+    <div style="text-align:center; font-size:11px; color:var(--text-3);">Generated by SmartRent · ${new Date().toLocaleDateString()}</div>
+  `;
+  openModal('receiptModal');
+}
+
+/* ── Reminders (SMS integration placeholder) ────── */
+function sendReminder(name, phone) {
+  alert(`Reminder sent to ${name} (${phone || 'no phone'}) via SMS.`);
+}
+function sendAllReminders() {
+  alert('Reminders sent to all pending and overdue tenants.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

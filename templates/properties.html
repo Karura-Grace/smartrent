@@ -1,0 +1,752 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Properties · SmartRent{% endblock %}
+{% block role_name %}Landlord{% endblock %}
+{% block page_title %}Properties{% endblock %}
+{% block page_sub %}Manage Your Portfolio{% endblock %}
+
+{% block extra_styles %}
+
+
+
+
+/* ── Accent overrides ─────────────────────────────── */
+.hero { background: linear-gradient(135deg, #6e2d8f 0%, #8c0b9f 100%); }
+.nav-item.active  { background: #f0fdfa; color: #0f766e; }
+.nav-item.active::before { background: #0f766e; }
+.nav-item:hover   { background: #f0fdfa; color: #0f766e; }
+.btn-primary      { background: #610f76; }
+.btn-primary:hover{ background: #065f46; }
+.card-action      { color: #0f766e; background: #f0fdfa; }
+.card-action:hover{ background: #ccfbf1; }
+
+/* ── Layout ───────────────────────────────────────── */
+.toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
+}
+.toolbar-left { display: flex; gap: 8px; align-items: center; }
+.search-box {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; background: var(--surface);
+    font-size: 13px; color: var(--text-2);
+}
+.search-box input {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 13px; color: var(--text); width: 180px;
+}
+
+/* ── Property grid — 3-col card layout ───────────── */
+.prop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px; margin-bottom: 28px;
+}
+
+/* ── Property card ────────────────────────────────── */
+.prop-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: box-shadow 0.18s, transform 0.15s;
+    display: flex; flex-direction: column;
+}
+.prop-card:hover {
+    box-shadow: var(--sh);
+    transform: translateY(-3px);
+}
+
+/* Photo banner */
+.prop-photo {
+    height: 150px; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #0f766e, #10b981);
+    display: flex; align-items: center; justify-content: center;
+}
+.prop-photo img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.prop-photo-fallback {
+    font-size: 44px; line-height: 1; position: relative; z-index: 1;
+}
+.prop-photo-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35));
+}
+.prop-status-badge {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 99px; z-index: 2;
+}
+.badge-active   { background: #d1fae5; color: #065f46; }
+.badge-inactive { background: #fee2e2; color: #991b1b; }
+
+.prop-type-badge {
+    position: absolute; top: 10px; left: 10px;
+    font-size: 10px; font-weight: 600; padding: 3px 8px;
+    border-radius: 99px; background: rgba(0,0,0,0.45);
+    color: #fff; z-index: 2;
+}
+
+/* Card body */
+.prop-body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+.prop-name    { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; }
+.prop-address { font-size: 12px; color: var(--text-3); display: flex; align-items: center; gap: 4px; margin: 0; }
+
+/* Mini stats row */
+.prop-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px; margin-top: 4px;
+}
+.prop-stat {
+    text-align: center; background: var(--bg);
+    border-radius: 8px; padding: 8px 4px;
+}
+.prop-stat-val { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1; }
+.prop-stat-lbl { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+.val-green { color: #480359; }
+.val-red   { color: #dc2626; }
+.val-gray  { color: var(--text-3); }
+
+/* Rent row */
+.prop-rent {
+    font-size: 12px; color: var(--text-2);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; background: var(--bg); border-radius: 8px; margin-top: auto;
+}
+.prop-rent strong { font-size: 14px; color: #0f766e; }
+
+/* Card footer buttons */
+.prop-footer {
+    display: flex; gap: 6px; padding: 12px 18px 14px;
+    border-top: 1px solid var(--border-lt);
+}
+.prop-btn {
+    flex: 1; padding: 7px 6px;
+    border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface); font-family: inherit;
+    font-size: 11px; font-weight: 600; color: var(--text-2);
+    cursor: pointer; transition: all 0.13s;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.prop-btn:hover        { background: #f0fdfa; color: #570f76; border-color: #99f6e4; }
+.prop-btn.btn-danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+/* ── Add property card ────────────────────────────── */
+.add-card {
+    border: 2px dashed var(--border);
+    background: var(--bg);
+    border-radius: 14px;
+    min-height: 280px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px; cursor: pointer;
+    transition: all 0.18s; color: var(--text-3);
+}
+.add-card:hover { border-color: #5e0f76; background: #f0fdfa; color: #0f766e; }
+.add-card-ico {
+    width: 52px; height: 52px; background: #f0fdfa;
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; transition: background 0.18s;
+}
+.add-card:hover .add-card-ico { background: #ccfbf1; }
+.add-card-txt { font-size: 14px; font-weight: 700; }
+.add-card-sub { font-size: 12px; }
+
+/* ── Units panel (inline below grid) ─────────────── */
+#units-panel {
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+}
+.units-panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; background: #f0fdfa; border-bottom: 1px solid var(--border);
+}
+.units-panel-title { font-size: 14px; font-weight: 700; color: #4c065f; }
+.units-panel-close { font-size: 12px; color: var(--text-3); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.units-panel-close:hover { background: #ccfbf1; color: #0f766e; }
+
+/* ── Modal ────────────────────────────────────────── */
+.modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 999;
+    align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+    background: var(--surface); border-radius: 16px;
+    padding: 28px 30px; width: 100%; max-width: 520px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+    max-height: 90vh; overflow-y: auto;
+    animation: slideUp 0.22s ease both;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.modal-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.modal-sub   { font-size: 13px; color: var(--text-3); margin-bottom: 22px; }
+.modal-footer { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+/* Form elements */
+.form-group  { margin-bottom: 14px; }
+.form-row    { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-label  { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
+.form-input  {
+    width: 100%; padding: 9px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-family: inherit; font-size: 13.5px;
+    color: var(--text); background: var(--surface); outline: none;
+    transition: border-color 0.13s; box-sizing: border-box;
+}
+.form-input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,0.1); }
+textarea.form-input { resize: vertical; min-height: 72px; }
+
+/* Image upload drop zone */
+.img-upload-zone {
+    border: 2px dashed var(--border); border-radius: 10px;
+    padding: 20px; text-align: center; cursor: pointer;
+    transition: all 0.15s; position: relative;
+}
+.img-upload-zone:hover, .img-upload-zone.dragover { border-color: #0f766e; background: #f0fdfa; }
+.img-upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.img-upload-preview { width: 100%; max-height: 140px; object-fit: cover; border-radius: 7px; display: none; }
+.img-upload-hint { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+
+/* ── Fix image display ───────────────────────────── */
+.prop-photo-img {
+    width: 100% !important;      /* Fill width */
+    height: 100% !important;     /* Fill height */
+    object-fit: cover;           /* Crop to fit without distortion */
+    display: block !important;   /* Ensure it's visible */
+}
+
+
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Properties</div>
+    <h1>Your Portfolio</h1>
+    <p>Manage all your properties and units from one place.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Properties</span>
+            <span class="hero-kpi-value">{{ stats.total_props or 0 }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Total Units</span>
+            <span class="hero-kpi-value">{{ stats.total_units or 0 }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Occupied</span>
+            <span class="hero-kpi-value">{{ stats.occupied or 0 }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Vacant</span>
+            <span class="hero-kpi-value">{{ stats.vacant or 0 }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{# ── Flash messages ───────────────────────────────── #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}" style="margin-bottom:16px; padding:12px 16px; border-radius:10px; font-size:13px;
+           background:{% if category=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
+           color:{% if category=='success' %}#065f46{% else %}#991b1b{% endif %};">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+{# ── Toolbar ──────────────────────────────────────── #}
+<div class="toolbar">
+    <div class="toolbar-left">
+        <div class="search-box">
+            <i data-lucide="search" width="14" height="14"></i>
+            <input type="text" id="searchInput" placeholder="Search properties…" oninput="filterCards()">
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+        <button class="btn-outline" onclick="openModal('addUnitModal')">
+            <i data-lucide="plus-square" width="14" height="14"></i> Add Unit
+        </button>
+        <button class="btn-primary" onclick="openModal('addPropModal')">
+            <i data-lucide="plus" width="14" height="14"></i> Add Property
+        </button>
+    </div>
+</div>
+
+{# ── Units panel (hidden by default) ─────────────── #}
+<div id="units-panel" style="display:none;">
+    <div class="units-panel-head">
+        <span class="units-panel-title" id="units-panel-title">Units</span>
+        <button class="units-panel-close" onclick="closeUnitsPanel()">
+            <i data-lucide="x" width="13" height="13"></i> Close
+        </button>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="tbl" id="units-table">
+            <thead>
+                <tr>
+                    <th>Unit</th><th>Floor</th><th>Type</th>
+                    <th>Tenant</th><th>Rent (KES)</th><th>Status</th><th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="units-tbody">
+                <tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px;">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ── Property grid ────────────────────────────────── #}
+<div class="prop-grid" id="propGrid">
+
+    {% for p in properties %}
+
+    <div class="prop-card" data-name="{{ p.name|lower }}">
+
+        {# Photo banner #}
+        <div class="prop-photo" style="
+            {% if not p.image %}background: {{ ['linear-gradient(135deg,#0f766e,#10b981)',
+                'linear-gradient(135deg,#1d4ed8,#60a5fa)',
+                'linear-gradient(135deg,#7c3aed,#c084fc)',
+                'linear-gradient(135deg,#ea580c,#fbbf24)'][loop.index0 % 4] }};{% endif %}
+        ">
+            {% if p.image %}
+                <img src="{{ url_for('static', filename='uploads/properties/' + p.image) }}" 
+     alt="Property Image" 
+     class="prop-photo-img">
+            {% else %}
+                <div class="prop-photo-fallback">
+                    {% if p.type == 'Apartments' %}🏢
+                    {% elif p.type == 'Townhouse' %}🏘️
+                    {% elif p.type == 'Commercial' %}🏬
+                    {% else %}🏠{% endif %}
+                </div>
+            {% endif %}
+            <div class="prop-photo-overlay"></div>
+            <span class="prop-type-badge">{{ p.type }}</span>
+            <span class="prop-status-badge {% if p.status == 'Active' %}badge-active{% else %}badge-inactive{% endif %}">
+                {{ p.status }}
+            </span>
+        </div>
+
+        {# Card body #}
+        <div class="prop-body">
+            <div class="prop-name">{{ p.name }}</div>
+            <div class="prop-address">
+                <i data-lucide="map-pin" width="11" height="11"></i>
+                {{ p.address }}{% if p.city %}, {{ p.city }}{% endif %}
+            </div>
+
+            <div class="prop-stats">
+                <div class="prop-stat">
+                    <div class="prop-stat-val">{{ p.unit_count or p.total_units }}</div>
+                    <div class="prop-stat-lbl">Units</div>
+                </div>
+                <div class="prop-stat">
+                    <div class="prop-stat-val val-green">{{ p.occupied_count or 0 }}</div>
+                    <div class="prop-stat-lbl">Occupied</div>
+                </div>
+                <div class="prop-stat">
+                    <div class="prop-stat-val {% if p.vacant_count %}val-red{% else %}val-gray{% endif %}">
+                        {{ p.vacant_count or 0 }}
+                    </div>
+                    <div class="prop-stat-lbl">Vacant</div>
+                </div>
+            </div>
+
+            <div class="prop-rent">
+                <span>Base rent</span>
+                <strong>KES {{ '{:,.0f}'.format(p.base_rent) }}</strong>
+            </div>
+        </div>
+
+        {# Footer actions #}
+        <div class="prop-footer">
+            <button class="prop-btn"
+                onclick="loadUnits({{ p.id }}, '{{ p.name }}')">
+                <i data-lucide="list" width="12" height="12"></i> Units
+            </button>
+            <button class="prop-btn"
+                onclick="openEditModal({{ p.id }}, '{{ p.name|e }}', '{{ p.address|e }}', '{{ p.city|e }}', '{{ p.type }}', {{ p.total_units }}, {{ p.base_rent }}, '{{ p.status }}', '{{ p.description|default('')|e }}')">
+                <i data-lucide="pencil" width="12" height="12"></i> Edit
+            </button>
+            <form method="POST" action="{{ url_for('properties.delete', property_id=p.id) }}"
+                  onsubmit="return confirm('Delete {{ p.name }}? This cannot be undone.');"
+                  style="flex:1; display:contents;">
+                <button class="prop-btn btn-danger" type="submit">
+                    <i data-lucide="trash-2" width="12" height="12"></i> Delete
+                </button>
+            </form>
+        </div>
+
+    </div>
+    {% else %}
+    <div style="grid-column:1/-1; text-align:center; color:var(--text-3); padding:48px 0; font-size:14px;">
+        No properties yet. Add your first one below.
+    </div>
+    {% endfor %}
+
+{# ══════════════════════════════════════════════════ #}
+{#   MODALS                                           #}
+{# ══════════════════════════════════════════════════ #}
+
+{# ── Add Property modal ───────────────────────────── #}
+<div class="modal-overlay" id="addPropModal">
+  <div class="modal">
+    <div class="modal-title">Add New Property</div>
+    <div class="modal-sub">Fill in the details. You can add units after saving.</div>
+<form method="POST" action="{{ url_for('properties.add') }}" enctype="multipart/form-data">
+
+      {# Photo upload #}
+      <div class="form-group">
+        <label class="form-label">Property Photo</label>
+        <div class="img-upload-zone" id="addPhotoZone"
+             ondragover="event.preventDefault();this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="handleDrop(event,'addPhotoZone','addPhotoPreview','addPhotoInput')">
+          <input type="file" name="image" accept="image/*" id="addPhotoInput"
+                 onchange="previewImage(this,'addPhotoPreview','addPhotoZone')">
+          <img class="img-upload-preview" id="addPhotoPreview" alt="preview">
+          <div id="addPhotoHint">
+            <i data-lucide="image" width="28" height="28" style="color:var(--text-3);margin-bottom:6px;"></i>
+            <div style="font-size:13px;font-weight:600;color:var(--text-2);">Click or drag a photo here</div>
+            <div class="img-upload-hint">JPG, PNG or WEBP · max 5 MB</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Property Name *</label>
+        <input type="text" name="name" class="form-input" placeholder="e.g. Sunset Apartments" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Address *</label>
+          <input type="text" name="address" class="form-input" placeholder="e.g. Kilimani" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input type="text" name="city" class="form-input" value="Nairobi">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Property Type</label>
+          <select name="type" class="form-input">
+            <option>Apartments</option>
+            <option>Townhouse</option>
+            <option>Bedsitter Block</option>
+            <option>Commercial</option>
+            <option>Mixed Use</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Units</label>
+          <input type="number" name="total_units" class="form-input" min="0" placeholder="e.g. 10">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Base Rent (KES)</label>
+        <input type="number" name="base_rent" class="form-input" min="0" placeholder="e.g. 18000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description (optional)</label>
+        <textarea name="description" class="form-input" placeholder="Brief notes about this property…"></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('addPropModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="check" width="14" height="14"></i> Save Property
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+{# ── Edit Property modal ───────────────────────────── #}
+<div class="modal-overlay" id="editPropModal">
+  <div class="modal">
+    <div class="modal-title">Edit Property</div>
+    <div class="modal-sub">Update details. Upload a new photo to replace the existing one.</div>
+
+    <form method="POST" id="editPropForm" enctype="multipart/form-data">
+
+      {# Photo upload #}
+      <div class="form-group">
+        <label class="form-label">Property Photo</label>
+        <div class="img-upload-zone" id="editPhotoZone"
+             ondragover="event.preventDefault();this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="handleDrop(event,'editPhotoZone','editPhotoPreview','editPhotoInput')">
+          <input type="file" name="image" accept="image/*" id="editPhotoInput"
+                 onchange="previewImage(this,'editPhotoPreview','editPhotoZone')">
+          <img class="img-upload-preview" id="editPhotoPreview" alt="preview">
+          <div id="editPhotoHint">
+            <i data-lucide="image" width="28" height="28" style="color:var(--text-3);margin-bottom:6px;"></i>
+            <div style="font-size:13px;font-weight:600;color:var(--text-2);">Click or drag a new photo</div>
+            <div class="img-upload-hint">Leave empty to keep the current photo</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Property Name *</label>
+        <input type="text" name="name" id="editName" class="form-input" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Address *</label>
+          <input type="text" name="address" id="editAddress" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input type="text" name="city" id="editCity" class="form-input">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Property Type</label>
+          <select name="type" id="editType" class="form-input">
+            <option>Apartments</option>
+            <option>Townhouse</option>
+            <option>Bedsitter Block</option>
+            <option>Commercial</option>
+            <option>Mixed Use</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" id="editStatus" class="form-input">
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Total Units</label>
+          <input type="number" name="total_units" id="editTotalUnits" class="form-input" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Base Rent (KES)</label>
+          <input type="number" name="base_rent" id="editBaseRent" class="form-input" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea name="description" id="editDescription" class="form-input"></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('editPropModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="check" width="14" height="14"></i> Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+{# ── Add Unit modal ────────────────────────────────── #}
+<div class="modal-overlay" id="addUnitModal">
+  <div class="modal">
+    <div class="modal-title">Add New Unit</div>
+    <div class="modal-sub">Add a unit to one of your properties.</div>
+
+    <form method="POST" action="{{ url_for('landlord.add_unit') }}">
+      <div class="form-group">
+        <label class="form-label">Property *</label>
+        <select name="property_id" class="form-input" required>
+          {% for p in properties %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unit Number *</label>
+          <input type="text" name="unit_number" class="form-input" placeholder="e.g. A-12" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Floor</label>
+          <input type="number" name="floor" class="form-input" min="0" placeholder="e.g. 2">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unit Type</label>
+          <select name="type" class="form-input">
+            <option>Studio</option>
+            <option>1 Bedroom</option>
+            <option>2 Bedroom</option>
+            <option>3 Bedroom</option>
+            <option>4 Bedroom</option>
+            <option>Penthouse</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rent (KES)</label>
+          <input type="number" name="rent" class="form-input" min="0" placeholder="e.g. 18000">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('addUnitModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="check" width="14" height="14"></i> Add Unit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════ #}
+{#   JAVASCRIPT                                       #}
+{# ══════════════════════════════════════════════════ #}
+<script>
+/* ── Modal helpers ──────────────────────────────── */
+function openModal(id) {
+    document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+/* ── Search / filter ────────────────────────────── */
+function filterCards() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#propGrid .prop-card').forEach(card => {
+        const name = card.dataset.name || '';
+        card.style.display = name.includes(q) ? '' : 'none';
+    });
+}
+
+/* ── Image preview ──────────────────────────────── */
+function previewImage(input, previewId, zoneId) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = document.getElementById(previewId);
+        const hint = document.getElementById(zoneId.replace('Zone','Hint'));
+        img.src = e.target.result;
+        img.style.display = 'block';
+        if (hint) hint.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleDrop(event, zoneId, previewId, inputId) {
+    event.preventDefault();
+    document.getElementById(zoneId).classList.remove('dragover');
+    const file = event.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const input = document.getElementById(inputId);
+    input.files = dt.files;
+    previewImage(input, previewId, zoneId);
+}
+
+/* ── Populate edit modal ────────────────────────── */
+function openEditModal(id, name, address, city, type, totalUnits, baseRent, status, description) {
+    document.getElementById('editPropForm').action = `/properties/edit/${id}`;
+    document.getElementById('editName').value        = name;
+    document.getElementById('editAddress').value     = address;
+    document.getElementById('editCity').value        = city;
+    document.getElementById('editTotalUnits').value  = totalUnits;
+    document.getElementById('editBaseRent').value    = baseRent;
+    document.getElementById('editDescription').value = description;
+
+    const typeSelect   = document.getElementById('editType');
+    const statusSelect = document.getElementById('editStatus');
+    [...typeSelect.options].forEach(o => o.selected = (o.value === type));
+    [...statusSelect.options].forEach(o => o.selected = (o.value === status));
+
+    // Reset photo preview
+    document.getElementById('editPhotoPreview').style.display = 'none';
+    document.getElementById('editPhotoHint').style.display = 'block';
+
+    openModal('editPropModal');
+}
+
+/* ── Load units via fetch ───────────────────────── */
+let _currentPropId = null;
+
+function loadUnits(propId, propName) {
+    _currentPropId = propId;
+    const panel = document.getElementById('units-panel');
+    const tbody = document.getElementById('units-tbody');
+    document.getElementById('units-panel-title').textContent = propName + ' — Units';
+    panel.style.display = 'block';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px;">Loading…</td></tr>';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    fetch(`/properties/${propId}/units`)
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
+        .then(data => {
+            if (!data.units || data.units.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px;">No units yet. Use "Add Unit" to add one.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.units.map(u => `
+                <tr>
+                    <td><strong>${u.unit_number}</strong></td>
+                    <td>${u.floor ?? '—'}</td>
+                    <td>${u.type}</td>
+                    <td>${u.tenant_name
+                        ? u.tenant_name
+                        : '<span style="color:var(--text-3)">—</span>'}</td>
+                    <td>KES ${Number(u.rent).toLocaleString()}</td>
+                    <td>
+                        <span class="badge ${
+                            u.status === 'Occupied' ? 'b-green' :
+                            u.status === 'Vacant'   ? 'b-amber' : 'b-red'
+                        }">${u.status}</span>
+                    </td>
+                    <td>
+                        <form method="POST" action="/units/delete/${u.id}"
+                              onsubmit="return confirm('Delete unit ${u.unit_number}?');"
+                              style="display:inline;">
+                            <button class="tbl-btn" type="submit"
+                                style="color:#dc2626;border-color:#fecaca;">
+                                <i data-lucide="trash-2" width="11" height="11"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            `).join('');
+            // Re-init lucide icons for dynamically added elements
+            if (window.lucide) lucide.createIcons();
+        })
+        .catch(err => {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:24px;">
+                Failed to load units. Check that <code>/properties/${propId}/units</code> is returning valid JSON.<br>
+                <small style="color:var(--text-3)">${err.message}</small>
+            </td></tr>`;
+        });
+}
+
+function closeUnitsPanel() {
+    document.getElementById('units-panel').style.display = 'none';
+}
+</script>
+{% endblock %}

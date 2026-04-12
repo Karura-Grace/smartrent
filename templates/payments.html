@@ -1,0 +1,1001 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Payments · SmartRent{% endblock %}
+{% block role_name %}Tenant{% endblock %}
+{% block page_title %}Payments{% endblock %}
+{% block page_sub %}Pay{% endblock %}
+
+{% block extra_styles %}
+.pay-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+}
+.balance-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+}
+.bal-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 16px 18px;
+    box-shadow: var(--sh-sm);
+    display: flex; align-items: center; gap: 12px;
+}
+.bal-icon { width: 38px; height: 38px; border-radius: 9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.bal-label { font-size: 11px; color: var(--text-3); font-weight: 500; margin-bottom: 3px; }
+.bal-value { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+.bal-value.danger { color: var(--red); }
+.bal-value.safe { color: var(--green); }
+
+/* Bill selector */
+.bill-list { list-style: none; margin-bottom: 16px; }
+.bill-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; margin-bottom: 8px;
+    cursor: pointer; transition: all 0.15s; background: var(--surface);
+}
+.bill-item:hover { border-color: var(--blue-400); background: var(--blue-50); }
+.bill-item.selected { border-color: var(--blue-600); background: var(--blue-50); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+.bill-check {
+    width: 18px; height: 18px; border-radius: 5px;
+    border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.15s; color: white; font-size: 11px;
+}
+.bill-item.selected .bill-check { background: var(--blue-600); border-color: var(--blue-600); }
+.bill-info { flex: 1; }
+.bill-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.bill-due  { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.bill-amount { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
+
+/* Method tabs */
+.method-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 20px; }
+.method-tab {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 12px 6px; border: 1.5px solid var(--border);
+    border-radius: 10px; cursor: pointer; background: var(--surface);
+    transition: all 0.15s; text-align: center;
+}
+.method-tab:hover { border-color: var(--blue-400); background: var(--blue-50); }
+.method-tab.active { border-color: var(--blue-600); background: var(--blue-50); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+.method-tab-icon { width: 34px; height: 34px; border-radius: 8px; display:flex; align-items:center; justify-content:center; }
+.mpesa-bg { background: #e8f5e9; }
+.bank-bg { background: #eff6ff; }
+.method-tab-label { font-size: 10.5px; font-weight: 600; color: var(--text-2); line-height: 1.3; }
+.method-tab.active .method-tab-label { color: var(--blue-600); }
+
+/* Panels */
+.pay-panel { display: none; }
+.pay-panel.active { display: block; }
+
+/* Instructions */
+.instructions {
+    background: var(--blue-50); border: 1px solid var(--blue-100);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;
+}
+.instr-title {
+    font-size: 11px; font-weight: 700; color: var(--blue-600);
+    text-transform: uppercase; letter-spacing: 0.07em;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.steps { list-style: none; }
+.steps li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 12.5px; color: var(--text-2);
+    padding: 5px 0; border-bottom: 1px solid var(--blue-100);
+}
+.steps li:last-child { border-bottom: none; }
+.step-num {
+    width: 19px; height: 19px; border-radius: 50%;
+    background: var(--blue-600); color: white;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+}
+
+/* Info rows */
+.info-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px;
+}
+.info-row-label { font-size: 11.5px; color: var(--text-3); font-weight: 500; }
+.info-row-value { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.copy-btn {
+    background: none; border: 1px solid var(--border); border-radius: 5px;
+    padding: 3px 8px; font-size: 10px; font-weight: 600;
+    color: var(--blue-600); cursor: pointer; transition: all 0.13s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.copy-btn:hover { background: var(--blue-50); }
+.copy-btn.copied { background: #f0fdf4; border-color: #bbf7d0; color: var(--green); }
+
+/* Form */
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
+.form-input {
+    width: 100%; padding: 10px 14px;
+    border: 1.5px solid var(--border); border-radius: 8px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13.5px; color: var(--text); background: var(--surface);
+    transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+}
+.form-input:focus { border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.form-input::placeholder { color: var(--text-3); }
+.form-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+.amount-display {
+    background: linear-gradient(135deg, var(--blue-600), var(--blue-700));
+    color: white; border-radius: 10px; padding: 14px 18px;
+    margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+}
+.amt-label { font-size: 10px; color: rgba(255,255,255,0.65); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.amt-value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+
+/* STK waiting */
+.stk-waiting { display: none; text-align: center; padding: 28px 16px; }
+.stk-waiting.show { display: block; }
+.stk-spinner {
+    width: 44px; height: 44px; border: 3px solid var(--border);
+    border-top-color: var(--blue-600); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 14px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.stk-txt { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.stk-sub { font-size: 12px; color: var(--text-3); }
+
+/* Summary card */
+.summary-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 20px;
+    box-shadow: var(--sh-sm); position: sticky; top: 80px;
+}
+.summary-title {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    margin-bottom: 14px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-lt);
+    display: flex; align-items: center; gap: 7px;
+}
+.summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border-lt); font-size: 13px;
+}
+.summary-row:last-of-type { border-bottom: none; }
+.summary-row-label { color: var(--text-2); }
+.summary-row-value { font-weight: 600; color: var(--text); }
+.summary-total {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0 0; margin-top: 6px; border-top: 2px solid var(--border);
+}
+.summary-total-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.summary-total-value { font-size: 20px; font-weight: 700; color: var(--blue-600); letter-spacing: -0.02em; }
+
+/* Modal */
+.modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 500;
+    align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+    background: var(--surface); border-radius: 14px;
+    padding: 26px; width: 380px; max-width: 95vw;
+    box-shadow: var(--sh-md); animation: fadeUp 0.22s ease both;
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.modal-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.modal-close {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-2); transition: all 0.13s;
+}
+.modal-close:hover { background: #fef2f2; color: var(--red); }
+.receipt-logo { text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px dashed var(--border); }
+.receipt-brand { font-size: 18px; font-weight: 700; color: var(--blue-600); }
+.receipt-sub   { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.receipt-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-lt); font-size: 12.5px; }
+.receipt-row:last-of-type { border-bottom: none; }
+.r-label { color: var(--text-3); }
+.r-value { font-weight: 600; color: var(--text); }
+.receipt-total {
+    background: var(--blue-50); border-radius: 8px; padding: 12px 14px;
+    margin: 12px 0; display: flex; justify-content: space-between; align-items: center;
+}
+.rt-label { font-size: 12px; font-weight: 600; color: var(--blue-600); }
+.rt-value { font-size: 18px; font-weight: 700; color: var(--blue-600); }
+
+/* Success modal */
+.success-wrap { text-align: center; padding: 16px 0 8px; }
+.success-circle {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #f0fdf4; border: 2px solid #bbf7d0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin: 0 auto 14px;
+}
+.success-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.success-sub   { font-size: 13px; color: var(--text-3); margin-bottom: 20px; line-height: 1.5; }
+
+/* Step badge */
+.step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--blue-600); color: white;
+    font-size: 11px; font-weight: 700; margin-right: 8px; flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+    .pay-layout { grid-template-columns: 1fr; }
+    .method-tabs { grid-template-columns: repeat(2,1fr); }
+    .summary-card { position: static; }
+    .balance-strip { grid-template-columns: repeat(2,1fr); }
+}
+{% endblock %}
+
+{% block content %}
+
+<!-- Balance strip -->
+<div class="balance-strip">
+   
+    <div class="bal-card">
+        <div class="bal-icon ico-red"><i data-lucide="home" width="17" height="17" style="color:var(--red)"></i></div>
+        <div><div class="bal-label">Rent Due</div><div class="bal-value danger">{{ "KES {:,}".format(rent_due_amount or 0) }}</div></div>
+    </div>
+    <div class="bal-card">
+        <div class="bal-icon ico-orange"><i data-lucide="zap" width="17" height="17" style="color:var(--orange)"></i></div>
+        <div><div class="bal-label">Electricity</div><div class="bal-value danger">{{ "KES {:,}".format(electricity_due_amount or 0) }}</div></div>
+    </div>
+    <div class="bal-card">
+        <div class="bal-icon ico-blue"><i data-lucide="droplets" width="17" height="17" style="color:var(--blue-600)"></i></div>
+        <div><div class="bal-label">Water Bill</div><div class="bal-value danger">{{ "KES {:,}".format(water_due_amount or 0) }}</div></div>
+    </div>
+    <div class="bal-card">
+        <div class="bal-icon ico-green"><i data-lucide="check-circle" width="17" height="17" style="color:var(--green)"></i></div>
+        <div><div class="bal-label">Last Payment</div><div class="bal-value safe">{{ "KES {:,}".format(last_payment_amount or 0) }}</div></div>
+    </div>
+</div>
+
+<div class="pay-layout">
+
+    <!-- LEFT COLUMN -->
+    <div>
+
+        <!-- STEP 1: Select bills -->
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-head">
+                <span class="card-title"><span class="step-badge">1</span>Select What to Pay</span>
+                <button class="card-action" onclick="selectAll()">Select All</button>
+            </div>
+            <ul class="bill-list" id="billList">
+                {% for bill in active_bills %}
+                <li class="bill-item{% if bill.selected %} selected{% endif %}" data-amount="{{ bill.amount }}" data-name="{{ bill.data_name }}" onclick="toggleBill(this)">
+                    <div class="bill-check">{% if bill.selected %}✓{% endif %}</div>
+                    <div class="bill-info">
+                        <div class="bill-name">{{ bill.name }}</div>
+                        <div class="bill-due">{{ bill.period }} · Due {{ bill.due }}</div>
+                    </div>
+                    <span class="badge {{ bill.status_class }}" style="margin-right:8px">{{ bill.status }}</span>
+                    <div class="bill-amount">{{ bill.amount_display }}</div>
+                </li>
+                {% else %}
+                <li style="padding:13px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);">
+                    <div class="bill-info">
+                        <div class="bill-name">No active bills found</div>
+                        <div class="bill-due">Assign this tenant to a unit or add bill records to the database to populate this section.</div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            <div style="font-size:11.5px;color:var(--text-3);padding-top:4px;">
+                <i data-lucide="info" width="12" height="12" style="display:inline;vertical-align:middle;margin-right:4px;"></i>
+                Click items to select or deselect
+            </div>
+        </div>
+
+        <!-- STEP 2: Payment method -->
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-head">
+                <span class="card-title"><span class="step-badge">2</span>Choose Payment Method</span>
+            </div>
+
+            <div class="method-tabs">
+                <div class="method-tab active" onclick="switchMethod('stk',this)">
+                    <div class="method-tab-icon mpesa-bg">
+                        <i data-lucide="smartphone" width="18" height="18" style="color:#2e7d32"></i>
+                    </div>
+                    <div class="method-tab-label">STK Push</div>
+                </div>
+                <div class="method-tab" onclick="switchMethod('bank',this)">
+                    <div class="method-tab-icon bank-bg">
+                        <i data-lucide="landmark" width="18" height="18" style="color:var(--blue-600)"></i>
+                    </div>
+                    <div class="method-tab-label">Bank Account</div>
+                </div>
+                <div class="method-tab" onclick="switchMethod('paybill',this)">
+                    <div class="method-tab-icon mpesa-bg">
+                        <i data-lucide="building-2" width="18" height="18" style="color:#2e7d32"></i>
+                    </div>
+                    <div class="method-tab-label">Paybill</div>
+                </div>
+                <div class="method-tab" onclick="switchMethod('till',this)">
+                    <div class="method-tab-icon mpesa-bg">
+                        <i data-lucide="store" width="18" height="18" style="color:#2e7d32"></i>
+                    </div>
+                    <div class="method-tab-label">Till Number</div>
+                </div>
+                <div class="method-tab" onclick="switchMethod('phone',this)">
+                    <div class="method-tab-icon mpesa-bg">
+                        <i data-lucide="phone-call" width="18" height="18" style="color:#2e7d32"></i>
+                    </div>
+                    <div class="method-tab-label">Send Money</div>
+                </div>
+            </div>
+
+            <!-- STK Push -->
+            <div class="pay-panel active" id="panel-stk">
+                <div class="instructions">
+                    <div class="instr-title">
+                        <i data-lucide="smartphone" width="13" height="13"></i>
+                        M-Pesa STK Push — Instant prompt on your phone
+                    </div>
+                    <ul class="steps">
+                        <li><div class="step-num">1</div>Enter your M-Pesa registered phone number below</li>
+                        <li><div class="step-num">2</div>Click "Send Payment Request"</li>
+                        <li><div class="step-num">3</div>A payment prompt appears on your phone — enter your M-Pesa PIN</li>
+                        <li><div class="step-num">4</div>You'll receive an SMS confirmation from Safaricom</li>
+                    </ul>
+                </div>
+                <div id="stk-form">
+                    <div class="amount-display">
+                        <div>
+                            <div class="amt-label">Amount to Pay</div>
+                            <div class="amt-value" id="stk-amt">KES 25,000</div>
+                        </div>
+                        <i data-lucide="smartphone" width="28" height="28" style="opacity:0.55"></i>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Your M-Pesa Phone Number</label>
+                        <input type="tel" class="form-input" id="stk-phone" placeholder="e.g. 0712 345 678">
+                        <div class="form-hint">Must be the number registered with M-Pesa / Safaricom</div>
+                    </div>
+                    <button class="btn-primary" id="stk-submit-btn" style="width:100%;justify-content:center;padding:11px 0;" onclick="sendSTK()">
+                        <i data-lucide="send" width="15" height="15"></i>
+                        Send Payment Request
+                    </button>
+                </div>
+                <div class="stk-waiting" id="stk-waiting">
+                    <div class="stk-spinner"></div>
+                    <div class="stk-txt">Waiting for M-Pesa confirmation…</div>
+                    <div class="stk-sub" id="stk-status-sub">Check your phone and enter your M-Pesa PIN to complete</div>
+                    <button class="btn-outline" style="margin-top:14px;" onclick="cancelSTK()">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Bank Account -->
+            <div class="pay-panel" id="panel-bank">
+                <div class="instructions">
+                    <div class="instr-title">
+                        <i data-lucide="landmark" width="13" height="13"></i>
+                        Bank Account - Use PayHero bank paybill options
+                    </div>
+                    <ul class="steps">
+                        <li><div class="step-num">1</div>Select your bank from the PayHero list below</li>
+                        <li><div class="step-num">2</div>Enter the account number you will pay with</li>
+                        <li><div class="step-num">3</div>Use the bank paybill shown to complete the transfer</li>
+                        <li><div class="step-num">4</div>Click Pay after you have confirmed the bank details</li>
+                    </ul>
+                </div>
+                <div class="amount-display">
+                    <div>
+                        <div class="amt-label">Amount to Pay</div>
+                        <div class="amt-value" id="bank-amt">KES 25,000</div>
+                    </div>
+                    <i data-lucide="landmark" width="28" height="28" style="opacity:0.55"></i>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="bank-select">Bank</label>
+                    <select class="form-input" id="bank-select" onchange="updateBankDetails()">
+                        <option value="">Loading PayHero bank options...</option>
+                    </select>
+                    <div class="form-hint" id="bank-select-hint">Banks such as KCB, Family Bank, Equity and others will appear here from PayHero.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="bank-account-number">Account Number</label>
+                    <input type="text" class="form-input" id="bank-account-number" placeholder="Enter your bank account number">
+                    <div class="form-hint">Use the bank account number you are paying from.</div>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Selected Bank</span>
+                    <span class="info-row-value" id="bank-name-display">Choose a bank</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Bank Paybill</span>
+                    <span class="info-row-value" id="bank-paybill-display">-</span>
+                </div>
+                <button class="btn-primary" style="width:100%;justify-content:center;padding:11px;margin-top:14px;" onclick="payWithBank()">
+                    <i data-lucide="landmark" width="15" height="15"></i>
+                    Pay
+                </button>
+            </div>
+
+            <!-- Paybill -->
+            <div class="pay-panel" id="panel-paybill">
+                <div class="instructions">
+                    <div class="instr-title">
+                        <i data-lucide="building-2" width="13" height="13"></i>
+                        M-Pesa Paybill — Step by step
+                    </div>
+                    <ul class="steps">
+                        <li><div class="step-num">1</div>Open M-Pesa menu → <strong>Lipa na M-Pesa</strong></li>
+                        <li><div class="step-num">2</div>Select <strong>Pay Bill</strong></li>
+                        <li><div class="step-num">3</div>Enter Business Number shown below</li>
+                        <li><div class="step-num">4</div>Enter Account Number (your unit number)</li>
+                        <li><div class="step-num">5</div>Enter exact amount, confirm with your PIN</li>
+                    </ul>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Business Number</span>
+                    <span class="info-row-value">247247 <button class="copy-btn" onclick="copyText('247247',this)">Copy</button></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Account Number</span>
+                    <span class="info-row-value">{{ paybill_account }} <button class="copy-btn" onclick="copyText('{{ paybill_account }}',this)">Copy</button></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Amount</span>
+                    <span class="info-row-value" id="paybill-amt">KES 25,000</span>
+                </div>
+                <button class="btn-primary" style="width:100%;justify-content:center;padding:11px;margin-top:14px;" onclick="markManualPaid('Paybill')">
+                    <i data-lucide="check-circle" width="15" height="15"></i>
+                    I've Completed This Payment
+                </button>
+            </div>
+
+            <!-- Till Number -->
+            <div class="pay-panel" id="panel-till">
+                <div class="instructions">
+                    <div class="instr-title">
+                        <i data-lucide="store" width="13" height="13"></i>
+                        M-Pesa Till Number — Buy Goods
+                    </div>
+                    <ul class="steps">
+                        <li><div class="step-num">1</div>Open M-Pesa → <strong>Lipa na M-Pesa</strong></li>
+                        <li><div class="step-num">2</div>Select <strong>Buy Goods & Services</strong></li>
+                        <li><div class="step-num">3</div>Enter Till Number shown below</li>
+                        <li><div class="step-num">4</div>Enter amount and confirm with your PIN</li>
+                    </ul>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Till Number</span>
+                    <span class="info-row-value">5123456 <button class="copy-btn" onclick="copyText('5123456',this)">Copy</button></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Amount</span>
+                    <span class="info-row-value" id="till-amt">KES 25,000</span>
+                </div>
+                <button class="btn-primary" style="width:100%;justify-content:center;padding:11px;margin-top:14px;" onclick="markManualPaid('Till Number')">
+                    <i data-lucide="check-circle" width="15" height="15"></i>
+                    I've Completed This Payment
+                </button>
+            </div>
+
+            <!-- Send Money -->
+            <div class="pay-panel" id="panel-phone">
+                <div class="instructions">
+                    <div class="instr-title">
+                        <i data-lucide="phone-call" width="13" height="13"></i>
+                        M-Pesa Send Money — Direct to landlord
+                    </div>
+                    <ul class="steps">
+                        <li><div class="step-num">1</div>Open M-Pesa → <strong>Send Money</strong></li>
+                        <li><div class="step-num">2</div>Enter landlord's phone number below</li>
+                        <li><div class="step-num">3</div>Enter the exact amount</li>
+                        <li><div class="step-num">4</div>Use your unit number as the reference/reason</li>
+                    </ul>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Landlord's Number</span>
+                    <span class="info-row-value">0722 000 000 <button class="copy-btn" onclick="copyText('0722000000',this)">Copy</button></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Reference</span>
+                    <span class="info-row-value">{{ phone_reference }} <button class="copy-btn" onclick="copyText('{{ phone_reference }}',this)">Copy</button></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row-label">Amount</span>
+                    <span class="info-row-value" id="phone-amt">KES 25,000</span>
+                </div>
+                <button class="btn-primary" style="width:100%;justify-content:center;padding:11px;margin-top:14px;" onclick="markManualPaid('Send Money')">
+                    <i data-lucide="check-circle" width="15" height="15"></i>
+                    I've Completed This Payment
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Payment History -->
+        <div class="card">
+            <div class="card-head">
+                <span class="card-title">
+                    <i data-lucide="clock" width="14" height="14" style="display:inline;vertical-align:middle;margin-right:6px;color:var(--blue-600)"></i>
+                    Payment History
+                </span>
+                <button class="card-action">Download All</button>
+            </div>
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Method</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in payment_history %}
+                    <tr>
+                        <td style="color:var(--text-3);font-size:12px;white-space:nowrap;">{{ item.date }}</td>
+                        <td>
+                            <strong style="font-size:13px;">{{ item.description }}</strong>
+                            <div style="font-size:11px;color:var(--text-3);">{{ item.reference }}</div>
+                        </td>
+                        <td><span class="badge b-blue">{{ item.method }}</span></td>
+                        <td style="font-weight:600;font-size:13px;">{{ item.amount }}</td>
+                        <td><span class="badge {{ item.status_class }}">{{ item.status }}</span></td>
+                        <td>
+                            <button class="copy-btn" onclick="showReceipt('{{ item.reference }}','{{ item.date }}','{{ item.description }}','{{ item.amount }}','{{ item.method }}')">
+                                Receipt
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="padding:18px 12px;color:var(--text-3);font-size:12px;">No payment history found for this tenant yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: Summary -->
+    <div>
+        <div class="summary-card">
+            <div class="summary-title">
+                <i data-lucide="receipt" width="15" height="15" style="color:var(--blue-600)"></i>
+                Payment Summary
+            </div>
+            <div id="summary-items">
+                <div style="font-size:12px;color:var(--text-3);padding:6px 0;">No items selected</div>
+            </div>
+            <div class="summary-total">
+                <span class="summary-total-label">Total</span>
+                <span class="summary-total-value" id="summary-total">KES 0</span>
+            </div>
+
+            <div style="margin-top:14px;padding:12px;background:var(--blue-50);border-radius:8px;border:1px solid var(--blue-100);">
+                <div style="font-size:11px;color:var(--blue-600);font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:5px;">
+                    <i data-lucide="shield-check" width="12" height="12"></i> Secure & Encrypted
+                </div>
+                <div style="font-size:11px;color:var(--text-3);line-height:1.5;">Payments go directly through M-Pesa. SmartRent never stores your PIN.</div>
+            </div>
+
+            <div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+                <div style="font-size:10.5px;color:var(--text-3);margin-bottom:4px;font-weight:500;">Selected method</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px;" id="summary-method">
+                    <i data-lucide="smartphone" width="13" height="13" style="color:var(--blue-600)"></i>
+                    M-Pesa STK Push
+                </div>
+            </div>
+
+            <div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+                <div style="font-size:10.5px;color:var(--text-3);margin-bottom:4px;font-weight:500;">Need help?</div>
+                <a href="#" style="font-size:12px;color:var(--blue-600);font-weight:500;text-decoration:none;">Contact your landlord →</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal-overlay" id="receiptModal" onclick="closeModal('receiptModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-head">
+            <span class="modal-title">Payment Receipt</span>
+            <button class="modal-close" onclick="closeModal('receiptModal')">✕</button>
+        </div>
+        <div class="receipt-logo">
+            <div class="receipt-brand">SmartRent</div>
+            <div class="receipt-sub">Official Payment Receipt</div>
+        </div>
+        <div id="receipt-body"></div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            <button class="btn-primary" style="flex:1;justify-content:center;" onclick="window.print()">
+                <i data-lucide="printer" width="14" height="14"></i> Print
+            </button>
+            <button class="btn-outline" style="flex:1;justify-content:center;" onclick="closeModal('receiptModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal-overlay" id="successModal" onclick="closeModal('successModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="success-wrap">
+            <div class="success-circle">✓</div>
+            <div class="success-title">Payment Submitted!</div>
+            <div class="success-sub" id="success-msg">Your payment has been submitted successfully.</div>
+            <button class="btn-primary" style="margin:0 auto;" onclick="closeModal('successModal')">
+                <i data-lucide="check" width="14" height="14"></i> Done
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Helpers ──────────────────────────────────
+function fmt(n){ return 'KES ' + n.toLocaleString(); }
+
+function getTotalAmount(){
+    let t = 0;
+    document.querySelectorAll('.bill-item.selected').forEach(el => {
+        t += parseInt(el.dataset.amount);
+    });
+    return t;
+}
+
+function updateAmounts(){
+    const t = getTotalAmount();
+    const s = fmt(t);
+    ['stk-amt','bank-amt','paybill-amt','till-amt','phone-amt'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.textContent = s;
+    });
+    updateSummary();
+}
+
+function updateSummary(){
+    const items = document.querySelectorAll('.bill-item.selected');
+    let html = '', total = 0;
+    items.forEach(el => {
+        const name = el.querySelector('.bill-name').textContent;
+        const amt  = parseInt(el.dataset.amount);
+        total += amt;
+        html += `<div class="summary-row"><span class="summary-row-label">${name}</span><span class="summary-row-value">${fmt(amt)}</span></div>`;
+    });
+    document.getElementById('summary-items').innerHTML = html || '<div style="font-size:12px;color:var(--text-3);padding:6px 0;">No items selected</div>';
+    document.getElementById('summary-total').textContent = fmt(total);
+}
+
+// ── Toggle bill ───────────────────────────────
+function toggleBill(el){
+    el.classList.toggle('selected');
+    el.querySelector('.bill-check').textContent = el.classList.contains('selected') ? '✓' : '';
+    updateAmounts();
+}
+
+function selectAll(){
+    document.querySelectorAll('.bill-item').forEach(el => {
+        el.classList.add('selected');
+        el.querySelector('.bill-check').textContent = '✓';
+    });
+    updateAmounts();
+}
+
+// ── Method switching ──────────────────────────
+const methodLabels = {
+    stk: '<i data-lucide="smartphone" width="13" height="13" style="color:var(--blue-600)"></i> M-Pesa STK Push',
+    bank: '<i data-lucide="landmark" width="13" height="13" style="color:var(--blue-600)"></i> Bank Account',
+    paybill: '<i data-lucide="building-2" width="13" height="13" style="color:var(--blue-600)"></i> M-Pesa Paybill',
+    till: '<i data-lucide="store" width="13" height="13" style="color:var(--blue-600)"></i> M-Pesa Till Number',
+    phone: '<i data-lucide="phone-call" width="13" height="13" style="color:var(--blue-600)"></i> M-Pesa Send Money'
+};
+
+function switchMethod(id, tab){
+    document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.pay-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + id).classList.add('active');
+    document.getElementById('summary-method').innerHTML = methodLabels[id];
+    lucide.createIcons();
+}
+
+// ── STK Push ──────────────────────────────────
+const fallbackBanks = [
+    { name: 'Co-operative Bank', paybill: '' },
+    { name: 'Equity Bank', paybill: '' },
+    { name: 'Family Bank', paybill: '' },
+    { name: 'KCB Bank', paybill: '' }
+];
+
+let bankOptions = [];
+
+function populateBankSelect(banks){
+    const select = document.getElementById('bank-select');
+    const hint = document.getElementById('bank-select-hint');
+    if(!select){ return; }
+
+    bankOptions = Array.isArray(banks) ? banks : [];
+
+    if(!bankOptions.length){
+        select.innerHTML = '<option value="">No bank options available right now</option>';
+        if(hint){
+            hint.textContent = 'PayHero bank options could not be loaded at the moment.';
+        }
+        updateBankDetails();
+        return;
+    }
+
+    select.innerHTML = '<option value="">Select bank</option>' + bankOptions.map((bank, index) =>
+        `<option value="${index}">${bank.name}</option>`
+    ).join('');
+
+    if(hint){
+        hint.textContent = 'This list is loaded from PayHero so it matches the configured bank payment options.';
+    }
+
+    updateBankDetails();
+}
+
+function updateBankDetails(){
+    const select = document.getElementById('bank-select');
+    const nameEl = document.getElementById('bank-name-display');
+    const paybillEl = document.getElementById('bank-paybill-display');
+    if(!select || !nameEl || !paybillEl){ return; }
+
+    const selected = bankOptions[select.value];
+    if(!selected){
+        nameEl.textContent = 'Choose a bank';
+        paybillEl.textContent = '-';
+        return;
+    }
+
+    nameEl.textContent = selected.name || 'Selected bank';
+    if(selected.paybill){
+        paybillEl.innerHTML = `${selected.paybill} <button class="copy-btn" onclick="copyText('${selected.paybill}', this)">Copy</button>`;
+    } else {
+        paybillEl.textContent = 'Load PayHero options to see paybill';
+    }
+}
+
+async function loadBankOptions(){
+    try {
+        const res = await fetch('/api/payhero/bank-paybills');
+        const data = await res.json();
+        if(!res.ok || !data.ok){
+            throw new Error(data.error || 'Failed to load bank options');
+        }
+        populateBankSelect(data.banks || []);
+    } catch (err) {
+        populateBankSelect(fallbackBanks);
+        const hint = document.getElementById('bank-select-hint');
+        if(hint){
+            hint.textContent = `${err.message || 'Failed to load PayHero bank options.'} Showing fallback banks for now.`;
+        }
+    } finally {
+        lucide.createIcons();
+    }
+}
+
+function payWithBank(){
+    const select = document.getElementById('bank-select');
+    const accountNumber = document.getElementById('bank-account-number').value.trim();
+    const total = getTotalAmount();
+
+    if(total === 0){
+        alert('Please select at least one item to pay');
+        return;
+    }
+
+    const selected = bankOptions[select.value];
+    if(!selected){
+        alert('Please choose a bank first');
+        return;
+    }
+
+    if(!accountNumber){
+        alert('Please enter your bank account number');
+        return;
+    }
+
+    document.getElementById('success-msg').textContent =
+        `Bank payment request for ${fmt(total)} via ${selected.name} using account number ${accountNumber} has been submitted. ${selected.paybill ? `Use paybill ${selected.paybill} to complete the transfer if you have not done so already.` : 'Load the PayHero bank list to view the exact paybill before completing the transfer.'}`;
+    document.getElementById('successModal').classList.add('show');
+    lucide.createIcons();
+}
+
+let stkPollTimer = null;
+let stkReference = null;
+
+function setStkLoading(isLoading){
+    const btn = document.getElementById('stk-submit-btn');
+    if(btn){
+        btn.disabled = isLoading;
+        btn.style.opacity = isLoading ? '0.7' : '1';
+    }
+}
+
+function clearStkPolling(){
+    if(stkPollTimer){
+        clearTimeout(stkPollTimer);
+        stkPollTimer = null;
+    }
+}
+
+async function pollStkStatus(reference, total, attempts = 0){
+    if(!reference){ return; }
+
+    try {
+        const res = await fetch(`/api/payhero/transaction-status/${encodeURIComponent(reference)}`);
+        const data = await res.json();
+        if(!res.ok || !data.ok){
+            throw new Error(data.error || 'Could not check payment status');
+        }
+
+        const status = String(data.status || '').toUpperCase();
+        const statusSub = document.getElementById('stk-status-sub');
+        if(statusSub){
+            statusSub.textContent = `Reference ${reference} • Current status: ${status || 'QUEUED'}`;
+        }
+
+        if(['SUCCESS', 'PAID', 'COMPLETED'].includes(status)){
+            clearStkPolling();
+            document.getElementById('stk-waiting').classList.remove('show');
+            document.getElementById('stk-form').style.display = 'block';
+            setStkLoading(false);
+            document.getElementById('success-msg').textContent =
+                `Payment of ${fmt(total)} via M-Pesa STK Push was successful. Reference: ${reference}.`;
+            document.getElementById('successModal').classList.add('show');
+            lucide.createIcons();
+            return;
+        }
+
+        if(['FAILED', 'CANCELLED', 'CANCELED', 'DECLINED'].includes(status)){
+            clearStkPolling();
+            document.getElementById('stk-waiting').classList.remove('show');
+            document.getElementById('stk-form').style.display = 'block';
+            setStkLoading(false);
+            alert(`Payment was not completed. Current status: ${status}.`);
+            return;
+        }
+    } catch (err) {
+        if(attempts >= 6){
+            clearStkPolling();
+            document.getElementById('stk-waiting').classList.remove('show');
+            document.getElementById('stk-form').style.display = 'block';
+            setStkLoading(false);
+            alert(err.message || 'Could not check payment status.');
+            return;
+        }
+    }
+
+    if(attempts >= 29){
+        clearStkPolling();
+        document.getElementById('stk-waiting').classList.remove('show');
+        document.getElementById('stk-form').style.display = 'block';
+        setStkLoading(false);
+        document.getElementById('success-msg').textContent =
+            `STK request sent for ${fmt(total)}. Still pending confirmation. Reference: ${reference}.`;
+        document.getElementById('successModal').classList.add('show');
+        lucide.createIcons();
+        return;
+    }
+
+    stkPollTimer = setTimeout(() => pollStkStatus(reference, total, attempts + 1), 4000);
+}
+
+function sendSTK(){
+    const phone = document.getElementById('stk-phone').value.trim();
+    if(!phone || phone.replace(/\s/g,'').length < 9){
+        alert('Please enter a valid M-Pesa phone number');
+        return;
+    }
+    const total = getTotalAmount();
+    if(total === 0){ alert('Please select at least one item to pay'); return; }
+
+    const billItems = Array.from(document.querySelectorAll('.bill-item.selected')).map(el => {
+        return el.dataset.name || el.querySelector('.bill-name')?.textContent || 'Bill payment';
+    });
+
+    clearStkPolling();
+    setStkLoading(true);
+
+    fetch('/api/payhero/stk-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            phone_number: phone,
+            amount: total,
+            bill_items: billItems
+        })
+    })
+    .then(async (res) => {
+        const data = await res.json();
+        if(!res.ok || !data.ok){
+            throw new Error(data.error || 'Failed to send STK push');
+        }
+
+        stkReference = data.reference;
+        document.getElementById('stk-form').style.display = 'none';
+        document.getElementById('stk-waiting').classList.add('show');
+        const statusSub = document.getElementById('stk-status-sub');
+        if(statusSub){
+            statusSub.textContent = `Reference ${stkReference} • Waiting for phone approval`;
+        }
+        pollStkStatus(stkReference, total, 0);
+    })
+    .catch((err) => {
+        setStkLoading(false);
+        alert(err.message || 'Could not send STK request');
+    });
+}
+
+function cancelSTK(){
+    clearStkPolling();
+    setStkLoading(false);
+    stkReference = null;
+    document.getElementById('stk-waiting').classList.remove('show');
+    document.getElementById('stk-form').style.display = 'block';
+    const statusSub = document.getElementById('stk-status-sub');
+    if(statusSub){
+        statusSub.textContent = 'Check your phone and enter your M-Pesa PIN to complete';
+    }
+}
+
+// ── Manual payment ────────────────────────────
+function markManualPaid(method){
+    const total = getTotalAmount();
+    if(total === 0){ alert('Please select at least one item to pay'); return; }
+    document.getElementById('success-msg').textContent =
+        `Thank you! Once your ${fmt(total)} payment via ${method} is confirmed by the landlord, your account will be updated.`;
+    document.getElementById('successModal').classList.add('show');
+    lucide.createIcons();
+}
+
+// ── Copy ──────────────────────────────────────
+function copyText(text, btn){
+    navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+}
+
+// ── Receipt modal ─────────────────────────────
+function showReceipt(ref, date, desc, amount, method){
+    document.getElementById('receipt-body').innerHTML = `
+        <div class="receipt-total">
+            <span class="rt-label">Amount Paid</span>
+            <span class="rt-value">${amount}</span>
+        </div>
+        <div class="receipt-row"><span class="r-label">Receipt No.</span><span class="r-value">${ref}</span></div>
+        <div class="receipt-row"><span class="r-label">Date</span><span class="r-value">${date}</span></div>
+        <div class="receipt-row"><span class="r-label">Description</span><span class="r-value">${desc}</span></div>
+        <div class="receipt-row"><span class="r-label">Method</span><span class="r-value">${method}</span></div>
+        <div class="receipt-row"><span class="r-label">Tenant</span><span class="r-value">{{ user.user_name }}</span></div>
+        <div class="receipt-row"><span class="r-label">Unit</span><span class="r-value">{{ tenant_unit }} · {{ property_name }}</span></div>
+        <div class="receipt-row"><span class="r-label">Status</span><span class="r-value" style="color:var(--green)">✓ Confirmed</span></div>
+    `;
+    document.getElementById('receiptModal').classList.add('show');
+}
+
+function closeModal(id){
+    document.getElementById(id).classList.remove('show');
+}
+
+// ── Init ──────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    updateAmounts();
+    loadBankOptions();
+    lucide.createIcons();
+});
+</script>
+
+{% endblock %}

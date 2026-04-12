@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - SmartRent</title>
+  <style>
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+    
+    body { 
+      min-height: 100vh;
+      display: flex;
+      align-items: center; 
+      justify-content: center; 
+      background-image: url("{{ url_for('static', filename='images/b.jpg') }}");
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      backdrop-filter: blur(2px);
+      position: relative;
+      overflow-x: hidden;
+    }
+    
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(216, 181, 255, 0.7) 0%, rgba(0, 0, 0, 0.85) 100%);
+      pointer-events: none;
+    }
+    
+    .wrap { 
+      background: #0c0316; 
+      border-radius: 30px; 
+      padding: 20px 30px; /* Further reduced padding */
+      width: 420px; /* Slightly narrower */
+      max-width: 100%; 
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      animation: slideUp 0.5s ease;
+    }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .brand { 
+      font-size: 11px; /* Smaller */
+      color: #ff64c9; 
+      letter-spacing: 2px; 
+      text-transform: uppercase; 
+      margin-bottom: 4px; /* Reduced */
+      position: relative;
+      display: inline-block;
+    }
+    
+    .brand::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 1.5px;
+      background: #a78bfa;
+      border-radius: 2px;
+    }
+    
+    .hello { 
+      font-family: 'Brush Script MT', cursive; 
+      font-size: 36px; /* Reduced from 48px */
+      color: #c4b5fd; 
+      margin-bottom: 2px; 
+      display: block; 
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .tagline { 
+      font-size: 11px; /* Smaller */
+      color: #a89fd8; 
+      margin-bottom: 12px; /* Reduced */
+    }
+    
+    h1 { 
+      font-size: 22px; /* Reduced from 28px */
+      font-weight: 800; 
+      color: #fff; 
+      margin-bottom: 2px; 
+    }
+    
+    .welcome-text {
+      font-size: 11px; /* Smaller */
+      color: #fdfdfd;
+      margin-bottom: 14px; /* Reduced */
+      line-height: 1.3;
+    }
+    
+    /* Form Fields */
+    .field { 
+      position: relative; 
+      margin-bottom: 12px; /* Reduced from 16px */
+    }
+    
+    .field label { 
+      display: block; 
+      font-size: 10px; /* Smaller */
+      color: #a89fd8; 
+      margin-bottom: 3px; 
+      letter-spacing: 0.5px; 
+      text-transform: uppercase; 
+      font-weight: 600;
+    }
+    
+    .field input { 
+      width: 100%; 
+      padding: 8px 12px; /* Reduced from 10px 14px */
+      background: #2d1f5e;
+      border: 1.5px solid #3d2d7a; 
+      border-radius: 8px; /* Smaller radius */
+      color: #fff;
+      font-size: 13px; 
+      outline: none; 
+      transition: all 0.2s; 
+    }
+    
+    .field input::placeholder { 
+      color: #6b5fa0; 
+      font-size: 12px;
+    }
+    
+    .field input:focus { 
+      border-color: #a78bfa; 
+      box-shadow: 0 0 0 3px rgba(167,139,250,0.15);
+      transform: translateY(-1px);
+    }
+    
+    .field input.valid { 
+      border-color: #34d399; 
+    }
+    
+    .field input.error { 
+      border-color: #f87171; 
+    }
+    
+    /* Password Toggle */
+    .pwtog { 
+      position: absolute; 
+      right: 12px; 
+      bottom: 7px; /* Adjusted */
+      background: none; 
+      border: none; 
+      cursor: pointer; 
+      font-size: 14px; 
+      color: #a89fd8; 
+      padding: 0;
+      transition: color 0.2s;
+    }
+    
+    .pwtog:hover {
+      color: #c4b5fd;
+    }
+    
+    /* Checkbox Row */
+    .check-row { 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      margin-bottom: 12px; /* Reduced */
+      font-size: 11px; 
+      color: #c4b5fd; 
+      cursor: pointer; 
+    }
+    
+    .check-row input[type="checkbox"] { 
+      width: 14px; 
+      height: 14px; 
+      accent-color: #a78bfa; 
+      cursor: pointer; 
+    }
+    
+    .check-row label { 
+      cursor: pointer;
+      font-size: 11px;
+    }
+    
+    .check-row a { 
+      color: #a78bfa; 
+      text-decoration: underline; 
+      transition: color 0.2s;
+    }
+    
+    .check-row a:hover {
+      color: #c4b5fd;
+    }
+    
+    /* Button */
+    .btn { 
+      width: 100%; 
+      padding: 9px; /* Reduced from 11px */
+      background: #7c3aed; 
+      color: #fff; 
+      border: none; 
+      border-radius: 8px; 
+      font-size: 13px; 
+      font-weight: 700; 
+      cursor: pointer; 
+      letter-spacing: 1px; 
+      transition: all 0.2s; 
+      margin-top: 4px; 
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+    
+    .btn:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+    
+    .btn:hover { 
+      background: #6d28d9; 
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(124,58,237,0.4);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .btn.loading {
+      pointer-events: none;
+      opacity: 0.8;
+    }
+    
+    /* Divider */
+    .divider { 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      margin: 12px 0 10px; /* Reduced */
+    }
+    
+    .divider span { 
+      font-size: 10px; /* Smaller */
+      color: #6b5fa0; 
+      white-space: nowrap; 
+    }
+    
+    .divider hr { 
+      flex: 1; 
+      border: none; 
+      border-top: 1px solid #3d2d7a; 
+    }
+    
+    /* Social Login Buttons - Single button */
+    .social-login {
+      margin-bottom: 10px; /* Reduced */
+    }
+    
+    .social-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px; /* Reduced from 10px */
+      background: #2d1f5e;
+      border: 1.5px solid #3d2d7a;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 12px; /* Smaller */
+      font-weight: 500;
+      color: #e2d9f3;
+      width: 100%;
+    }
+    
+    .social-btn:hover {
+      border-color: #a78bfa;
+      background: #3d2d7a;
+      transform: translateY(-2px);
+    }
+    
+    .social-btn .icon {
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    /* Register Link */
+    .register-link { 
+      text-align: center; 
+      margin-top: 12px; /* Reduced */
+      font-size: 11px; /* Smaller */
+      color: #fb3ad8; 
+      padding-top: 10px; /* Reduced */
+      border-top: 1px solid #3d2d7a;
+    }
+    
+    .register-link a { 
+      color: #c4b5fd; 
+      font-weight: 700; 
+      text-decoration: none; 
+      border-bottom: 1px solid #c4b5fd;
+      transition: all 0.2s;
+    }
+    
+    .register-link a:hover {
+      color: #a78bfa;
+      border-bottom-color: #a78bfa;
+    }
+    
+    .register-link span {
+      margin-top: 6px !important;
+      font-size: 10px;
+    }
+    
+    /* Flash Messages */
+    .flash-error, .flash-success { 
+      padding: 8px 12px; /* Reduced */
+      font-size: 12px; 
+      margin-bottom: 12px; /* Reduced */
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: shake 0.4s ease;
+      border-radius: 8px;
+    }
+    
+    .flash-error { 
+      background: rgba(248,113,113,0.12); 
+      border: 1px solid #f87171; 
+      color: #f87171; 
+    }
+    
+    .flash-success { 
+      background: rgba(52,211,153,0.12); 
+      border: 1px solid #34d399; 
+      color: #34d399; 
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    
+    /* Error Message */
+    .errmsg { 
+      font-size: 10px; 
+      color: #f87171; 
+      margin-top: 3px; 
+      padding-left: 2px; 
+      display: none; 
+    }
+    
+    /* Forgot password link */
+    .forgot-link {
+      text-align: right;
+      margin-top: 4px;
+      margin-bottom: 2px;
+    }
+    
+    .forgot-link a {
+      font-size: 10px;
+      color: #a89fd8;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    .forgot-link a:hover {
+      color: #c4b5fd;
+      text-decoration: underline;
+    }
+    
+    /* Responsive */
+    @media (max-width: 520px) {
+      .wrap {
+        padding: 16px 20px;
+      }
+      
+      .hello {
+        font-size: 32px;
+      }
+      
+      h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">SmartRent</div>
+  <span class="hello">welcome back</span>
+  <p class="tagline">Sign in to your account</p>
+
+  {# Flask flash messages #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash-{{ category }}">
+          <span>{{ '✓' if category == 'success' else '⚠' }}</span>
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <h1>Login</h1>
+  <p class="welcome-text">Enter your credentials</p>
+
+  <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
+    {{ csrf_token() if csrf_token is defined }}
+    
+    <div class="field">
+      <label for="email">Email address</label>
+      <input type="email" id="email" name="email" placeholder="jane@example.com" 
+             value="{{ request.form.get('email', '') }}" oninput="validateEmail()">
+    </div>
+    <div class="errmsg" id="err-email">Please enter a valid email address</div>
+    
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Enter your password" oninput="validatePassword()">
+      <button class="pwtog" type="button" onclick="togglePassword('password', this)">👁️</button>
+    </div>
+    <div class="errmsg" id="err-password">Password is required</div>
+    
+    <div class="forgot-link">
+      <a href="#" onclick="alert('Password reset link will be sent to your email')">Forgot password?</a>
+    </div>
+    
+    <div class="check-row">
+      <input type="checkbox" id="remember" name="remember">
+      <label for="remember">Remember me</label>
+    </div>
+    
+    <button class="btn" type="submit" id="loginBtn">Sign In →</button>
+    
+    <div class="divider">
+      <hr>
+      <span>or</span>
+      <hr>
+    </div>
+    
+    <!-- Single Google button -->
+    <div class="social-login">
+      <div class="social-btn" onclick="alert('Google login coming soon!')">
+        <span class="icon">G</span>
+        <span>Continue with Google</span>
+      </div>
+    </div>
+  </form>
+  
+  <div class="register-link">
+    Don't have an account? <a href="{{ url_for('auth.register') }}">Create account</a>
+    <span style="color: #6b5fa0; display: block; margin-top: 4px;">✨ First month free ✨</span>
+  </div>
+</div>
+
+<script>
+  function validateEmail() {
+    const email = document.getElementById('email');
+    const err = document.getElementById('err-email');
+    const isValid = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/.test(email.value);
+    
+    if (email.value && !isValid) {
+      err.style.display = 'block';
+      email.classList.add('error');
+      email.classList.remove('valid');
+    } else if (email.value && isValid) {
+      err.style.display = 'none';
+      email.classList.add('valid');
+      email.classList.remove('error');
+    } else {
+      err.style.display = 'none';
+      email.classList.remove('valid', 'error');
+    }
+    return isValid;
+  }
+  
+  function validatePassword() {
+    const password = document.getElementById('password');
+    const err = document.getElementById('err-password');
+    const isValid = password.value.length > 0;
+    
+    if (!isValid && password.value === '') {
+      err.style.display = 'none';
+      password.classList.remove('error', 'valid');
+    } else if (!isValid) {
+      err.style.display = 'block';
+      password.classList.add('error');
+      password.classList.remove('valid');
+    } else {
+      err.style.display = 'none';
+      password.classList.add('valid');
+      password.classList.remove('error');
+    }
+    return isValid;
+  }
+  
+  function togglePassword(fieldId, btn) {
+    const field = document.getElementById(fieldId);
+    field.type = field.type === 'password' ? 'text' : 'password';
+    btn.innerHTML = field.type === 'password' ? '👁️' : '👁️‍🗨️';
+  }
+  
+  const form = document.getElementById('loginForm');
+  const loginBtn = document.getElementById('loginBtn');
+  
+  form.addEventListener('submit', function(e) {
+    let isValid = true;
+    
+    if (!validateEmail()) {
+      isValid = false;
+    }
+    
+    if (!validatePassword()) {
+      isValid = false;
+    }
+    
+    if (!isValid) {
+      e.preventDefault();
+      const wrap = document.querySelector('.wrap');
+      wrap.style.animation = 'shake 0.4s ease';
+      setTimeout(() => {
+        wrap.style.animation = '';
+      }, 400);
+    } else {
+      loginBtn.classList.add('loading');
+      loginBtn.innerHTML = 'Signing in...';
+    }
+  });
+</script>
+</body>
+</html>

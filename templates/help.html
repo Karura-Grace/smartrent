@@ -1,0 +1,358 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Help & Support – SmartRent{% endblock %}
+{% block page_title %}Help & Support{% endblock %}
+{% block page_sub %}FAQs, guides and contact{% endblock %}
+{% block role_name %}{{ user.role | capitalize }}{% endblock %}
+
+{% block extra_styles %}
+.help-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .help-grid { grid-template-columns: 1fr; } }
+.help-search-wrap { position: relative; margin-bottom: 22px; }
+.help-search-wrap input { width: 100%; padding: 13px 18px 13px 48px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--surface); color: var(--text); box-shadow: var(--sh-sm); transition: border-color 0.15s, box-shadow 0.15s; }
+.help-search-wrap input:focus { outline: none; border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.help-search-ico { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+.help-search-clear { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-3); cursor: pointer; display: none; background: none; border: none; padding: 4px; }
+.contact-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 22px; }
+@media (max-width: 600px) { .contact-grid { grid-template-columns: 1fr; } }
+.contact-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 16px; cursor: pointer; text-decoration: none; display: block; transition: all 0.15s; box-shadow: var(--sh-sm); }
+.contact-card:hover { border-color: var(--blue-400); box-shadow: var(--sh); transform: translateY(-2px); }
+.contact-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 11px; }
+.contact-name { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.contact-desc { font-size: 12px; color: var(--text-3); }
+.contact-badge { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+.cb-green { background: #f0fdf4; color: #15803d; }
+.cb-blue  { background: var(--blue-50); color: var(--blue-600); }
+.cb-amber { background: #fffbeb; color: #b45309; }
+.hcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--sh-sm); overflow: hidden; margin-bottom: 18px; }
+.hcard-head { display: flex; align-items: center; gap: 12px; padding: 15px 20px; border-bottom: 1px solid var(--border-lt); }
+.hcard-head-ico { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.hcard-head-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.hcard-head-sub   { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+.faq-item { border-bottom: 1px solid var(--border-lt); }
+.faq-item:last-child { border-bottom: none; }
+.faq-item.hidden { display: none; }
+.faq-q { display: flex; align-items: center; gap: 12px; padding: 14px 20px; cursor: pointer; user-select: none; }
+.faq-q:hover { background: var(--bg); }
+.faq-q-ico { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.faq-q-text { flex: 1; font-size: 13.5px; font-weight: 500; color: var(--text); }
+.faq-chevron { color: var(--text-3); transition: transform 0.2s; flex-shrink: 0; }
+.faq-item.open .faq-chevron { transform: rotate(180deg); }
+.faq-a { padding: 0 20px 0 60px; max-height: 0; overflow: hidden; transition: max-height 0.25s ease, padding 0.15s; }
+.faq-item.open .faq-a { max-height: 300px; padding-bottom: 16px; }
+.faq-a p { font-size: 13px; color: var(--text-2); line-height: 1.65; }
+.faq-a-actions { display: flex; gap: 8px; margin-top: 10px; }
+.faq-vote { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; color: var(--text-3); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-lt); background: var(--bg); cursor: pointer; transition: all 0.13s; font-family: 'Plus Jakarta Sans', sans-serif; }
+.faq-vote:hover { background: var(--surface); color: var(--text); }
+.faq-vote.voted { border-color: var(--blue-100); background: var(--blue-50); color: var(--blue-600); }
+.qlink { display: flex; align-items: center; gap: 12px; padding: 13px 18px; text-decoration: none; border-bottom: 1px solid var(--border-lt); transition: background 0.13s; }
+.qlink:last-child { border-bottom: none; }
+.qlink:hover { background: var(--bg); }
+.qlink-ico { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.qlink-body { flex: 1; }
+.qlink-label { font-size: 13px; font-weight: 500; color: var(--text); }
+.qlink-sub   { font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+.qlink-arrow { color: var(--text-3); }
+.qlink:hover .qlink-arrow { color: var(--blue-600); }
+.aside-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--sh-sm); margin-bottom: 16px; overflow: hidden; }
+.aside-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border-lt); font-size: 13px; font-weight: 600; color: var(--text); }
+.aside-head-ico { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+.aside-body { padding: 14px 16px; }
+.aside-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border-lt); font-size: 12.5px; }
+.aside-row:last-child { border-bottom: none; }
+.aside-row-ico { color: var(--text-3); flex-shrink: 0; }
+.aside-row-body { flex: 1; color: var(--text); font-weight: 500; }
+.aside-row-sub  { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.status-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-lt); font-size: 12.5px; }
+.status-row:last-child { border-bottom: none; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-green { background: var(--green); box-shadow: 0 0 0 2px #dcfce7; }
+.dot-amber { background: var(--amber); box-shadow: 0 0 0 2px #fef9c3; }
+.topic-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 14px 16px; }
+.topic-chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: var(--bg); color: var(--text-2); cursor: pointer; transition: all 0.13s; }
+.topic-chip:hover, .topic-chip.active { background: var(--blue-50); border-color: var(--blue-100); color: var(--blue-600); }
+.feedback-bar { display: flex; align-items: center; gap: 12px; padding: 13px 18px; background: var(--bg); border-top: 1px solid var(--border-lt); font-size: 12.5px; color: var(--text-2); }
+.fb-btns { display: flex; gap: 6px; }
+.fb-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-2); cursor: pointer; transition: all 0.13s; font-family: 'Plus Jakarta Sans', sans-serif; }
+.fb-btn:hover { background: var(--blue-50); border-color: var(--blue-100); color: var(--blue-600); }
+.no-results { padding: 32px 20px; text-align: center; color: var(--text-3); font-size: 13.5px; display: none; }
+.ico-bg-blue   { background: var(--blue-50);   color: var(--blue-600); }
+.ico-bg-green  { background: #f0fdf4;           color: var(--green); }
+.ico-bg-orange { background: var(--orange-50);  color: var(--orange); }
+.ico-bg-purple { background: #f5f3ff;           color: var(--purple); }
+.ico-bg-red    { background: #fef2f2;           color: var(--red); }
+.ico-bg-amber  { background: #fffbeb;           color: var(--amber); }
+.ico-bg-gray   { background: var(--bg);         color: var(--text-2); }
+{% endblock %}
+
+{% block hero %}
+<div class="hero" style="margin-bottom:24px;">
+    <div class="hero-eye">Support Center</div>
+    <h1>How can we help you?</h1>
+    <p>Find answers, get in touch, or browse our documentation</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi"><div class="hero-kpi-label">Response time</div><div class="hero-kpi-value">~5 min</div></div>
+        <div class="hero-kpi"><div class="hero-kpi-label">Satisfaction rate</div><div class="hero-kpi-value">98%</div></div>
+        <div class="hero-kpi"><div class="hero-kpi-label">Help articles</div><div class="hero-kpi-value">120+</div></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Search -->
+<div class="help-search-wrap">
+    <span class="help-search-ico"><i data-lucide="search" width="18" height="18"></i></span>
+    <input type="text" id="faqSearch" placeholder="Search for answers… e.g. 'how to pay rent'" oninput="filterFAQ(this)">
+    <button class="help-search-clear" id="searchClear" onclick="clearSearch()">
+        <i data-lucide="x" width="15" height="15"></i>
+    </button>
+</div>
+
+<!-- Contact channels -->
+<div class="contact-grid">
+    <a class="contact-card" href="#">
+        <div class="contact-icon ico-bg-green"><i data-lucide="message-circle" width="20" height="20"></i></div>
+        <div class="contact-name">Live chat</div>
+        <div class="contact-desc">Chat with our support team</div>
+        <div class="contact-badge cb-green"><i data-lucide="circle" width="8" height="8" style="fill:currentColor"></i> Usually responds in minutes</div>
+    </a>
+    <a class="contact-card" href="mailto:support@smartrent.com">
+        <div class="contact-icon ico-bg-blue"><i data-lucide="mail" width="20" height="20"></i></div>
+        <div class="contact-name">Email support</div>
+        <div class="contact-desc">Send us a detailed message</div>
+        <div class="contact-badge cb-blue"><i data-lucide="clock" width="8" height="8"></i> Reply within 24 hours</div>
+    </a>
+    <a class="contact-card" href="tel:+254800000000">
+        <div class="contact-icon ico-bg-amber"><i data-lucide="phone" width="20" height="20"></i></div>
+        <div class="contact-name">Call us</div>
+        <div class="contact-desc">+254 800 000 000</div>
+        <div class="contact-badge cb-amber"><i data-lucide="sun" width="8" height="8"></i> Mon – Fri, 8am – 6pm</div>
+    </a>
+</div>
+
+<div class="help-grid">
+    <!-- Main column -->
+    <div>
+        <!-- Topic chips -->
+        <div class="hcard" style="margin-bottom:18px;">
+            <div class="hcard-head">
+                <div class="hcard-head-ico ico-bg-blue"><i data-lucide="tag" width="15" height="15"></i></div>
+                <div><div class="hcard-head-title">Browse by topic</div></div>
+            </div>
+            <div class="topic-chips">
+                <div class="topic-chip active" onclick="filterTopic('all',this)"><i data-lucide="layout-grid" width="13" height="13"></i> All</div>
+                <div class="topic-chip" onclick="filterTopic('payments',this)"><i data-lucide="credit-card" width="13" height="13"></i> Payments</div>
+                <div class="topic-chip" onclick="filterTopic('maintenance',this)"><i data-lucide="wrench" width="13" height="13"></i> Maintenance</div>
+                <div class="topic-chip" onclick="filterTopic('lease',this)"><i data-lucide="file-text" width="13" height="13"></i> Lease</div>
+                <div class="topic-chip" onclick="filterTopic('account',this)"><i data-lucide="user" width="13" height="13"></i> Account</div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="hcard">
+            <div class="hcard-head">
+                <div class="hcard-head-ico ico-bg-purple"><i data-lucide="help-circle" width="15" height="15"></i></div>
+                <div><div class="hcard-head-title">Frequently Asked Questions</div><div class="hcard-head-sub">Click a question to expand the answer</div></div>
+            </div>
+            <div id="faqList">
+                <div class="faq-item" data-topic="payments" data-q="how do i pay rent mpesa">
+                    <div class="faq-q" onclick="togFAQ(this.parentElement)">
+                        <div class="faq-q-ico ico-bg-green"><i data-lucide="banknote" width="14" height="14"></i></div>
+                        <span class="faq-q-text">How do I pay my rent?</span>
+                        <i data-lucide="chevron-down" width="16" height="16" class="faq-chevron"></i>
+                    </div>
+                    <div class="faq-a">
+                        <p>Go to the <strong>Payments</strong> section, choose your amount, and select M-Pesa, card, or bank transfer. You'll receive a confirmation SMS and email immediately.</p>
+                        <div class="faq-a-actions">
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-up" width="12" height="12"></i> Helpful</button>
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-down" width="12" height="12"></i> Not helpful</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item" data-topic="payments" data-q="late payment missed fee grace period">
+                    <div class="faq-q" onclick="togFAQ(this.parentElement)">
+                        <div class="faq-q-ico ico-bg-red"><i data-lucide="alarm-clock" width="14" height="14"></i></div>
+                        <span class="faq-q-text">What happens if I miss a payment?</span>
+                        <i data-lucide="chevron-down" width="16" height="16" class="faq-chevron"></i>
+                    </div>
+                    <div class="faq-a">
+                        <p>A late fee may apply after the grace period (usually 5 days). You'll receive reminders before and after the due date. Contact your property manager early if you're having difficulty.</p>
+                        <div class="faq-a-actions">
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-up" width="12" height="12"></i> Helpful</button>
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-down" width="12" height="12"></i> Not helpful</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item" data-topic="payments" data-q="download receipt pdf invoice">
+                    <div class="faq-q" onclick="togFAQ(this.parentElement)">
+                        <div class="faq-q-ico ico-bg-blue"><i data-lucide="download" width="14" height="14"></i></div>
+                        <span class="faq-q-text">Can I download my payment receipts?</span>
+                        <i data-lucide="chevron-down" width="16" height="16" class="faq-chevron"></i>
+                    </div>
+                    <div class="faq-a">
+                        <p>Yes. Go to <strong>Payments → History</strong>, find the transaction, and click the download icon. Receipts are PDF format.</p>
+                        <div class="faq-a-actions">
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-up" width="12" height="12"></i> Helpful</button>
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-down" width="12" height="12"></i> Not helpful</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item" data-topic="maintenance" data-q="submit maintenance request repair">
+                    <div class="faq-q" onclick="togFAQ(this.parentElement)">
+                        <div class="faq-q-ico ico-bg-amber"><i data-lucide="wrench" width="14" height="14"></i></div>
+                        <span class="faq-q-text">How do I submit a maintenance request?</span>
+                        <i data-lucide="chevron-down" width="16" height="16" class="faq-chevron"></i>
+                    </div>
+                    <div class="faq-a">
+                        <p>Open the <strong>Maintenance</strong> tab, click <strong>New Request</strong>, describe the issue and attach photos. Your manager will be notified and you can track the status in real time.</p>
+                        <div class="faq-a-actions">
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-up" width="12" height="12"></i> Helpful</button>
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-down" width="12" height="12"></i> Not helpful</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item" data-topic="account" data-q="update contact details profile name email phone">
+                    <div class="faq-q" onclick="togFAQ(this.parentElement)">
+                        <div class="faq-q-ico ico-bg-purple"><i data-lucide="user-pen" width="14" height="14"></i></div>
+                        <span class="faq-q-text">How do I update my contact details?</span>
+                        <i data-lucide="chevron-down" width="16" height="16" class="faq-chevron"></i>
+                    </div>
+                    <div class="faq-a">
+                        <p>Go to <strong>Settings → Profile</strong>. Update your name, email or phone and click <strong>Save changes</strong>.</p>
+                        <div class="faq-a-actions">
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-up" width="12" height="12"></i> Helpful</button>
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-down" width="12" height="12"></i> Not helpful</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item" data-topic="account" data-q="change password reset forgot login">
+                    <div class="faq-q" onclick="togFAQ(this.parentElement)">
+                        <div class="faq-q-ico ico-bg-blue"><i data-lucide="key-round" width="14" height="14"></i></div>
+                        <span class="faq-q-text">How do I change or reset my password?</span>
+                        <i data-lucide="chevron-down" width="16" height="16" class="faq-chevron"></i>
+                    </div>
+                    <div class="faq-a">
+                        <p>Go to <strong>Settings → Security → Change password</strong>. You'll need your current password. If forgotten, use <strong>Forgot password</strong> on the login page.</p>
+                        <div class="faq-a-actions">
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-up" width="12" height="12"></i> Helpful</button>
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-down" width="12" height="12"></i> Not helpful</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item" data-topic="lease" data-q="view lease agreement contract document">
+                    <div class="faq-q" onclick="togFAQ(this.parentElement)">
+                        <div class="faq-q-ico ico-bg-green"><i data-lucide="file-text" width="14" height="14"></i></div>
+                        <span class="faq-q-text">Where can I view my lease agreement?</span>
+                        <i data-lucide="chevron-down" width="16" height="16" class="faq-chevron"></i>
+                    </div>
+                    <div class="faq-a">
+                        <p>Your lease is available under <strong>My Lease</strong> in the sidebar. You can view, download, or print it anytime.</p>
+                        <div class="faq-a-actions">
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-up" width="12" height="12"></i> Helpful</button>
+                            <button class="faq-vote" onclick="vote(this)"><i data-lucide="thumbs-down" width="12" height="12"></i> Not helpful</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="no-results" id="noResults">
+                <i data-lucide="search-x" width="32" height="32" style="color:var(--text-3);display:block;margin:0 auto 10px"></i>
+                No results found. Try a different term or <a href="mailto:support@smartrent.com" style="color:var(--blue-600)">contact support</a>.
+            </div>
+            <div class="feedback-bar">
+                <span id="feedbackText">Was this page helpful?</span>
+                <div class="fb-btns">
+                    <button class="fb-btn" onclick="feedback(this,'yes')"><i data-lucide="thumbs-up" width="13" height="13"></i> Yes</button>
+                    <button class="fb-btn" onclick="feedback(this,'no')"><i data-lucide="thumbs-down" width="13" height="13"></i> No</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resources -->
+        <div class="hcard">
+            <div class="hcard-head">
+                <div class="hcard-head-ico ico-bg-blue"><i data-lucide="book-open" width="15" height="15"></i></div>
+                <div><div class="hcard-head-title">Resources & Guides</div><div class="hcard-head-sub">Step-by-step help for common tasks</div></div>
+            </div>
+            <a class="qlink" href="#"><div class="qlink-ico ico-bg-green"><i data-lucide="credit-card" width="15" height="15"></i></div><div class="qlink-body"><div class="qlink-label">How to make your first payment</div><div class="qlink-sub">Step-by-step guide</div></div><div class="qlink-arrow"><i data-lucide="arrow-right" width="15" height="15"></i></div></a>
+            <a class="qlink" href="#"><div class="qlink-ico ico-bg-amber"><i data-lucide="wrench" width="15" height="15"></i></div><div class="qlink-body"><div class="qlink-label">Submitting a maintenance request</div><div class="qlink-sub">Photos, priority levels and tracking</div></div><div class="qlink-arrow"><i data-lucide="arrow-right" width="15" height="15"></i></div></a>
+            <a class="qlink" href="#"><div class="qlink-ico ico-bg-blue"><i data-lucide="file-check" width="15" height="15"></i></div><div class="qlink-body"><div class="qlink-label">Understanding your lease</div><div class="qlink-sub">Key terms, renewal dates and notices</div></div><div class="qlink-arrow"><i data-lucide="arrow-right" width="15" height="15"></i></div></a>
+            <a class="qlink" href="#"><div class="qlink-ico ico-bg-purple"><i data-lucide="shield" width="15" height="15"></i></div><div class="qlink-body"><div class="qlink-label">Securing your account</div><div class="qlink-sub">Password tips and 2FA</div></div><div class="qlink-arrow"><i data-lucide="arrow-right" width="15" height="15"></i></div></a>
+            <a class="qlink" href="#"><div class="qlink-ico ico-bg-red"><i data-lucide="bug" width="15" height="15"></i></div><div class="qlink-body"><div class="qlink-label">Report a bug</div><div class="qlink-sub">Help us improve the platform</div></div><div class="qlink-arrow"><i data-lucide="arrow-right" width="15" height="15"></i></div></a>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+        <div class="aside-card">
+            <div class="aside-head"><div class="aside-head-ico ico-bg-green"><i data-lucide="activity" width="14" height="14"></i></div>System Status</div>
+            <div class="aside-body">
+                <div class="status-row"><span style="flex:1;font-size:12.5px;color:var(--text)">Payment gateway</span><div class="status-dot dot-green"></div><span style="font-size:11px;color:var(--green);font-weight:600">Operational</span></div>
+                <div class="status-row"><span style="flex:1;font-size:12.5px;color:var(--text)">Notifications</span><div class="status-dot dot-green"></div><span style="font-size:11px;color:var(--green);font-weight:600">Operational</span></div>
+                <div class="status-row"><span style="flex:1;font-size:12.5px;color:var(--text)">Document uploads</span><div class="status-dot dot-amber"></div><span style="font-size:11px;color:var(--amber);font-weight:600">Degraded</span></div>
+                <div class="status-row"><span style="flex:1;font-size:12.5px;color:var(--text)">SMS delivery</span><div class="status-dot dot-green"></div><span style="font-size:11px;color:var(--green);font-weight:600">Operational</span></div>
+            </div>
+        </div>
+        <div class="aside-card">
+            <div class="aside-head"><div class="aside-head-ico ico-bg-blue"><i data-lucide="contact" width="14" height="14"></i></div>Contact Details</div>
+            <div class="aside-body">
+                <div class="aside-row"><div class="aside-row-ico"><i data-lucide="mail" width="14" height="14"></i></div><div class="aside-row-body"><div>support@smartrent.com</div><div class="aside-row-sub">General enquiries</div></div></div>
+                <div class="aside-row"><div class="aside-row-ico"><i data-lucide="phone" width="14" height="14"></i></div><div class="aside-row-body"><div>+254 800 000 000</div><div class="aside-row-sub">Mon–Fri 8am–6pm</div></div></div>
+                <div class="aside-row"><div class="aside-row-ico"><i data-lucide="map-pin" width="14" height="14"></i></div><div class="aside-row-body"><div>Nairobi, Kenya</div><div class="aside-row-sub">Head office</div></div></div>
+            </div>
+        </div>
+        <div class="aside-card">
+            <div class="aside-head"><div class="aside-head-ico ico-bg-orange"><i data-lucide="zap" width="14" height="14"></i></div>Quick Actions</div>
+            <a class="qlink" href="#"><div class="qlink-ico ico-bg-blue"><i data-lucide="message-circle-plus" width="14" height="14"></i></div><div class="qlink-body"><div class="qlink-label">Start live chat</div></div><div class="qlink-arrow"><i data-lucide="arrow-right" width="13" height="13"></i></div></a>
+            <a class="qlink" href="{{ url_for('auth.settings') }}"><div class="qlink-ico ico-bg-purple"><i data-lucide="settings" width="14" height="14"></i></div><div class="qlink-body"><div class="qlink-label">Go to settings</div></div><div class="qlink-arrow"><i data-lucide="arrow-right" width="13" height="13"></i></div></a>
+            <a class="qlink" href="mailto:support@smartrent.com"><div class="qlink-ico ico-bg-red"><i data-lucide="flag" width="14" height="14"></i></div><div class="qlink-body"><div class="qlink-label">Report a problem</div></div><div class="qlink-arrow"><i data-lucide="arrow-right" width="13" height="13"></i></div></a>
+        </div>
+    </div>
+</div>
+
+<script>
+function togFAQ(item) {
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+    lucide.createIcons();
+}
+function filterFAQ(input) {
+    const q = input.value.toLowerCase().trim();
+    document.getElementById('searchClear').style.display = q ? 'block' : 'none';
+    let any = false;
+    document.querySelectorAll('.faq-item').forEach(item => {
+        const match = !q || item.dataset.q.includes(q);
+        item.classList.toggle('hidden', !match);
+        if (match) any = true;
+    });
+    document.getElementById('noResults').style.display = any ? 'none' : 'block';
+}
+function clearSearch() {
+    const inp = document.getElementById('faqSearch');
+    inp.value = '';
+    filterFAQ(inp);
+}
+function filterTopic(topic, chip) {
+    document.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    let any = false;
+    document.querySelectorAll('.faq-item').forEach(item => {
+        const match = topic === 'all' || item.dataset.topic === topic;
+        item.classList.toggle('hidden', !match);
+        if (match) any = true;
+    });
+    document.getElementById('noResults').style.display = any ? 'none' : 'block';
+}
+function vote(btn) {
+    btn.parentElement.querySelectorAll('.faq-vote').forEach(b => b.classList.remove('voted'));
+    btn.classList.add('voted');
+}
+function feedback(btn, type) {
+    document.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('voted'));
+    btn.classList.add('voted');
+    document.getElementById('feedbackText').textContent = type === 'yes' ? 'Thanks for the feedback!' : "Thanks — we'll work on improving this.";
+}
+lucide.createIcons();
+</script>
+{% endblock %}

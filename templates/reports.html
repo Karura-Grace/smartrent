@@ -1,0 +1,107 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Reports · SmartRent{% endblock %}
+{% block role_name %}Landlord{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block page_sub %}Financial Overview{% endblock %}
+{% block extra_styles %}
+.hero{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%)}
+.nav-item.active{background:#f0fdfa;color:#0f766e}.nav-item.active::before{background:#0f766e}
+.nav-item:hover{background:#f0fdfa;color:#0f766e}
+.btn-primary{background:#0f766e}.btn-primary:hover{background:#065f46}
+.card-action{color:#0f766e;background:#f0fdfa}
+.report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:22px}
+.report-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--sh-sm);cursor:pointer;transition:all 0.18s}
+.report-card:hover{box-shadow:var(--sh);transform:translateY(-2px);border-color:#99f6e4}
+.report-ico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.report-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.report-desc{font-size:11.5px;color:var(--text-3);line-height:1.5}
+.report-badge{margin-top:10px}
+.month-bar{display:flex;align-items:flex-end;gap:6px;height:80px;margin-top:12px}
+.bar{flex:1;background:var(--blue-100);border-radius:4px 4px 0 0;position:relative;transition:background 0.2s;cursor:pointer;min-width:0}
+.bar:hover{background:#0f766e}
+.bar-tip{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;color:var(--text-3);white-space:nowrap}
+.bar.current{background:#0f766e}
+.bar-labels{display:flex;gap:6px;margin-top:4px}
+.bar-lbl{flex:1;text-align:center;font-size:9px;color:var(--text-3);min-width:0}
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Reports</div>
+    <h1>Financial Reports</h1>
+    <p>Income, expenses and occupancy summaries for your portfolio.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi"><span class="hero-kpi-label">Total Income (Mar)</span><span class="hero-kpi-value">KES 142,000</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">Expenses (Mar)</span><span class="hero-kpi-value">KES 18,500</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">Net Profit</span><span class="hero-kpi-value">KES 123,500</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">YTD Income</span><span class="hero-kpi-value">KES 412,000</span></div>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="report-grid">
+        <div class="report-card" onclick="window.location='/reports/income/pdf'">    
+        <div class="report-ico ico-green"><i data-lucide="trending-up" width="20" height="20" style="color:#15803d"></i></div>
+        <div class="report-name">Income Report</div>
+        <div class="report-desc">Monthly and annual rental income by property and unit.</div>
+        <div class="report-badge"><span class="badge b-green">Download PDF</span></div>
+    </div>
+    <div class="report-card" onclick="window.location='/reports/expenses/pdf'">
+        <div class="report-ico ico-red"><i data-lucide="trending-down" width="20" height="20" style="color:#dc2626"></i></div>
+        <div class="report-name">Expense Report</div>
+        <div class="report-desc">Maintenance costs, repairs and operational expenses.</div>
+        <div class="report-badge"><span class="badge b-red">Download PDF</span></div>
+    </div>
+    <div class="report-card" onclick="window.location='/reports/occupancy/pdf'">
+        <div class="report-ico ico-blue"><i data-lucide="home" width="20" height="20" style="color:#2563eb"></i></div>
+        <div class="report-name">Occupancy Report</div>
+        <div class="report-desc">Vacancy rates and occupancy trends per property.</div>
+        <div class="report-badge"><span class="badge b-blue">Download PDF</span></div>
+    </div>
+    <div class="report-card" onclick="window.location='/reports/arrears/pdf'">
+
+        <div class="report-ico ico-orange"><i data-lucide="alert-circle" width="20" height="20" style="color:#d97706"></i></div>
+        <div class="report-name">Arrears Report</div>
+        <div class="report-desc">Outstanding balances and overdue rent per tenant.</div>
+        <div class="report-badge"><span class="badge b-amber">Download PDF</span></div>
+    </div>
+</div>
+<div class="content-grid">
+    <div class="card">
+        <div class="card-head"><span class="card-title">Monthly Income — 2025</span><button class="card-action" onclick="alert('Export CSV coming soon!')"><i data-lucide="download" width="12" height="12" style="display:inline;margin-right:3px;vertical-align:-1px"></i>CSV</button></div>
+        <div class="month-bar">
+            <div class="bar" style="height:65%"><div class="bar-tip">138K</div></div>
+            <div class="bar" style="height:70%"><div class="bar-tip">141K</div></div>
+            <div class="bar current" style="height:72%"><div class="bar-tip">142K</div></div>
+            <div class="bar" style="height:30%;opacity:0.4"></div>
+            <div class="bar" style="height:30%;opacity:0.4"></div>
+            <div class="bar" style="height:30%;opacity:0.4"></div>
+        </div>
+        <div class="bar-labels"><div class="bar-lbl">Jan</div><div class="bar-lbl">Feb</div><div class="bar-lbl">Mar</div><div class="bar-lbl">Apr</div><div class="bar-lbl">May</div><div class="bar-lbl">Jun</div></div>
+        <table class="tbl" style="margin-top:18px">
+            <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Rate</th></tr></thead>
+            <tbody>
+                <tr><td>January</td><td>KES 138,000</td><td>KES 12,000</td><td>KES 126,000</td><td><span class="badge b-green">80%</span></td></tr>
+                <tr><td>February</td><td>KES 141,500</td><td>KES 9,500</td><td>KES 132,000</td><td><span class="badge b-green">82%</span></td></tr>
+                <tr><td><strong>March</strong></td><td><strong>KES 142,000</strong></td><td><strong>KES 18,500</strong></td><td><strong>KES 123,500</strong></td><td><span class="badge b-green">83%</span></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <div class="card-head"><span class="card-title">By Property — March</span></div>
+        <table class="tbl">
+            <thead><tr><th>Property</th><th>Collected</th><th>Occupancy</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Sunset Apts</strong></td><td>KES 68,000</td><td><span class="badge b-green">80%</span></td></tr>
+                <tr><td><strong>Sunrise Apts</strong></td><td>KES 52,000</td><td><span class="badge b-green">100%</span></td></tr>
+                <tr><td><strong>Greenview</strong></td><td>KES 22,000</td><td><span class="badge b-amber">67%</span></td></tr>
+            </tbody>
+        </table>
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border-lt)">
+            <button class="btn-primary" style="width:100%;justify-content:center" onclick="alert('Full report PDF coming soon!')">
+                <i data-lucide="download" width="14" height="14"></i> Download Full Report
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

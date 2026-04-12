@@ -1,0 +1,115 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Maintenance · SmartRent{% endblock %}
+{% block role_name %}Landlord{% endblock %}
+{% block page_title %}Maintenance{% endblock %}
+{% block page_sub %}Requests & Repairs{% endblock %}
+{% block extra_styles %}
+.hero{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%)}
+.nav-item.active{background:#f0fdfa;color:#0f766e}.nav-item.active::before{background:#0f766e}
+.nav-item:hover{background:#f0fdfa;color:#0f766e}
+.btn-primary{background:#0f766e}.btn-primary:hover{background:#065f46}
+.card-action{color:#0f766e;background:#f0fdfa}
+.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.filter-input{flex:1;min-width:200px;padding:9px 14px 9px 36px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none}
+.filter-input:focus{border-color:#0f766e}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none}
+.filter-select{padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text-2);background:var(--surface);cursor:pointer;outline:none}
+.tbl-actions{display:flex;gap:6px}
+.tbl-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.13s;background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;gap:4px}
+.tbl-btn:hover{background:var(--bg);color:var(--text)}
+.tbl-btn.success:hover{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+.tbl-btn.warn:hover{background:#fffbeb;color:#d97706;border-color:#fde68a}
+.tbl-btn.info:hover{background:var(--blue-50);color:var(--blue-600);border-color:var(--blue-100)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:var(--sh-md);animation:fadeUp 0.25s ease both;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--text-3);margin-bottom:22px}
+.modal-footer{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:5px}
+.form-input{width:100%;padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.13s}
+.form-input:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,0.1)}
+{% endblock %}
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Maintenance</div>
+    <h1>Maintenance Requests</h1>
+    <p>Track and assign all repair and maintenance tickets.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi"><span class="hero-kpi-label">Open</span><span class="hero-kpi-value">7</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">Urgent</span><span class="hero-kpi-value">3</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">In Progress</span><span class="hero-kpi-value">2</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">Resolved This Month</span><span class="hero-kpi-value">8</span></div>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="stats-grid" style="margin-bottom:20px;">
+    <div class="stat-card"><div class="stat-top"><div class="stat-ico ico-red"><i data-lucide="alert-triangle" width="18" height="18" style="color:#dc2626"></i></div><span class="stat-trend down">Needs action</span></div><div class="stat-val">3</div><div class="stat-name">Urgent</div><div class="stat-hint">Immediate attention required</div></div>
+    <div class="stat-card"><div class="stat-top"><div class="stat-ico ico-amber" style="background:#fffbeb"><i data-lucide="clock" width="18" height="18" style="color:#d97706"></i></div><span class="stat-trend flat">In progress</span></div><div class="stat-val">2</div><div class="stat-name">In Progress</div><div class="stat-hint">Assigned to service providers</div></div>
+    <div class="stat-card"><div class="stat-top"><div class="stat-ico ico-blue"><i data-lucide="inbox" width="18" height="18" style="color:#2563eb"></i></div><span class="stat-trend flat">Waiting</span></div><div class="stat-val">2</div><div class="stat-name">Pending Assignment</div><div class="stat-hint">Not yet assigned</div></div>
+    <div class="stat-card"><div class="stat-top"><div class="stat-ico ico-green"><i data-lucide="check-circle" width="18" height="18" style="color:#15803d"></i></div><span class="stat-trend up">This month</span></div><div class="stat-val">8</div><div class="stat-name">Resolved</div><div class="stat-hint">Successfully closed tickets</div></div>
+</div>
+<div class="filter-bar">
+    <div class="search-wrap"><i data-lucide="search" width="14" height="14"></i><input type="text" class="filter-input" placeholder="Search by tenant, unit or issue..."></div>
+    <select class="filter-select"><option>All Priorities</option><option>Urgent</option><option>Medium</option><option>Low</option></select>
+    <select class="filter-select"><option>All Statuses</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
+    <button class="btn-primary" onclick="openModal('addMaintModal')"><i data-lucide="plus" width="14" height="14"></i> Log Request</button>
+</div>
+<div class="card">
+    <div class="card-head"><span class="card-title">All Requests</span><button class="card-action" onclick="alert('Export coming soon!')"><i data-lucide="download" width="12" height="12" style="display:inline;margin-right:3px;vertical-align:-1px"></i>Export</button></div>
+    <table class="tbl">
+        <thead><tr><th>#</th><th>Tenant / Unit</th><th>Issue</th><th>Priority</th><th>Assigned To</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+            <tr><td>#001</td><td><strong>Brian Kamau</strong><div style="font-size:11px;color:var(--text-3)">A-45 · Sunset</div></td><td>Burst pipe in bathroom</td><td><span class="badge b-red">Urgent</span></td><td>—</td><td>Mar 20</td><td><span class="badge b-amber">Open</span></td><td><div class="tbl-actions"><button class="tbl-btn info" onclick="openModal('assignModal')"><i data-lucide="user-plus" width="11" height="11"></i> Assign</button><button class="tbl-btn" onclick="openModal('viewMaintModal')"><i data-lucide="eye" width="11" height="11"></i> View</button></div></td></tr>
+            <tr><td>#002</td><td><strong>Amina Hassan</strong><div style="font-size:11px;color:var(--text-3)">C-07 · Greenview</div></td><td>No electricity in bedroom</td><td><span class="badge b-red">Urgent</span></td><td>John Electrician</td><td>Mar 18</td><td><span class="badge b-blue">In Progress</span></td><td><div class="tbl-actions"><button class="tbl-btn success" onclick="resolveTicket(this)"><i data-lucide="check" width="11" height="11"></i> Resolve</button><button class="tbl-btn" onclick="openModal('viewMaintModal')"><i data-lucide="eye" width="11" height="11"></i> View</button></div></td></tr>
+            <tr><td>#003</td><td><strong>Jane Mwangi</strong><div style="font-size:11px;color:var(--text-3)">A-12 · Sunset</div></td><td>Broken door lock</td><td><span class="badge b-amber">Medium</span></td><td>—</td><td>Mar 17</td><td><span class="badge b-amber">Open</span></td><td><div class="tbl-actions"><button class="tbl-btn info" onclick="openModal('assignModal')"><i data-lucide="user-plus" width="11" height="11"></i> Assign</button><button class="tbl-btn" onclick="openModal('viewMaintModal')"><i data-lucide="eye" width="11" height="11"></i> View</button></div></td></tr>
+            <tr><td>#004</td><td><strong>Kevin Otieno</strong><div style="font-size:11px;color:var(--text-3)">B-03 · Sunrise</div></td><td>Leaking kitchen tap</td><td><span class="badge b-gray">Low</span></td><td>Mike Plumber</td><td>Mar 15</td><td><span class="badge b-blue">In Progress</span></td><td><div class="tbl-actions"><button class="tbl-btn success" onclick="resolveTicket(this)"><i data-lucide="check" width="11" height="11"></i> Resolve</button><button class="tbl-btn" onclick="openModal('viewMaintModal')"><i data-lucide="eye" width="11" height="11"></i> View</button></div></td></tr>
+            <tr><td>#005</td><td><strong>Lucy Njeri</strong><div style="font-size:11px;color:var(--text-3)">B-11 · Sunrise</div></td><td>Blocked kitchen drain</td><td><span class="badge b-red">Urgent</span></td><td>—</td><td>Mar 22</td><td><span class="badge b-amber">Open</span></td><td><div class="tbl-actions"><button class="tbl-btn info" onclick="openModal('assignModal')"><i data-lucide="user-plus" width="11" height="11"></i> Assign</button><button class="tbl-btn" onclick="openModal('viewMaintModal')"><i data-lucide="eye" width="11" height="11"></i> View</button></div></td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Assign Modal -->
+<div class="modal-overlay" id="assignModal">
+    <div class="modal">
+        <div class="modal-title">Assign to Service Provider</div><div class="modal-sub">Select a service provider for this request.</div>
+        <div class="form-group"><label class="form-label">Service Provider</label><select class="form-input"><option>John Electrician</option><option>Mike Plumber</option><option>David Carpenter</option><option>Mary Cleaner</option></select></div>
+        <div class="form-group"><label class="form-label">Expected Completion</label><input type="date" class="form-input"></div>
+        <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" rows="3" placeholder="Any special instructions..."></textarea></div>
+        <div class="modal-footer"><button class="btn-outline" onclick="closeModal('assignModal')">Cancel</button><button class="btn-primary" onclick="alert('Assigned!');closeModal('assignModal')"><i data-lucide="check" width="14" height="14"></i> Assign</button></div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal-overlay" id="viewMaintModal">
+    <div class="modal">
+        <div class="modal-title">Maintenance Request #001</div><div class="modal-sub">Full details for this ticket.</div>
+        <div class="form-group"><label class="form-label">Issue</label><input type="text" class="form-input" value="Burst pipe in bathroom" readonly></div>
+        <div class="form-group"><label class="form-label">Tenant / Unit</label><input type="text" class="form-input" value="Brian Kamau — A-45, Sunset Apartments" readonly></div>
+        <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" rows="3" readonly>The pipe under the bathroom sink has burst and is causing flooding. Needs urgent repair.</textarea></div>
+        <div class="form-group"><label class="form-label">Priority</label><input type="text" class="form-input" value="Urgent" readonly></div>
+        <div class="modal-footer"><button class="btn-outline" onclick="closeModal('viewMaintModal')">Close</button><button class="btn-primary" onclick="closeModal('viewMaintModal');openModal('assignModal')"><i data-lucide="user-plus" width="14" height="14"></i> Assign Now</button></div>
+    </div>
+</div>
+
+<!-- Add Request Modal -->
+<div class="modal-overlay" id="addMaintModal">
+    <div class="modal">
+        <div class="modal-title">Log Maintenance Request</div><div class="modal-sub">Manually add a maintenance ticket.</div>
+        <div class="form-group"><label class="form-label">Tenant / Unit</label><select class="form-input"><option>Jane Mwangi — A-12</option><option>Kevin Otieno — B-03</option><option>Brian Kamau — A-45</option></select></div>
+        <div class="form-group"><label class="form-label">Issue Title</label><input type="text" class="form-input" placeholder="e.g. Broken window pane"></div>
+        <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" rows="3" placeholder="Describe the problem..."></textarea></div>
+        <div class="form-group"><label class="form-label">Priority</label><select class="form-input"><option>Low</option><option>Medium</option><option selected>Urgent</option></select></div>
+        <div class="modal-footer"><button class="btn-outline" onclick="closeModal('addMaintModal')">Cancel</button><button class="btn-primary" onclick="alert('Request logged!');closeModal('addMaintModal')"><i data-lucide="check" width="14" height="14"></i> Log Request</button></div>
+    </div>
+</div>
+<script>
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+function resolveTicket(btn){const row=btn.closest('tr');if(confirm('Mark this ticket as resolved?')){row.querySelector('.badge.b-blue,.badge.b-amber').className='badge b-green';row.querySelector('.badge.b-green').textContent='Resolved';row.cells[7].innerHTML='<span style="font-size:12px;color:var(--text-3)">Closed</span>'}}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show')}))
+</script>
+{% endblock %}

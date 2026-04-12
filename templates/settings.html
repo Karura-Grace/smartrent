@@ -1,0 +1,405 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Settings – SmartRent{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block page_sub %}Account & Preferences{% endblock %}
+{% block role_name %}{{ user.role | capitalize }}{% endblock %}
+
+{% block extra_styles %}
+.settings-wrap {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+@media (max-width: 780px) {
+    .settings-wrap { grid-template-columns: 1fr; }
+    .settings-nav  { display: none; }
+}
+.settings-nav {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 8px;
+    box-shadow: var(--sh-sm);
+    position: sticky;
+    top: calc(var(--topbar-h) + 28px);
+}
+.snav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; color: var(--text-2);
+    cursor: pointer; text-decoration: none;
+    transition: background 0.13s, color 0.13s;
+    margin-bottom: 2px;
+}
+.snav-item:hover  { background: var(--blue-50); color: var(--blue-600); }
+.snav-item.active { background: var(--blue-50); color: var(--blue-600); font-weight: 600; }
+.snav-item.danger:hover { background: #fef2f2; color: var(--red); }
+.snav-ico { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.snav-item.active .snav-ico, .snav-item:hover .snav-ico { background: rgba(37,99,235,0.1); }
+.snav-item.danger:hover .snav-ico { background: rgba(239,68,68,0.1); }
+.snav-divider { height: 1px; background: var(--border-lt); margin: 6px 4px; }
+.settings-panel { display: flex; flex-direction: column; gap: 18px; }
+.scard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--sh-sm); overflow: hidden; }
+.scard-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border-lt); }
+.scard-head-ico { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.scard-head-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.scard-head-sub   { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+.srow { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--border-lt); transition: background 0.1s; }
+.srow:last-child { border-bottom: none; }
+.srow:hover { background: var(--bg); }
+.srow-ico { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-2); }
+.srow-body { flex: 1; min-width: 0; }
+.srow-label { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.srow-sub   { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+.srow-ctrl  { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+.profile-header { display: flex; align-items: center; gap: 18px; padding: 20px; border-bottom: 1px solid var(--border-lt); }
+.profile-avatar-wrap { position: relative; flex-shrink: 0; }
+.profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--blue-600), var(--purple)); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: white; border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--blue-100); }
+.profile-avatar-btn { position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--blue-600); border: 2px solid white; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; }
+.profile-info { flex: 1; min-width: 0; }
+.profile-name  { font-size: 16px; font-weight: 700; color: var(--text); }
+.profile-email { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+.profile-role  { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: var(--blue-50); color: var(--blue-600); margin-top: 6px; }
+.s-input { padding: 7px 11px; font-size: 13px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; transition: border-color 0.13s, box-shadow 0.13s; width: 200px; }
+.s-input:focus { outline: none; border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.s-select { padding: 7px 11px; font-size: 13px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; }
+.s-select:focus { outline: none; border-color: var(--blue-500); }
+.s-toggle { width: 42px; height: 24px; background: #cbd5e1; border-radius: 20px; border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+.s-toggle.on { background: var(--blue-600); }
+.s-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); transition: left 0.2s; }
+.s-toggle.on::after { left: 21px; }
+.s-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.sb-amber { background: #fffbeb; color: #b45309; }
+.s-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 12.5px; font-weight: 500; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text-2); font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: all 0.13s; text-decoration: none; }
+.s-btn:hover { background: var(--surface); border-color: #94a3b8; color: var(--text); }
+.s-btn-danger { background: #fef2f2; border-color: #fecaca; color: var(--red); }
+.s-btn-danger:hover { background: #fee2e2; }
+.s-btn-primary { background: var(--blue-600); color: white; border-color: var(--blue-600); box-shadow: 0 1px 3px rgba(37,99,235,0.25); }
+.s-btn-primary:hover { background: var(--blue-700); }
+.save-bar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--sh-sm); }
+.saved-msg { font-size: 12.5px; color: var(--green); font-weight: 500; display: flex; align-items: center; gap: 5px; margin-right: auto; opacity: 0; transition: opacity 0.3s; }
+.saved-msg.show { opacity: 1; }
+.session-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border-lt); }
+.session-item:last-child { border-bottom: none; }
+.session-device { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-2); }
+.session-body { flex: 1; }
+.session-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.session-meta { font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+.session-current { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: #f0fdf4; color: #15803d; }
+.ico-bg-blue   { background: var(--blue-50);   color: var(--blue-600); }
+.ico-bg-green  { background: #f0fdf4;           color: var(--green); }
+.ico-bg-orange { background: var(--orange-50);  color: var(--orange); }
+.ico-bg-purple { background: #f5f3ff;           color: var(--purple); }
+.ico-bg-red    { background: #fef2f2;           color: var(--red); }
+.ico-bg-amber  { background: #fffbeb;           color: var(--amber); }
+.ico-bg-gray   { background: var(--bg);         color: var(--text-2); }
+{% endblock %}
+
+{% block hero %}
+<div class="hero" style="margin-bottom:24px;">
+    <div class="hero-eye">Account</div>
+    <h1>Settings</h1>
+    <p>Manage your profile, notifications, security and preferences</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('auth.settings') }}">
+
+    <div class="settings-wrap">
+
+        <!-- Side Nav -->
+        <nav class="settings-nav">
+            <a class="snav-item active" href="#profile" onclick="scrollSec('profile',this);return false;">
+                <div class="snav-ico"><i data-lucide="user" width="15" height="15"></i></div>
+                Profile
+            </a>
+            <a class="snav-item" href="#notifications" onclick="scrollSec('notifications',this);return false;">
+                <div class="snav-ico"><i data-lucide="bell" width="15" height="15"></i></div>
+                Notifications
+            </a>
+            <a class="snav-item" href="#preferences" onclick="scrollSec('preferences',this);return false;">
+                <div class="snav-ico"><i data-lucide="sliders-horizontal" width="15" height="15"></i></div>
+                Preferences
+            </a>
+            <a class="snav-item" href="#security" onclick="scrollSec('security',this);return false;">
+                <div class="snav-ico"><i data-lucide="shield" width="15" height="15"></i></div>
+                Security
+            </a>
+            <a class="snav-item" href="#sessions" onclick="scrollSec('sessions',this);return false;">
+                <div class="snav-ico"><i data-lucide="monitor" width="15" height="15"></i></div>
+                Sessions
+            </a>
+            <div class="snav-divider"></div>
+            <a class="snav-item danger" href="{{ url_for('auth.logout') }}">
+                <div class="snav-ico"><i data-lucide="log-out" width="15" height="15"></i></div>
+                Sign Out
+            </a>
+        </nav>
+
+        <!-- Panels -->
+        <div class="settings-panel">
+
+            <!-- PROFILE -->
+            <div class="scard" id="profile">
+                <div class="scard-head">
+                    <div class="scard-head-ico ico-bg-blue"><i data-lucide="user-circle" width="18" height="18"></i></div>
+                    <div>
+                        <div class="scard-head-title">Profile Information</div>
+                        <div class="scard-head-sub">Update your personal details</div>
+                    </div>
+                </div>
+                <div class="profile-header">
+                    <div class="profile-avatar-wrap">
+                        <div class="profile-avatar">{{ user.user_name[:2].upper() }}</div>
+                        <div class="profile-avatar-btn"><i data-lucide="camera" width="10" height="10"></i></div>
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-name">{{ user.user_name }}</div>
+                        <div class="profile-email">{{ user.user_email }}</div>
+                        <div class="profile-role">
+                            <i data-lucide="badge-check" width="11" height="11"></i>
+                            {{ user.role | capitalize }}
+                        </div>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-blue"><i data-lucide="user" width="15" height="15"></i></div>
+                    <div class="srow-body">
+                        <div class="srow-label">Full name</div>
+                        <div class="srow-sub">Shown across the platform</div>
+                    </div>
+                    <div class="srow-ctrl">
+                        <input class="s-input" type="text" name="full_name" value="{{ user.user_name }}" required>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-blue"><i data-lucide="mail" width="15" height="15"></i></div>
+                    <div class="srow-body">
+                        <div class="srow-label">Email address</div>
+                        <div class="srow-sub">Used for login and notifications</div>
+                    </div>
+                    <div class="srow-ctrl">
+                        <input class="s-input" type="email" name="email" value="{{ user.user_email }}" required>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-orange"><i data-lucide="phone" width="15" height="15"></i></div>
+                    <div class="srow-body">
+                        <div class="srow-label">Phone number</div>
+                        <div class="srow-sub">For SMS alerts and verification</div>
+                    </div>
+                    <div class="srow-ctrl">
+                        <input class="s-input" type="tel" name="phone" placeholder="+254 700 000 000">
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-purple"><i data-lucide="map-pin" width="15" height="15"></i></div>
+                    <div class="srow-body">
+                        <div class="srow-label">Location</div>
+                        <div class="srow-sub">City or area you're based in</div>
+                    </div>
+                    <div class="srow-ctrl">
+                        <input class="s-input" type="text" name="location" placeholder="Nairobi, Kenya">
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOTIFICATIONS -->
+            <div class="scard" id="notifications">
+                <div class="scard-head">
+                    <div class="scard-head-ico ico-bg-orange"><i data-lucide="bell-ring" width="18" height="18"></i></div>
+                    <div>
+                        <div class="scard-head-title">Notifications</div>
+                        <div class="scard-head-sub">Choose what you want to be notified about</div>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-red"><i data-lucide="calendar-clock" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Rent due reminders</div><div class="srow-sub">Get notified 3 days before rent is due</div></div>
+                    <div class="srow-ctrl">
+                        <button type="button" class="s-toggle on" onclick="togSwitch(this,'notif_rent')"></button>
+                        <input type="hidden" name="notif_rent" value="1" id="notif_rent">
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-green"><i data-lucide="circle-check" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Payment confirmations</div><div class="srow-sub">Receive a receipt after each successful payment</div></div>
+                    <div class="srow-ctrl">
+                        <button type="button" class="s-toggle on" onclick="togSwitch(this,'notif_payment')"></button>
+                        <input type="hidden" name="notif_payment" value="1" id="notif_payment">
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-amber"><i data-lucide="wrench" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Maintenance updates</div><div class="srow-sub">Status changes on your maintenance requests</div></div>
+                    <div class="srow-ctrl">
+                        <button type="button" class="s-toggle on" onclick="togSwitch(this,'notif_maint')"></button>
+                        <input type="hidden" name="notif_maint" value="1" id="notif_maint">
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-blue"><i data-lucide="mail-open" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Email notifications</div><div class="srow-sub">Also deliver notifications to your inbox</div></div>
+                    <div class="srow-ctrl">
+                        <button type="button" class="s-toggle on" onclick="togSwitch(this,'notif_email')"></button>
+                        <input type="hidden" name="notif_email" value="1" id="notif_email">
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-green"><i data-lucide="message-square" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">SMS notifications</div><div class="srow-sub">Receive text alerts on your phone</div></div>
+                    <div class="srow-ctrl">
+                        <button type="button" class="s-toggle on" onclick="togSwitch(this,'notif_sms')"></button>
+                        <input type="hidden" name="notif_sms" value="1" id="notif_sms">
+                    </div>
+                </div>
+            </div>
+
+            <!-- PREFERENCES -->
+            <div class="scard" id="preferences">
+                <div class="scard-head">
+                    <div class="scard-head-ico ico-bg-purple"><i data-lucide="sliders-horizontal" width="18" height="18"></i></div>
+                    <div>
+                        <div class="scard-head-title">Preferences</div>
+                        <div class="scard-head-sub">Customize your experience</div>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-blue"><i data-lucide="globe" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Language</div><div class="srow-sub">Interface display language</div></div>
+                    <div class="srow-ctrl">
+                        <select class="s-select" name="language">
+                            <option value="en">English</option>
+                            <option value="sw">Swahili</option>
+                            <option value="fr">French</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-amber"><i data-lucide="banknote" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Currency</div><div class="srow-sub">Used for amounts and reports</div></div>
+                    <div class="srow-ctrl">
+                        <select class="s-select" name="currency">
+                            <option value="KES">KES – Kenyan Shilling</option>
+                            <option value="USD">USD – US Dollar</option>
+                            <option value="EUR">EUR – Euro</option>
+                            <option value="GBP">GBP – British Pound</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-gray"><i data-lucide="moon" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Dark mode</div><div class="srow-sub">Follows your system setting</div></div>
+                    <div class="srow-ctrl">
+                        <button type="button" class="s-toggle" onclick="togSwitch(this,'dark_mode')"></button>
+                        <input type="hidden" name="dark_mode" value="0" id="dark_mode">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECURITY -->
+            <div class="scard" id="security">
+                <div class="scard-head">
+                    <div class="scard-head-ico ico-bg-green"><i data-lucide="shield-check" width="18" height="18"></i></div>
+                    <div>
+                        <div class="scard-head-title">Security</div>
+                        <div class="scard-head-sub">Protect your account</div>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-blue"><i data-lucide="key-round" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Password</div><div class="srow-sub">Change your login password</div></div>
+                    <div class="srow-ctrl">
+                        <a href="{{ url_for('auth.change_password') }}" class="s-btn">
+                            <i data-lucide="lock" width="13" height="13"></i> Change password
+                        </a>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-green"><i data-lucide="shield" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Two-factor authentication</div><div class="srow-sub">Adds an extra layer of login security</div></div>
+                    <div class="srow-ctrl">
+                        <span class="s-badge sb-amber">
+                            <i data-lucide="alert-triangle" width="10" height="10"></i> Not enabled
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SESSIONS -->
+            <div class="scard" id="sessions">
+                <div class="scard-head">
+                    <div class="scard-head-ico ico-bg-gray"><i data-lucide="monitor-smartphone" width="18" height="18"></i></div>
+                    <div>
+                        <div class="scard-head-title">Active Sessions</div>
+                        <div class="scard-head-sub">Devices currently logged in to your account</div>
+                    </div>
+                </div>
+                <div class="session-item">
+                    <div class="session-device"><i data-lucide="monitor" width="16" height="16"></i></div>
+                    <div class="session-body">
+                        <div class="session-name">Current browser session</div>
+                        <div class="session-meta">Active now</div>
+                    </div>
+                    <span class="session-current">
+                        <i data-lucide="check" width="10" height="10"></i> This device
+                    </span>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-red"><i data-lucide="log-out" width="15" height="15"></i></div>
+                    <div class="srow-body"><div class="srow-label">Sign out all devices</div><div class="srow-sub">End all active sessions</div></div>
+                    <div class="srow-ctrl">
+                        <a href="{{ url_for('auth.logout') }}" class="s-btn s-btn-danger">
+                            <i data-lucide="shield-x" width="13" height="13"></i> Sign out all
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save bar -->
+            <div class="save-bar">
+                <span class="saved-msg" id="savedMsg">
+                    <i data-lucide="check-circle" width="14" height="14"></i> Changes saved successfully
+                </span>
+                <a href="{{ url_for('auth.settings') }}" class="s-btn">
+                    <i data-lucide="rotate-ccw" width="13" height="13"></i> Discard
+                </a>
+                <button type="submit" class="s-btn s-btn-primary">
+                    <i data-lucide="save" width="13" height="13"></i> Save changes
+                </button>
+            </div>
+
+        </div>
+    </div>
+</form>
+
+<script>
+function togSwitch(btn, fieldId) {
+    btn.classList.toggle('on');
+    const field = document.getElementById(fieldId);
+    if (field) field.value = btn.classList.contains('on') ? '1' : '0';
+}
+function scrollSec(id, navEl) {
+    document.querySelectorAll('.snav-item').forEach(i => i.classList.remove('active'));
+    if (navEl) navEl.classList.add('active');
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.addEventListener('scroll', function() {
+    ['profile','notifications','preferences','security','sessions'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= 80 && rect.bottom >= 80) {
+            document.querySelectorAll('.snav-item').forEach(i => i.classList.remove('active'));
+            const t = document.querySelector(`.snav-item[href="#${id}"]`);
+            if (t) t.classList.add('active');
+        }
+    });
+});
+lucide.createIcons();
+</script>
+{% endblock %}
