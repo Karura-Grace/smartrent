@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign Lease · SmartRent</title>
+  <style>
+    :root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#475569;--green:#10b981;--amber:#f59e0b;--red:#ef4444}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    body{margin:0;background:var(--bg);color:var(--text)}
+    .wrap{max-width:860px;margin:28px auto;padding:0 16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 12px 28px rgba(2,6,23,.06);overflow:hidden}
+    .head{padding:18px 20px;background:linear-gradient(135deg,#0f766e 0%,#065f46 100%);color:#fff}
+    .head h1{margin:0;font-size:18px}
+    .head p{margin:6px 0 0;opacity:.85;font-size:13px}
+    .body{padding:18px 20px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .item{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+    .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+    .val{margin-top:6px;font-size:14px;font-weight:650}
+    .terms{margin-top:14px;border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+    .terms pre{white-space:pre-wrap;margin:0;color:var(--text);font-size:13px;line-height:1.45}
+    .flash{margin:0 0 12px;padding:10px 12px;border-radius:12px;font-size:13px}
+    .flash.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+    .flash.success{background:#d1fae5;color:#065f46;border:1px solid #bbf7d0}
+    .form{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+    .field{flex:1;min-width:240px}
+    .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
+    .field input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none}
+    .btn{padding:10px 14px;border-radius:12px;border:0;font-weight:800;cursor:pointer}
+    .btn.primary{background:#0f766e;color:#fff}
+    .btn.primary:hover{background:#065f46}
+    .signed{display:flex;gap:10px;align-items:center;margin-top:14px;padding:12px;border-radius:12px;background:#d1fae5;color:#065f46;border:1px solid #bbf7d0}
+    @media (max-width:720px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <h1>Lease Agreement Signature</h1>
+        <p>Please review and sign below.</p>
+      </div>
+      <div class="body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="grid">
+          <div class="item">
+            <div class="lbl">Tenant</div>
+            <div class="val">{{ lease.tenant_name or '—' }}</div>
+          </div>
+          <div class="item">
+            <div class="lbl">Unit</div>
+            <div class="val">{{ lease.unit_number_live or lease.unit_number or '—' }}</div>
+          </div>
+          <div class="item">
+            <div class="lbl">Property</div>
+            <div class="val">{{ lease.property_name or '—' }}</div>
+          </div>
+          <div class="item">
+            <div class="lbl">Rent</div>
+            <div class="val">KES {{ (lease.rent_amount or 0) | round | int }}</div>
+          </div>
+          <div class="item">
+            <div class="lbl">Start Date</div>
+            <div class="val">{{ lease.start_date or '—' }}</div>
+          </div>
+          <div class="item">
+            <div class="lbl">End Date</div>
+            <div class="val">{{ lease.end_date or '—' }}</div>
+          </div>
+        </div>
+
+        <div class="terms">
+          <div class="lbl" style="margin-bottom:8px;">Terms</div>
+          <pre>{{ lease.terms or '—' }}</pre>
+        </div>
+
+        {% if signed %}
+          <div class="signed">
+            <strong>Signed successfully.</strong>
+            <span>Thank you.</span>
+          </div>
+        {% else %}
+          <form class="form" method="POST">
+            <div class="field">
+              <label>Type your full name to sign *</label>
+              <input name="signed_name" placeholder="e.g. Jane Mwangi" required>
+            </div>
+            <button class="btn primary" type="submit">Sign Lease</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

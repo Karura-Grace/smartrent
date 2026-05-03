@@ -1,0 +1,63 @@
+{% extends "base_dashboard.html" %}
+
+{% block role_name %}Service Provider{% endblock %}
+
+{% block extra_styles %}
+{{ super() }}
+.hero { background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%); }
+.hero::after { background: radial-gradient(circle, rgba(251,191,36,0.18) 0%, transparent 65%); }
+.nav-item.active { background: #fff7ed; color: #c2410c; }
+.nav-item.active::before { background: #c2410c; }
+.nav-item:hover { background: #fff7ed; color: #c2410c; }
+.btn-primary { background: #c2410c; }
+.btn-primary:hover { background: #9a3412; }
+.card-action { color: #c2410c; background: #fff7ed; }
+.card-action:hover { background: #fed7aa; }
+{% endblock %}
+
+{% set ep = request.endpoint %}
+
+{% block nav_main %}
+<a href="{{ url_for('service.service_dashboard') }}" class="nav-item {% if ep == 'service.service_dashboard' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="layout-dashboard" width="16" height="16"></i></div>
+    <span class="nav-txt">Dashboard</span>
+</a>
+<a href="{{ url_for('service.jobs') }}" class="nav-item {% if ep == 'service.jobs' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="clipboard-list" width="16" height="16"></i></div>
+    <span class="nav-txt">My Jobs</span>
+    {% if open_count is defined and open_count > 0 %}
+    <span class="nav-pill">{{ open_count }}</span>
+    {% endif %}
+</a>
+<a href="{{ url_for('service.completed_jobs') }}" class="nav-item {% if ep == 'service.completed_jobs' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="check-circle" width="16" height="16"></i></div>
+    <span class="nav-txt">Completed Jobs</span>
+</a>
+<a href="{{ url_for('service.earnings') }}" class="nav-item {% if ep == 'service.earnings' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="banknote" width="16" height="16"></i></div>
+    <span class="nav-txt">Earnings</span>
+</a>
+{% endblock %}
+
+{% block nav_management %}
+<a href="{{ url_for('service.schedule') }}" class="nav-item {% if ep == 'service.schedule' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="calendar-days" width="16" height="16"></i></div>
+    <span class="nav-txt">Schedule</span>
+</a>
+<a href="{{ url_for('service.reviews') }}" class="nav-item {% if ep == 'service.reviews' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="star" width="16" height="16"></i></div>
+    <span class="nav-txt">Reviews & Ratings</span>
+</a>
+<a href="{{ url_for('service.work_photos') }}" class="nav-item {% if ep == 'service.work_photos' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="camera" width="16" height="16"></i></div>
+    <span class="nav-txt">Work Photos</span>
+</a>
+<a href="{{ url_for('service.messages') }}" class="nav-item {% if ep in ('service.messages', 'service.message_thread') %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="message-square" width="16" height="16"></i></div>
+    <span class="nav-txt">Messages</span>
+    {% if unread_count is defined and unread_count > 0 %}
+    <span class="nav-pill">{{ unread_count }}</span>
+    {% endif %}
+</a>
+{% endblock %}
+

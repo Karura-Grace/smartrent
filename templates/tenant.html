@@ -277,9 +277,9 @@
               <button class="action-btn" onclick="openEditModal({{ t.id }})">
                 <i data-lucide="pencil" width="12" height="12"></i> Edit
               </button>
-              <form method="POST" action="{{ url_for('landlord.delete_tenant', tenant_id=t.id) }}"
-                    onsubmit="return confirm('Remove {{ t.name | e }}? This cannot be undone.');"
-                    style="display:inline;">
+              <form method="POST" action="{{ url_for('agent.agent_delete_tenant', tenant_id=t.id) if user.role == 'agent' else url_for('landlord.delete_tenant', tenant_id=t.id) }}"
+                     onsubmit="return confirm('Remove {{ t.name | e }}? This cannot be undone.');"
+                     style="display:inline;">
                 <button class="action-btn danger" type="submit">
                   <i data-lucide="trash-2" width="12" height="12"></i> Remove
                 </button>
@@ -316,7 +316,7 @@
         <i data-lucide="x" width="20" height="20"></i>
       </div>
     </div>
-    <form method="POST" action="{{ url_for('landlord.add_tenant') }}">
+    <form method="POST" action="{{ url_for('agent.agent_add_tenant') if user.role == 'agent' else url_for('landlord.add_tenant') }}">
       <div class="modal-body">
         <div class="form-row">
           <div class="form-group">
@@ -480,6 +480,12 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
   });
 });
 
+// Quick-action deep link (agent dashboard tile)
+try {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('open') === 'add') openModal('addTenantModal');
+} catch (e) {}
+
 // ── View tenant details ──────────────────────────
 function viewTenantDetails(tenantId) {
   const t = tenantData.find(x => x.id == tenantId);
@@ -557,7 +563,7 @@ function openEditModal(tenantId) {
   if (!t) return;
 
   // Point the form to the correct edit URL
-  document.getElementById('editTenantForm').action = `/tenants/edit/${t.id}`;
+  document.getElementById('editTenantForm').action = `{{ '/agent/tenants/edit' if user.role == 'agent' else '/tenants/edit' }}/${t.id}`;
 
   document.getElementById('editName').value       = t.name        || '';
   document.getElementById('editPhone').value      = t.phone       || '';

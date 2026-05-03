@@ -1,0 +1,744 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Units · SmartRent{% endblock %}
+{% block role_name %}{{ 'Agent' if user.role == 'agent' else 'Landlord' }}{% endblock %}
+{% block page_title %}Units{% endblock %}
+{% block page_sub %}Manage Your Units{% endblock %}
+
+{% block extra_styles %}
+/* ── Accent overrides ─────────────────────────────── */
+.hero { background: linear-gradient(135deg, #6e2d8f 0%, #8c0b9f 100%); }
+.nav-item.active  { background: #f0fdfa; color: #0f766e; }
+.nav-item.active::before { background: #0f766e; }
+.nav-item:hover   { background: #f0fdfa; color: #0f766e; }
+.btn-primary      { background: #610f76; }
+.btn-primary:hover{ background: #065f46; }
+
+/* ── Toolbar ────────────────────────────────────────── */
+.toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
+}
+.toolbar-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.search-box {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; background: var(--surface);
+    font-size: 13px; color: var(--text-2);
+}
+.search-box input {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 13px; color: var(--text); width: 180px;
+}
+.filter-select {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; background: var(--surface);
+    font-family: inherit; font-size: 13px; color: var(--text-2);
+    outline: none; cursor: pointer;
+}
+
+/* ── Property section headers ─────────────────────── */
+.property-section {
+    margin-bottom: 28px;
+}
+.property-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+}
+.property-section-left {
+    display: flex; align-items: center; gap: 12px;
+}
+.property-section-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, #6e2d8f, #8c0b9f);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+.property-section-name {
+    font-size: 16px; font-weight: 700; color: var(--text);
+}
+.property-section-meta {
+    font-size: 12px; color: var(--text-3); margin-top: 2px;
+    display: flex; gap: 12px;
+}
+.property-section-meta span {
+    display: flex; align-items: center; gap: 4px;
+}
+.meta-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+}
+.meta-dot-green { background: #10b981; }
+.meta-dot-amber { background: #f59e0b; }
+
+/* ── Units table inside each property ─────────────── */
+.units-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.units-table thead {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.units-table th {
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.units-table tbody tr {
+    border-bottom: 1px solid var(--border-lt);
+    transition: background 0.13s;
+}
+
+.units-table tbody tr:hover {
+    background: var(--bg);
+}
+
+.units-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.units-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text);
+    vertical-align: middle;
+}
+
+.unit-number-cell {
+    font-weight: 700;
+    color: var(--text);
+}
+
+.unit-type-cell {
+    font-size: 12px;
+    background: var(--bg);
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    color: var(--text-2);
+}
+
+.unit-tenant-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 200px;
+}
+
+.unit-tenant-avatar-small {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6e2d8f, #10b981);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+.unit-tenant-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.unit-tenant-name {
+    font-weight: 500;
+    color: var(--text);
+}
+
+.unit-tenant-phone {
+    font-size: 11px;
+    color: var(--text-3);
+}
+
+.unit-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.status-occupied   { background: #d1fae5; color: #065f46; }
+.status-vacant     { background: #fef3c7; color: #92400e; }
+.status-maintenance{ background: #fee2e2; color: #991b1b; }
+
+.unit-rent-cell {
+    font-weight: 600;
+    color: #0f766e;
+    text-align: right;
+}
+
+.unit-actions-cell {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    min-width: 110px;
+}
+
+.unit-btn {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all 0.13s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.unit-btn:hover {
+    background: #f0fdfa;
+    color: #610f76;
+    border-color: #c084fc;
+}
+
+.unit-btn.danger {
+    color: #dc2626;
+}
+
+.unit-btn.danger:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+/* ── Empty state ─────────────────────────────────── */
+.no-units-msg {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 13px;
+}
+
+/* ── Empty state ─────────────────────────────────── */
+.empty-state {
+    text-align: center; padding: 48px 0; color: var(--text-3); font-size: 14px;
+    grid-column: 1/-1;
+}
+
+/* ── Modal ────────────────────────────────────────── */
+.modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 999;
+    align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+    background: var(--surface); border-radius: 16px;
+    padding: 28px 30px; width: 100%; max-width: 480px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+    max-height: 90vh; overflow-y: auto;
+    animation: slideUp 0.22s ease both;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.modal-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.modal-sub   { font-size: 13px; color: var(--text-3); margin-bottom: 22px; }
+.modal-footer { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+.form-group  { margin-bottom: 14px; }
+.form-row    { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-label  { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
+.form-input  {
+    width: 100%; padding: 9px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-family: inherit; font-size: 13.5px;
+    color: var(--text); background: var(--surface); outline: none;
+    transition: border-color 0.13s; box-sizing: border-box;
+}
+.form-input:focus { border-color: #8c0b9f; box-shadow: 0 0 0 3px rgba(140,11,159,0.1); }
+textarea.form-input { resize: vertical; min-height: 72px; }
+
+/* ── Summary bar ────────────────────────────────── */
+.summary-bar {
+    display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.summary-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 16px; font-size: 13px;
+}
+.summary-pill-val { font-size: 18px; font-weight: 800; color: var(--text); }
+.summary-pill-lbl { font-size: 11px; color: var(--text-3); }
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Units</div>
+    <h1>All Units</h1>
+    <p>View, add, and manage every unit across your portfolio.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Properties</span>
+            <span class="hero-kpi-value">{{ properties|length }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Total Units</span>
+            <span class="hero-kpi-value">{{ stats.total_units or 0 }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Occupied</span>
+            <span class="hero-kpi-value">{{ stats.occupied or 0 }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Vacant</span>
+            <span class="hero-kpi-value">{{ stats.vacant or 0 }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{# ── Flash messages ─────────────────────────────── #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}" style="margin-bottom:16px; padding:12px 16px; border-radius:10px; font-size:13px;
+           background:{% if category=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
+           color:{% if category=='success' %}#065f46{% else %}#991b1b{% endif %};">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+{# ── Toolbar ──────────────────────────────────────── #}
+<div class="toolbar">
+    <div class="toolbar-left">
+        <div class="search-box">
+            <i data-lucide="search" width="14" height="14"></i>
+            <input type="text" id="searchInput" placeholder="Search units or tenants…" oninput="filterUnits()">
+        </div>
+        <select class="filter-select" id="filterProperty" onchange="filterUnits()">
+            <option value="">All Properties</option>
+            {% for p in properties %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+        </select>
+        <select class="filter-select" id="filterStatus" onchange="filterUnits()">
+            <option value="">All Statuses</option>
+            <option value="Occupied">Occupied</option>
+            <option value="Vacant">Vacant</option>
+            <option value="Maintenance">Maintenance</option>
+        </select>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <a href="{{ url_for('agent.agent_properties') if user.role == 'agent' else url_for('properties.properties') }}"
+           class="btn-outline" style="text-decoration:none;display:flex;align-items:center;gap:6px;font-size:13px;">
+            <i data-lucide="arrow-left" width="14" height="14"></i> Properties
+        </a>
+        <button class="btn-primary" onclick="openModal('addUnitModal')">
+            <i data-lucide="plus" width="14" height="14"></i> Add Unit
+        </button>
+    </div>
+</div>
+
+{# ── Per-property sections ─────────────────────────── #}
+{% for p in properties %}
+<div class="property-section" data-property-id="{{ p.id }}" id="prop-section-{{ p.id }}">
+
+    <div class="property-section-header">
+        <div class="property-section-left">
+            <div class="property-section-icon">
+                {% if p.type == 'Apartments' %}🏢
+                {% elif p.type == 'Townhouse' %}🏘️
+                {% elif p.type == 'Commercial' %}🏬
+                {% else %}🏠{% endif %}
+            </div>
+            <div>
+                <div class="property-section-name">{{ p.name }}</div>
+                <div class="property-section-meta">
+                    <span><i data-lucide="map-pin" width="11" height="11"></i> {{ p.address }}{% if p.city %}, {{ p.city }}{% endif %}</span>
+                    <span>
+                        <span class="meta-dot meta-dot-green"></span>
+                        {{ p.occupied_count or 0 }} occupied
+                    </span>
+                    <span>
+                        <span class="meta-dot meta-dot-amber"></span>
+                        {{ p.vacant_count or 0 }} vacant
+                    </span>
+                </div>
+            </div>
+        </div>
+        <button class="btn-outline" style="font-size:12px;"
+                onclick="openAddUnitForProperty({{ p.id }}, '{{ p.name|e }}')">
+            <i data-lucide="plus" width="13" height="13"></i> Add Unit
+        </button>
+    </div>
+
+    <div class="units-grid" id="units-grid-{{ p.id }}">
+        {# Units will be loaded by JS on page load #}
+        <div style="padding: 20px; text-align: center; color: var(--text-3);">
+            <i data-lucide="loader" width="20" height="20" style="animation:spin 1s linear infinite;"></i>
+            <div style="margin-top:8px;">Loading units…</div>
+        </div>
+    </div>
+
+</div>
+{% else %}
+<div style="text-align:center;padding:64px 0;color:var(--text-3);">
+    <div style="font-size:48px;margin-bottom:12px;">🏠</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px;">No properties yet</div>
+    <div style="font-size:13px;">
+        <a href="{{ url_for('agent.agent_properties') if user.role == 'agent' else url_for('properties.properties') }}" style="color:#8c0b9f;">Add a property first</a>
+        to start managing units.
+    </div>
+</div>
+{% endfor %}
+
+
+{# ══════════════════════════════════════════════════ #}
+{#   MODALS                                           #}
+{# ══════════════════════════════════════════════════ #}
+
+{# ── Add Unit modal ────────────────────────────────── #}
+<div class="modal-overlay" id="addUnitModal">
+  <div class="modal">
+    <div class="modal-title">Add New Unit</div>
+    <div class="modal-sub">Add a unit to one of your properties.</div>
+    <form method="POST" action="{{ url_for('agent.agent_add_unit') if user.role == 'agent' else url_for('landlord.add_unit') }}">
+      <div class="form-group">
+        <label class="form-label">Property *</label>
+        <select name="property_id" class="form-input" id="addUnitPropertySelect" required>
+          {% for p in properties %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unit Number *</label>
+          <input type="text" name="unit_number" class="form-input" placeholder="e.g. A-12" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Floor</label>
+          <input type="number" name="floor" class="form-input" min="0" placeholder="e.g. 2">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unit Type</label>
+          <select name="type" class="form-input">
+            <option>Studio</option>
+            <option>1 Bedroom</option>
+            <option>2 Bedroom</option>
+            <option>3 Bedroom</option>
+            <option>4 Bedroom</option>
+            <option>Penthouse</option>
+            <option>Bedsitter</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-input">
+            <option>Vacant</option>
+            <option>Occupied</option>
+            <option>Maintenance</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rent (KES)</label>
+        <input type="number" name="rent" class="form-input" min="0" placeholder="e.g. 18000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tenant (Optional)</label>
+        <select name="tenant_id" class="form-input">
+          <option value="">No tenant assigned</option>
+          {% for tenant in tenants %}
+          <option value="{{ tenant.id }}">{{ tenant.name }} - {{ tenant.unit }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('addUnitModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="check" width="14" height="14"></i> Add Unit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Edit Unit modal ────────────────────────────────── #}
+<div class="modal-overlay" id="editUnitModal">
+  <div class="modal">
+    <div class="modal-title">Edit Unit</div>
+    <div class="modal-sub">Update this unit's details.</div>
+    <form method="POST" id="editUnitForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unit Number *</label>
+          <input type="text" name="unit_number" id="editUnitNumber" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Floor</label>
+          <input type="number" name="floor" id="editUnitFloor" class="form-input" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unit Type</label>
+          <select name="type" id="editUnitType" class="form-input">
+            <option>Studio</option>
+            <option>1 Bedroom</option>
+            <option>2 Bedroom</option>
+            <option>3 Bedroom</option>
+            <option>4 Bedroom</option>
+            <option>Penthouse</option>
+            <option>Bedsitter</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" id="editUnitStatus" class="form-input">
+            <option>Vacant</option>
+            <option>Occupied</option>
+            <option>Maintenance</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rent (KES)</label>
+        <input type="number" name="rent" id="editUnitRent" class="form-input" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tenant</label>
+        <select name="tenant_id" id="editUnitTenant" class="form-input">
+          <option value="">No tenant assigned</option>
+          {% for tenant in tenants %}
+          <option value="{{ tenant.id }}">{{ tenant.name }}{% if tenant.unit %} - {{ tenant.unit }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('editUnitModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="check" width="14" height="14"></i> Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════ #}
+{#   JAVASCRIPT                                       #}
+{# ══════════════════════════════════════════════════ #}
+<script>
+const UNITS_BASE        = "{{ '/agent/properties' if user.role == 'agent' else '/properties' }}";
+const UNITS_DELETE_BASE = "{{ '/agent/units/delete' if user.role == 'agent' else '/units/delete' }}";
+const UNITS_EDIT_BASE   = "{{ '/agent/units/edit' if user.role == 'agent' else '/units/edit' }}";
+
+/* ── Modal helpers ──────────────────────────────── */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+/* ── Pre-select property in add unit modal ────────── */
+function openAddUnitForProperty(propId, propName) {
+    const sel = document.getElementById('addUnitPropertySelect');
+    if (sel) sel.value = propId;
+    openModal('addUnitModal');
+}
+
+/* ── Edit unit modal ─────────────────────────────── */
+function openEditUnit(unitId, unitNumber, floor, type, status, rent, tenantId) {
+    document.getElementById('editUnitForm').action = `${UNITS_EDIT_BASE}/${unitId}`;
+    document.getElementById('editUnitNumber').value = unitNumber;
+    document.getElementById('editUnitFloor').value  = floor || '';
+    document.getElementById('editUnitRent').value   = rent || '';
+    const typeEl   = document.getElementById('editUnitType');
+    const statusEl = document.getElementById('editUnitStatus');
+    [...typeEl.options].forEach(o => o.selected = (o.value === type));
+    [...statusEl.options].forEach(o => o.selected = (o.value === status));
+    const tenantEl = document.getElementById('editUnitTenant');
+    if (tenantEl) {
+        const hasTenant = !(tenantId === null || tenantId === undefined || tenantId === 'null' || tenantId === '');
+        tenantEl.value = hasTenant ? String(tenantId) : '';
+    }
+    openModal('editUnitModal');
+}
+
+/* ── Render unit cards ───────────────────────────── */
+function renderUnits(units, gridEl, propId) {
+    if (!units || units.length === 0) {
+        gridEl.innerHTML = `
+            <div class="no-units-msg">
+                No units added yet. 
+                <button class="btn-primary" style="margin-left: 12px; padding: 4px 12px; font-size: 12px;" 
+                        onclick="openAddUnitForProperty(${propId}, '')">
+                    <i data-lucide="plus" width="14" height="14"></i> Add Unit
+                </button>
+            </div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    const statusBadge = { 'Occupied': 'status-occupied', 'Vacant': 'status-vacant', 'Maintenance': 'status-maintenance' };
+
+    const rows = units.map(u => {
+        const bdg = statusBadge[u.status] || 'status-vacant';
+        const initials = u.tenant_name && u.tenant_name !== '—'
+            ? u.tenant_name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()
+            : '—';
+        
+        const tenantCell = (u.tenant_name && u.tenant_name !== '—')
+            ? `<div class="unit-tenant-cell">
+                <div class="unit-tenant-avatar-small">${initials}</div>
+                <div class="unit-tenant-info">
+                    <div class="unit-tenant-name">${u.tenant_name}</div>
+                    ${u.tenant_phone && u.tenant_phone !== '—' ? `<div class="unit-tenant-phone">${u.tenant_phone}</div>` : ''}
+                </div>
+               </div>`
+            : '<span style="color: var(--text-3); font-style: italic;">Vacant</span>';
+
+        return `
+        <tr data-unit-number="${u.unit_number.toLowerCase()}"
+            data-tenant="${(u.tenant_name || '').toLowerCase()}"
+            data-status="${u.status}"
+            data-property-id="${propId}">
+            <td class="unit-number-cell">${u.unit_number}</td>
+            <td><span class="unit-type-cell">${u.type}</span></td>
+            <td>${u.floor ?? '—'}</td>
+            <td>${tenantCell}</td>
+            <td class="unit-rent-cell">KES ${Number(u.rent).toLocaleString()}</td>
+            <td><span class="unit-status-badge ${bdg}">${u.status}</span></td>
+            <td class="unit-actions-cell">
+                <button class="unit-btn"
+                    onclick="openEditUnit(${u.id}, '${u.unit_number}', ${u.floor ?? 0}, '${u.type}', '${u.status}', ${u.rent}, ${u.tenant_id ?? 'null'})">
+                    <i data-lucide="pencil" width="13" height="13"></i>
+                </button>
+                <form method="POST" action="${UNITS_DELETE_BASE}/${u.id}"
+                      onsubmit="return confirm('Delete unit ${u.unit_number}? This cannot be undone.');"
+                      style="display:contents;">
+                    <button class="unit-btn danger" type="submit">
+                        <i data-lucide="trash-2" width="13" height="13"></i>
+                    </button>
+                </form>
+            </td>
+        </tr>`;
+    }).join('');
+
+    const html = `
+        <table class="units-table">
+            <thead>
+                <tr>
+                    <th>Unit</th>
+                    <th>Type</th>
+                    <th>Floor</th>
+                    <th>Tenant</th>
+                    <th style="text-align: right;">Rent/Month</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>`;
+
+    gridEl.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
+/* ── Load units for each property on page load ────── */
+const propertyIds = [{% for p in properties %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+propertyIds.forEach(propId => {
+    const grid    = document.getElementById(`units-grid-${propId}`);
+    const loading = document.getElementById(`units-loading-${propId}`);
+
+    fetch(`${UNITS_BASE}/${propId}/units`)
+        .then(r => r.json())
+        .then(data => {
+            if (loading) loading.remove();
+            renderUnits(data.units || [], grid, propId);
+        })
+        .catch(() => {
+            if (grid) grid.innerHTML = `
+                <div class="empty-state">
+                    <i data-lucide="alert-circle" width="20" height="20" style="color:#dc2626;"></i>
+                    <div style="margin-top:8px;color:#dc2626;">Failed to load units for this property.</div>
+                </div>`;
+            if (window.lucide) lucide.createIcons();
+        });
+});
+
+/* ── Filter / search ─────────────────────────────── */
+function filterUnits() {
+    const q          = document.getElementById('searchInput').value.toLowerCase();
+    const propFilter = document.getElementById('filterProperty').value;
+    const stsFilter  = document.getElementById('filterStatus').value;
+
+    // Show/hide property sections
+    document.querySelectorAll('.property-section').forEach(section => {
+        const pid = section.dataset.propertyId;
+        if (propFilter && pid !== propFilter) {
+            section.style.display = 'none';
+            return;
+        }
+        section.style.display = '';
+
+        // Show/hide individual unit rows in table
+        section.querySelectorAll('tbody tr').forEach(row => {
+            const unitNum = row.dataset.unitNumber || '';
+            const tenant  = row.dataset.tenant     || '';
+            const status  = row.dataset.status     || '';
+
+            const matchQ   = !q || unitNum.includes(q) || tenant.includes(q);
+            const matchSts = !stsFilter || status === stsFilter;
+
+            row.style.display = (matchQ && matchSts) ? '' : 'none';
+        });
+    });
+}
+
+/* ── Auto-scroll to a specific property via ?prop=ID ── */
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const targetProp = params.get('prop');
+    if (targetProp) {
+        // Wait for units to render (a short delay)
+        setTimeout(() => {
+            const section = document.getElementById(`prop-section-${targetProp}`);
+            if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const sel = document.getElementById('filterProperty');
+            if (sel) { sel.value = targetProp; filterUnits(); }
+        }, 600);
+    }
+})();
+
+/* ── Spinning loader CSS ─────────────────────────── */
+const style = document.createElement('style');
+style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

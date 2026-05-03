@@ -1,0 +1,123 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Wallet · SmartRent{% endblock %}
+{% block role_name %}Agent{% endblock %}
+{% block page_title %}Wallet{% endblock %}
+{% block page_sub %}Your earnings & what’s owed{% endblock %}
+
+{% block extra_styles %}
+.hero { background: linear-gradient(135deg, #0f766e 0%, #2563eb 100%); }
+.grid { display:grid; grid-template-columns: 1fr 420px; gap: 18px; align-items: start; }
+.kpis { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--sh-sm); }
+.kpi-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.kpi-value { font-size: 20px; font-weight: 800; margin-top: 6px; }
+.kpi-sub { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.card { background: white; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--sh-sm); }
+.card-h { padding: 14px 16px; border-bottom: 1px solid var(--border); font-weight: 800; font-size: 13px; display:flex; align-items:center; gap:8px; }
+.card-b { padding: 14px 16px; }
+.row { display:flex; align-items:center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-lt); font-size: 13px; }
+.row:last-child { border-bottom: none; }
+.mono { font-family: var(--mono); font-weight: 800; }
+.table-wrap { background: white; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 14px 16px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--gray-50); border-bottom: 1px solid var(--border); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--border-lt); font-size: 13px; }
+tr:hover td { background: #f0fdfa; }
+.pill { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; }
+@media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+{% endblock %}
+
+{% block content %}
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-label">Collected (Paid)</div>
+    <div class="kpi-value">KES {{ "{:,.0f}".format(wallet.total_collected or 0) }}</div>
+    <div class="kpi-sub">{{ wallet.total_transactions or 0 }} transactions</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Commission Earned</div>
+    <div class="kpi-value">KES {{ "{:,.0f}".format(wallet.total_commission or 0) }}</div>
+    <div class="kpi-sub">{{ commission_rate_pct }}% on paid rent</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Penalty Owed</div>
+    <div class="kpi-value">KES {{ "{:,.0f}".format(penalty_summary.agent_penalty_owed or 0) }}</div>
+    <div class="kpi-sub">{{ penalty_summary.overdue_count or 0 }} overdue payments</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th>Property</th>
+            <th>Date</th>
+            <th>Rent</th>
+            <th>Commission</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if transactions %}
+            {% for t in transactions %}
+            <tr>
+              <td>{{ t.tenant_name }}</td>
+              <td>{{ t.property_name }}</td>
+              <td>{{ t.date }}</td>
+              <td class="mono">KES {{ "{:,.0f}".format(t.rent_amount or 0) }}</td>
+              <td class="mono">KES {{ "{:,.0f}".format(t.commission or 0) }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="5" style="color:var(--text-3);">No paid transactions yet.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="card" style="margin-bottom: 14px;">
+      <div class="card-h"><i data-lucide="pie-chart" width="16" height="16"></i>By Property</div>
+      <div class="card-b">
+        {% if property_breakdown %}
+          {% for p in property_breakdown %}
+          <div class="row">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div style="font-weight:800;">{{ p.property_name }}</div>
+              <div style="font-size:12px; color:var(--text-3);">{{ p.tx_count }} payments</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="mono">KES {{ "{:,.0f}".format(p.commission or 0) }}</div>
+              <div style="font-size:12px; color:var(--text-3);">collected KES {{ "{:,.0f}".format(p.collected or 0) }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="color:var(--text-3); font-size:13px;">No earnings yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><i data-lucide="alert-triangle" width="16" height="16"></i>Penalty Notes <span class="pill">owed</span></div>
+      <div class="card-b">
+        <div class="row">
+          <div>Overdue total</div>
+          <div class="mono">KES {{ "{:,.0f}".format(penalty_summary.overdue_total or 0) }}</div>
+        </div>
+        <div class="row">
+          <div>Agent owed ({{ commission_rate_pct }}%)</div>
+          <div class="mono">KES {{ "{:,.0f}".format(penalty_summary.agent_penalty_owed or 0) }}</div>
+        </div>
+        <div class="kpi-sub" style="margin-top: 10px;">
+          This page shows what you’re owed based on recorded overdue payments. Settlement (when landlord pays agent) isn’t tracked yet.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,6 +1,6 @@
-# Example using SQLAlchemy (adapt to your ORM)
-from your_app import db
+from extensions import db
 from datetime import datetime
+import json
 
 class Transaction(db.Model):
     __tablename__ = 'transactions'
@@ -19,6 +19,15 @@ class Transaction(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     paid_at = db.Column(db.DateTime, nullable=True)
     
+    # Helper methods for JSON fields
+    def get_bills(self):
+        if self.bills:
+            return json.loads(self.bills)
+        return []
+    
+    def set_bills(self, bills_list):
+        self.bills = json.dumps(bills_list)
+    
     @classmethod
     def get_by_external_reference(cls, ref):
         return cls.query.filter_by(external_reference=ref).first()
@@ -26,3 +35,6 @@ class Transaction(db.Model):
     @classmethod
     def get_by_payhero_reference(cls, ref):
         return cls.query.filter_by(payhero_reference=ref).first()
+    
+    def __repr__(self):
+        return f'<Transaction {self.external_reference}>'

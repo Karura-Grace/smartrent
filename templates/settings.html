@@ -205,6 +205,43 @@
                         <input class="s-input" type="text" name="location" placeholder="Nairobi, Kenya">
                     </div>
                 </div>
+
+                {% if user.role == 'tenant' %}
+                <div class="srow">
+                    <div class="srow-ico ico-bg-green"><i data-lucide="home" width="15" height="15"></i></div>
+                    <div class="srow-body">
+                        <div class="srow-label">Property</div>
+                        <div class="srow-sub">Select the property you live in</div>
+                    </div>
+                    <div class="srow-ctrl">
+                        <select class="s-input" name="tenant_property_id" id="tenantPropertySelect">
+                            <option value="">Select a property</option>
+                            {% for p in properties_list %}
+                            <option value="{{ p.id }}" {% if tenant_profile and tenant_profile.property_id == p.id %}selected{% endif %}>
+                                {{ p.name }}{% if p.address %} — {{ p.address }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="srow">
+                    <div class="srow-ico ico-bg-green"><i data-lucide="door-open" width="15" height="15"></i></div>
+                    <div class="srow-body">
+                        <div class="srow-label">Unit</div>
+                        <div class="srow-sub">Choose your unit (vacant units only)</div>
+                    </div>
+                    <div class="srow-ctrl">
+                        <select class="s-input" name="tenant_unit_id" id="tenantUnitSelect">
+                            <option value="">Select a unit</option>
+                            {% for u in tenant_units %}
+                            <option value="{{ u.id }}" {% if tenant_profile and tenant_profile.unit_id == u.id %}selected{% endif %}>
+                                {{ u.unit_number }}{% if u.status %} ({{ u.status }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- NOTIFICATIONS -->
@@ -400,6 +437,35 @@ window.addEventListener('scroll', function() {
         }
     });
 });
+
+// Tenant: load units dynamically when property changes
+const tenantPropertySelect = document.getElementById('tenantPropertySelect');
+const tenantUnitSelect = document.getElementById('tenantUnitSelect');
+async function loadTenantUnits(propertyId) {
+    if (!tenantUnitSelect) return;
+    tenantUnitSelect.innerHTML = '<option value="">Loading units…</option>';
+    try {
+        const resp = await fetch(`/tenant/api/properties/${propertyId}/units`);
+        const data = await resp.json();
+        const units = (data && data.units) ? data.units : [];
+        tenantUnitSelect.innerHTML = '<option value="">Select a unit</option>';
+        units.forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = `${u.unit_number}${u.status ? ` (${u.status})` : ''}`;
+            tenantUnitSelect.appendChild(opt);
+        });
+    } catch (e) {
+        tenantUnitSelect.innerHTML = '<option value="">Unable to load units</option>';
+    }
+}
+if (tenantPropertySelect && tenantUnitSelect) {
+    tenantPropertySelect.addEventListener('change', (e) => {
+        const pid = e.target.value;
+        tenantUnitSelect.innerHTML = '<option value="">Select a unit</option>';
+        if (pid) loadTenantUnits(pid);
+    });
+}
 lucide.createIcons();
 </script>
 {% endblock %}

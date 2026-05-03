@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provider Portfolio · SmartRent</title>
+    <style>
+        body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f8fafc;color:#0f172a}
+        .wrap{max-width:1100px;margin:0 auto;padding:28px}
+        .top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:16px}
+        h1{margin:0;font-size:22px}
+        p{margin:6px 0 0;color:#475569;font-size:14px}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:18px}
+        .tile{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff}
+        .tile img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+        .empty{margin-top:18px;padding:18px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;background:#fff}
+        a{color:#c2410c;text-decoration:none}
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="top">
+            <div>
+                <h1>Work Portfolio</h1>
+                <p>Provider #{{ provider_id }}</p>
+            </div>
+            <div>
+                <a href="/">SmartRent</a>
+            </div>
+        </div>
+
+        {% if work_photos %}
+            <div class="grid">
+                {% for photo in work_photos %}
+                    <div class="tile">
+                        <img src="/static/uploads/work/{{ photo.image_path }}" alt="Work photo">
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty">No public photos yet.</div>
+        {% endif %}
+    </div>
+</body>
+</html>
+

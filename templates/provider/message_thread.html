@@ -1,0 +1,61 @@
+{% extends "provider/base_provider.html" %}
+
+{% block title %}Chat · SmartRent{% endblock %}
+{% block page_title %}Chat{% endblock %}
+{% block page_sub %}Job #{{ job_id }}{% endblock %}
+
+{% block extra_styles %}
+{{ super() }}
+.chat-wrap { display:flex; flex-direction:column; gap:10px; }
+.bubble {
+    max-width: 72%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.bubble.me { margin-left:auto; background:#fff7ed; border-color:#fed7aa; }
+.bubble .meta { margin-top:6px; font-size:11px; color:var(--text-3); }
+.chat-input { display:flex; gap:8px; margin-top:12px; }
+.chat-input input {
+    flex:1;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-head">
+        <span class="card-title">
+            <i data-lucide="message-square" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:5px;color:#c2410c"></i>
+            Job #{{ job_id }}
+        </span>
+        <a href="{{ url_for('service.messages') }}" class="card-action" style="display:inline-flex;align-items:center;gap:4px;">
+            <i data-lucide="arrow-left" width="12" height="12"></i> Back
+        </a>
+    </div>
+
+    <div class="chat-wrap">
+        {% for m in messages %}
+            <div class="bubble {% if m.from == 'provider' %}me{% endif %}">
+                {{ m.text }}
+                <div class="meta">{{ m.time }}</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <form method="POST" class="chat-input">
+        <input type="text" name="message" placeholder="Type a message…" autocomplete="off">
+        <button class="btn-primary" type="submit" style="padding:10px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;">
+            <i data-lucide="send" width="14" height="14"></i> Send
+        </button>
+    </form>
+</div>
+{% endblock %}
+

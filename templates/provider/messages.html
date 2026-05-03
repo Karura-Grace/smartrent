@@ -1,0 +1,55 @@
+{% extends "provider/base_provider.html" %}
+
+{% block title %}Messages · SmartRent{% endblock %}
+{% block page_title %}Messages{% endblock %}
+{% block page_sub %}Tenant & landlord chats{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-head">
+        <span class="card-title">
+            <i data-lucide="message-square" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:5px;color:#c2410c"></i>
+            Conversations
+        </span>
+    </div>
+
+    {% if threads %}
+    <table class="tbl">
+        <thead>
+            <tr>
+                <th>Job</th>
+                <th>Last message</th>
+                <th>Status</th>
+                <th>Open</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in threads %}
+            <tr>
+                <td>
+                    <strong>#{{ t.job_id }}</strong>
+                    <div style="font-size:11px;color:var(--text-3)">{{ t.title }}</div>
+                </td>
+                <td style="color:var(--text-2)">{{ t.last }}</td>
+                <td>
+                    {% if t.unread and t.unread > 0 %}
+                        <span class="badge b-amber">{{ t.unread }} unread</span>
+                    {% else %}
+                        <span class="badge b-green">Read</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a class="card-action" href="{{ url_for('service.message_thread', job_id=t.job_id) }}" style="display:inline-flex;align-items:center;gap:4px;">
+                        <i data-lucide="arrow-right" width="12" height="12"></i> Open
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding:28px;color:var(--text-3);font-size:13px">No messages yet.</div>
+    {% endif %}
+</div>
+{% endblock %}
+

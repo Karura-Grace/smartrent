@@ -50,7 +50,7 @@
             <div class="stat-ico ico-blue"><i data-lucide="credit-card" width="18" height="18"></i></div>
             <span class="stat-trend flat">Due {{ next_due_date }}</span>
         </div>
-        <div class="stat-val">{{ monthly_rent_due }}</div>
+        <div class="stat-val">{{ stats.rent_amount}}</div>
         <div class="stat-name">Monthly Rent</div>
         <div class="stat-hint">{{ property_name }} · Unit {{ tenant_unit }}</div>
     </div>
@@ -58,9 +58,9 @@
     <div class="stat-card">
         <div class="stat-top">
             <div class="stat-ico ico-orange"><i data-lucide="file-text" width="18" height="18"></i></div>
-            <span>{{ pending_bills_count | default(0) }}</span>
+            <span>{{stats.pending_bills_count  }}</span>
         </div>
-        <div class="stat-val">{{ pending_bills_count }}</div>
+        <div class="stat-val">{{ stats.pending_bills_count }}</div>
         <div class="stat-name">Pending Bills</div>
         <div class="stat-hint">Based on your active billing items.</div>
     </div>
@@ -70,7 +70,7 @@
             <div class="stat-ico ico-green"><i data-lucide="check-circle" width="18" height="18"></i></div>
             <span class="stat-trend up">↑ On time</span>
         </div>
-        <div class="stat-val">{{ payments_made }}</div>
+        <div class="stat-val">{{ stats.payments_made }}</div>
         <div class="stat-name">Payments Made</div>
         <div class="stat-hint">Total cleared transactions.</div>
     </div>
@@ -78,9 +78,9 @@
     <div class="stat-card">
         <div class="stat-top">
             <div class="stat-ico ico-red"><i data-lucide="alert-triangle" width="18" height="18"></i></div>
-            <span class="stat-trend flat">{{ active_requests }} Open</span>
+            <span class="stat-trend flat">{{ stats.active_requests }} Open</span>
         </div>
-        <div class="stat-val">{{ active_requests }}</div>
+        <div class="stat-val">{{ stats.active_requests }}</div>
         <div class="stat-name">Active Requests</div>
         <div class="stat-hint">Maintenance requests are not yet tracked in DB.</div>
     </div>

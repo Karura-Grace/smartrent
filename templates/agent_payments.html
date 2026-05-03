@@ -1,8 +1,8 @@
 {% extends "base_dashboard.html" %}
 
-{% block title %}Rent Collection · SmartRent{% endblock %}
-{% block role_name %}Landlord{% endblock %}
-{% block page_title %}Rent Collection{% endblock %}
+{% block title %}Payments · SmartRent{% endblock %}
+{% block role_name %}Agent{% endblock %}
+{% block page_title %}Payment Collection{% endblock %}
 {% block page_sub %}{{ stats.month | default('This Month') }}{% endblock %}
 
 {% block extra_styles %}
@@ -114,9 +114,9 @@
 
 {% block hero %}
 <div class="hero">
-  <div class="hero-eye">Rent Collection</div>
-  <h1>Rent Collection</h1>
-  <p>Track and manage all tenant rent payments.</p>
+  <div class="hero-eye">Payment Collection</div>
+  <h1>Payment Collection</h1>
+  <p>Track and manage tenant payments for assigned properties.</p>
   <div class="hero-kpis">
     <div class="hero-kpi">
       <span class="hero-kpi-label">Collected</span>
@@ -254,8 +254,7 @@
               <div class="name-stack">
                 <strong>{{ p.full_name or '—' }}</strong>
                 <div class="sub-actions">
-                
-                  <a href="{{ url_for('landlord.landlord_tenant_receipt', tenant_id=p.tenant_id, month=selected_month) }}">
+                  <a href="{{ url_for('agent.agent_tenant_receipt', tenant_id=p.tenant_id, month=selected_month) }}">
                     <i data-lucide="receipt" width="13" height="13"></i> Receipt
                   </a>
                 </div>
@@ -281,10 +280,6 @@
               <button class="tbl-btn success" type="button"
                       onclick="openRecordForTenant('{{ p.tenant_id }}', '{{ p.full_name | e }}', '{{ p.amount_due }}')">
                 <i data-lucide="plus" width="11" height="11"></i> Record
-              </button>
-              <button class="tbl-btn warn" type="button"
-                      onclick="openBillForTenant('{{ p.tenant_id }}', '{{ p.full_name | e }}', '{{ p.amount_due }}')">
-                <i data-lucide="file-plus-2" width="11" height="11"></i> Bill
               </button>
             </div>
           </td>
@@ -312,7 +307,7 @@
   <div class="modal">
     <div class="modal-title">Record Manual Payment</div>
     <div class="modal-sub">Record a cash or bank transfer payment for a tenant.</div>
-    <form method="POST" action="{{ url_for('landlord.record_payment') }}">
+    <form method="POST" action="{{ url_for('agent.agent_record_payment') }}">
       <input type="hidden" name="month" value="{{ selected_month }}">
       <div class="form-group">
         <label class="form-label">Select Tenant</label>
@@ -355,52 +350,6 @@
 </div>
 
 {# ── Receipt modal ────────────────────────────────── #}
-{# Bill tenant modal #}
-<div class="modal-overlay" id="billModal">
-  <div class="modal">
-    <div class="modal-title">Create Bill</div>
-    <div class="modal-sub">Bill a tenant. The tenant will see this in their Bills page.</div>
-    <form method="POST" action="{{ url_for('landlord.landlord_create_bill') }}">
-      <input type="hidden" name="month" value="{{ selected_month }}">
-      <div class="form-group">
-        <label class="form-label">Select Tenant</label>
-        <select class="form-input" id="billTenantSelect" name="tenant_id" required>
-          <option value="">— Select tenant —</option>
-          {% for t in tenants %}
-            <option value="{{ t.id }}">{{ t.name }} — {{ t.unit or 'No unit' }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Bill Type</label>
-          <select class="form-input" name="bill_type">
-            <option value="Rent">Rent</option>
-            <option value="Water">Water</option>
-            <option value="Electricity">Electricity</option>
-            <option value="Penalty">Penalty</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Due Date</label>
-          <input type="date" class="form-input" name="due_date">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Amount (KES) *</label>
-        <input type="number" name="amount" id="billAmount" class="form-input" required min="0" placeholder="e.g. 18000">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-outline" onclick="closeModal('billModal')">Cancel</button>
-        <button type="submit" class="btn-primary">
-          <i data-lucide="check" width="14" height="14"></i> Create Bill
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
 <div class="modal-overlay" id="receiptModal">
   <div class="modal">
     <div class="modal-title">Payment Receipt</div>
@@ -442,14 +391,6 @@ function openRecordForTenant(tenantId, tenantName, amount){
   const sel = document.getElementById('tenantSelect');
   if(sel){ sel.value = tenantId; }
   const amt = document.getElementById('recordAmount');
-  if(amt && amount){ amt.value = amount; }
-}
-
-function openBillForTenant(tenantId, tenantName, amount){
-  openModal('billModal');
-  const sel = document.getElementById('billTenantSelect');
-  if(sel){ sel.value = tenantId; }
-  const amt = document.getElementById('billAmount');
   if(amt && amount){ amt.value = amount; }
 }
 

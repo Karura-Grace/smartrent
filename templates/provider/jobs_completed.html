@@ -1,0 +1,62 @@
+{% extends "provider/base_provider.html" %}
+
+{% block title %}Completed Jobs · SmartRent{% endblock %}
+{% block page_title %}Completed Jobs{% endblock %}
+{% block page_sub %}Work history{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-head">
+        <span class="card-title">
+            <i data-lucide="check-circle" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:5px;color:#c2410c"></i>
+            Completed Jobs
+        </span>
+        <span style="font-size:12px;color:var(--text-3)">{{ jobs | length }} job(s)</span>
+    </div>
+
+    {% if jobs %}
+    <table class="tbl">
+        <thead>
+            <tr>
+                <th>Property / Unit</th>
+                <th>Issue</th>
+                <th>Priority</th>
+                <th>Completed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>
+                    <strong>{{ job.property_name }}</strong>
+                    <div style="font-size:11px;color:var(--text-3)">Unit {{ job.unit }}</div>
+                </td>
+                <td>{{ job.description }}</td>
+                <td>
+                    {% if job.priority == 'urgent' %}
+                        <span class="badge b-red">Urgent</span>
+                    {% elif job.priority == 'medium' %}
+                        <span class="badge b-amber">Medium</span>
+                    {% else %}
+                        <span class="badge b-gray">Low</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:12px;color:var(--text-2)">
+                    {% if job.scheduled_date %}
+                        {{ job.scheduled_date.strftime('%d %b %Y') }}
+                    {% else %}
+                        <span style="color:var(--text-3)">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding:28px;color:var(--text-3);font-size:13px">
+        No completed jobs yet.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

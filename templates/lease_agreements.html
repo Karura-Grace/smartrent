@@ -3,26 +3,34 @@
 {% block role_name %}Landlord{% endblock %}
 {% block page_title %}Lease Agreements{% endblock %}
 {% block page_sub %}Manage Leases{% endblock %}
+
 {% block extra_styles %}
 .hero{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%)}
 .nav-item.active{background:#f0fdfa;color:#0f766e}.nav-item.active::before{background:#0f766e}
 .nav-item:hover{background:#f0fdfa;color:#0f766e}
 .btn-primary{background:#0f766e}.btn-primary:hover{background:#065f46}
-.card-action{color:#0f766e;background:#f0fdfa}
-.tbl-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.13s;background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;gap:4px}
-.tbl-btn:hover{background:var(--bg)}
-.tbl-btn.success:hover{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
-.tbl-btn.warn:hover{background:#fffbeb;color:#d97706}
-.tbl-btn.info:hover{background:var(--blue-50);color:var(--blue-600);border-color:var(--blue-100)}
-.tbl-actions{display:flex;gap:6px}
+
 .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
 .search-wrap{position:relative;flex:1;min-width:200px}
 .search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none}
 .filter-input{width:100%;padding:9px 14px 9px 36px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none}
 .filter-input:focus{border-color:#0f766e}
+
+.badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;display:inline-block}
+.b-green{background:#d1fae5;color:#065f46}
+.b-amber{background:#fef3c7;color:#92400e}
+.b-red{background:#fee2e2;color:#991b1b}
+.b-gray{background:var(--gray-100);color:var(--gray-700)}
+
+.tbl-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.13s;background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;gap:4px;text-decoration:none}
+.tbl-btn:hover{background:var(--bg)}
+.tbl-btn.info:hover{background:var(--blue-50);color:var(--blue-600);border-color:var(--blue-100)}
+.tbl-btn.warn:hover{background:#fffbeb;color:#d97706;border-color:#fde68a}
+.tbl-actions{display:flex;gap:6px;justify-content:flex-end}
+
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
-.modal{background:var(--surface);border-radius:14px;padding:28px;width:100%;max-width:500px;box-shadow:var(--sh-md);animation:fadeUp 0.25s ease both;max-height:90vh;overflow-y:auto}
+.modal{background:var(--surface);border-radius:14px;padding:28px;width:100%;max-width:520px;box-shadow:var(--sh-md);max-height:90vh;overflow-y:auto}
 .modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
 .modal-sub{font-size:13px;color:var(--text-3);margin-bottom:22px}
 .modal-footer{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
@@ -32,102 +40,179 @@
 .form-input:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,0.1)}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 {% endblock %}
+
 {% block hero %}
 <div class="hero">
-    <div class="hero-eye">Lease Agreements</div>
-    <h1>Manage Leases</h1>
-    <p>View, create and renew lease agreements for all your tenants.</p>
-    <div class="hero-kpis">
-        <div class="hero-kpi"><span class="hero-kpi-label">Active Leases</span><span class="hero-kpi-value">20</span></div>
-        <div class="hero-kpi"><span class="hero-kpi-label">Expiring (90 days)</span><span class="hero-kpi-value">3</span></div>
-        <div class="hero-kpi"><span class="hero-kpi-label">Expired</span><span class="hero-kpi-value">1</span></div>
-        <div class="hero-kpi"><span class="hero-kpi-label">Up for Renewal</span><span class="hero-kpi-value">3</span></div>
-    </div>
+  <div class="hero-eye">Lease Agreements</div>
+  <h1>Manage Leases</h1>
+  <p>Create agreements, track status, and keep signatures on record.</p>
+  <div class="hero-kpis">
+    <div class="hero-kpi"><span class="hero-kpi-label">Active Leases</span><span class="hero-kpi-value">{{ stats.active | default(0) }}</span></div>
+    <div class="hero-kpi"><span class="hero-kpi-label">Expiring (90 days)</span><span class="hero-kpi-value">{{ stats.expiring_90 | default(0) }}</span></div>
+    <div class="hero-kpi"><span class="hero-kpi-label">Expired</span><span class="hero-kpi-value">{{ stats.expired | default(0) }}</span></div>
+    <div class="hero-kpi"><span class="hero-kpi-label">Pending Signatures</span><span class="hero-kpi-value">{{ stats.pending | default(0) }}</span></div>
+  </div>
 </div>
 {% endblock %}
+
 {% block content %}
-<div class="stats-grid" style="margin-bottom:20px">
-    <div class="stat-card"><div class="stat-top"><div class="stat-ico ico-green"><i data-lucide="file-check" width="18" height="18" style="color:#15803d"></i></div><span class="stat-trend up">All good</span></div><div class="stat-val">20</div><div class="stat-name">Active Leases</div><div class="stat-hint">Currently running agreements</div></div>
-    <div class="stat-card"><div class="stat-top"><div class="stat-ico ico-orange"><i data-lucide="clock" width="18" height="18" style="color:#d97706"></i></div><span class="stat-trend down">Renew soon</span></div><div class="stat-val">3</div><div class="stat-name">Expiring in 90 Days</div><div class="stat-hint">Contact tenants to renew</div></div>
-    <div class="stat-card"><div class="stat-top"><div class="stat-ico ico-red"><i data-lucide="alert-circle" width="18" height="18" style="color:#dc2626"></i></div><span class="stat-trend down">Action needed</span></div><div class="stat-val">1</div><div class="stat-name">Expired Leases</div><div class="stat-hint">Needs immediate renewal</div></div>
-    <div class="stat-card"><div class="stat-top"><div class="stat-ico ico-blue"><i data-lucide="refresh-cw" width="18" height="18" style="color:#2563eb"></i></div><span class="stat-trend flat">Pending</span></div><div class="stat-val">2</div><div class="stat-name">Renewal Requests</div><div class="stat-hint">Awaiting landlord signature</div></div>
-</div>
 <div class="filter-bar">
-    <div class="search-wrap"><i data-lucide="search" width="14" height="14"></i><input type="text" class="filter-input" placeholder="Search tenant or unit..."></div>
-    <select style="padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text-2);background:var(--surface);cursor:pointer;outline:none"><option>All Statuses</option><option>Active</option><option>Expiring</option><option>Expired</option></select>
-    <button class="btn-primary" onclick="openModal('newLeaseModal')"><i data-lucide="plus" width="14" height="14"></i> New Lease</button>
-</div>
-<div class="card">
-    <div class="card-head"><span class="card-title">All Lease Agreements</span><button class="card-action">Export</button></div>
-    <table class="tbl">
-        <thead><tr><th>Tenant</th><th>Unit</th><th>Start</th><th>End</th><th>Rent (KES)</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-            <tr>
-                <td><strong>Jane Mwangi</strong></td><td>A-12</td><td>Jan 1, 2025</td><td>Dec 31, 2025</td><td>18,000</td>
-                <td><span class="badge b-green">Active</span></td>
-                <td><div class="tbl-actions"><button class="tbl-btn info" onclick="openModal('viewLeaseModal')"><i data-lucide="eye" width="11" height="11"></i> View</button><button class="tbl-btn" onclick="alert('PDF downloading...')"><i data-lucide="download" width="11" height="11"></i> PDF</button></div></td>
-            </tr>
-            <tr>
-                <td><strong>Kevin Otieno</strong></td><td>B-03</td><td>Feb 1, 2025</td><td>Jan 31, 2026</td><td>22,000</td>
-                <td><span class="badge b-green">Active</span></td>
-                <td><div class="tbl-actions"><button class="tbl-btn info" onclick="openModal('viewLeaseModal')"><i data-lucide="eye" width="11" height="11"></i> View</button><button class="tbl-btn" onclick="alert('PDF downloading...')"><i data-lucide="download" width="11" height="11"></i> PDF</button></div></td>
-            </tr>
-            <tr>
-                <td><strong>Amina Hassan</strong></td><td>C-07</td><td>Jun 1, 2024</td><td>May 31, 2025</td><td>15,000</td>
-                <td><span class="badge b-amber">Expiring</span></td>
-                <td><div class="tbl-actions"><button class="tbl-btn success" onclick="openModal('renewLeaseModal')"><i data-lucide="refresh-cw" width="11" height="11"></i> Renew</button><button class="tbl-btn" onclick="alert('PDF downloading...')"><i data-lucide="download" width="11" height="11"></i> PDF</button></div></td>
-            </tr>
-            <tr>
-                <td><strong>Brian Kamau</strong></td><td>A-45</td><td>Jan 1, 2025</td><td>Dec 31, 2025</td><td>25,000</td>
-                <td><span class="badge b-green">Active</span></td>
-                <td><div class="tbl-actions"><button class="tbl-btn info" onclick="openModal('viewLeaseModal')"><i data-lucide="eye" width="11" height="11"></i> View</button><button class="tbl-btn" onclick="alert('PDF downloading...')"><i data-lucide="download" width="11" height="11"></i> PDF</button></div></td>
-            </tr>
-            <tr>
-                <td><strong>Peter Odhiambo</strong></td><td>D-02</td><td>Nov 1, 2023</td><td>Oct 31, 2024</td><td>18,000</td>
-                <td><span class="badge b-red">Expired</span></td>
-                <td><div class="tbl-actions"><button class="tbl-btn success" onclick="openModal('renewLeaseModal')"><i data-lucide="refresh-cw" width="11" height="11"></i> Renew</button><button class="tbl-btn warn" onclick="alert('Termination notice sent.')"><i data-lucide="x" width="11" height="11"></i> Terminate</button></div></td>
-            </tr>
-        </tbody>
-    </table>
+  <div class="search-wrap">
+    <i data-lucide="search" width="14" height="14"></i>
+    <input class="filter-input" id="searchInput" placeholder="Search tenant, unit, property, status...">
+  </div>
+  <button class="btn-primary" onclick="openModal('newLeaseModal')">
+    <i data-lucide="file-plus" width="14" height="14"></i> New Lease
+  </button>
 </div>
 
-<!-- View Lease -->
-<div class="modal-overlay" id="viewLeaseModal">
-    <div class="modal">
-        <div class="modal-title">Lease Agreement</div><div class="modal-sub">Jane Mwangi — Unit A-12</div>
-        <div class="form-row"><div class="form-group"><label class="form-label">Start Date</label><input type="text" class="form-input" value="January 1, 2025" readonly></div><div class="form-group"><label class="form-label">End Date</label><input type="text" class="form-input" value="December 31, 2025" readonly></div></div>
-        <div class="form-group"><label class="form-label">Monthly Rent</label><input type="text" class="form-input" value="KES 18,000" readonly></div>
-        <div class="form-group"><label class="form-label">Deposit</label><input type="text" class="form-input" value="KES 36,000 (2 months)" readonly></div>
-        <div class="form-group"><label class="form-label">Terms</label><textarea class="form-input" rows="3" readonly>Standard 12-month lease. Rent due by 5th of each month. Tenant responsible for utility bills.</textarea></div>
-        <div class="modal-footer"><button class="btn-outline" onclick="closeModal('viewLeaseModal')">Close</button><button class="btn-primary" onclick="alert('Downloading PDF...')"><i data-lucide="download" width="14" height="14"></i> Download PDF</button></div>
-    </div>
-</div>
-
-<!-- Renew Lease -->
-<div class="modal-overlay" id="renewLeaseModal">
-    <div class="modal">
-        <div class="modal-title">Renew Lease</div><div class="modal-sub">Update and extend the lease agreement.</div>
-        <div class="form-row"><div class="form-group"><label class="form-label">New Start Date</label><input type="date" class="form-input"></div><div class="form-group"><label class="form-label">New End Date</label><input type="date" class="form-input"></div></div>
-        <div class="form-group"><label class="form-label">New Monthly Rent (KES)</label><input type="number" class="form-input" placeholder="e.g. 16000"></div>
-        <div class="form-group"><label class="form-label">Notes / Changes</label><textarea class="form-input" rows="3" placeholder="Any changes to the lease terms..."></textarea></div>
-        <div class="modal-footer"><button class="btn-outline" onclick="closeModal('renewLeaseModal')">Cancel</button><button class="btn-primary" onclick="alert('Lease renewed!');closeModal('renewLeaseModal')"><i data-lucide="check" width="14" height="14"></i> Renew Lease</button></div>
-    </div>
+<div style="background:white;border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left;padding:14px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);background:var(--gray-50);border-bottom:1px solid var(--border);">Tenant</th>
+        <th style="text-align:left;padding:14px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);background:var(--gray-50);border-bottom:1px solid var(--border);">Unit / Property</th>
+        <th style="text-align:left;padding:14px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);background:var(--gray-50);border-bottom:1px solid var(--border);">Start</th>
+        <th style="text-align:left;padding:14px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);background:var(--gray-50);border-bottom:1px solid var(--border);">End</th>
+        <th style="text-align:left;padding:14px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);background:var(--gray-50);border-bottom:1px solid var(--border);">Rent</th>
+        <th style="text-align:left;padding:14px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);background:var(--gray-50);border-bottom:1px solid var(--border);">Status</th>
+        <th style="text-align:right;padding:14px 18px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);background:var(--gray-50);border-bottom:1px solid var(--border);">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="leaseTableBody">
+      {% if leases %}
+        {% for l in leases %}
+          <tr>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">
+              <strong>{{ l.tenant_name_live or l.tenant_name or '—' }}</strong>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ l.tenant_email or '—' }}</div>
+            </td>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">
+              <div><strong>{{ l.unit_number_live or l.unit_number or '—' }}</strong></div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ l.property_name or '—' }}</div>
+            </td>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">{{ l.start_date or '—' }}</td>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">{{ l.end_date or '—' }}</td>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);font-family:var(--mono);font-weight:700;">KES {{ (l.rent_amount or 0) | round | int }}</td>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">
+              {% set st = (l.status or '') %}
+              {% if st | lower == 'active' %}
+                <span class="badge b-green">Active</span>
+              {% elif st | lower in ['pending signature','pending_signature'] %}
+                <span class="badge b-amber">Pending Signature</span>
+              {% elif st | lower == 'expired' %}
+                <span class="badge b-red">Expired</span>
+              {% else %}
+                <span class="badge b-gray">{{ st or 'Draft' }}</span>
+              {% endif %}
+            </td>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);text-align:right;">
+              <div class="tbl-actions">
+                {% if (l.status or '') | lower in ['pending signature','pending_signature'] and l.sign_token %}
+                  <a class="tbl-btn info" target="_blank" href="{{ url_for('landlord.sign_lease_agreement', token=l.sign_token) }}">
+                    <i data-lucide="pen-line" width="11" height="11"></i> Sign Link
+                  </a>
+                  <button class="tbl-btn warn" type="button" onclick="copyText('{{ url_for('landlord.sign_lease_agreement', token=l.sign_token) }}')">
+                    <i data-lucide="copy" width="11" height="11"></i> Copy
+                  </button>
+                {% else %}
+                  <span style="font-size:12px;color:var(--text-3);">—</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="7" style="padding:22px 18px;color:var(--text-3);text-align:center;">No leases yet. Create your first lease to keep agreements and signatures on record.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
 </div>
 
 <!-- New Lease -->
 <div class="modal-overlay" id="newLeaseModal">
-    <div class="modal">
-        <div class="modal-title">Create New Lease</div><div class="modal-sub">Generate a new lease agreement for a tenant.</div>
-        <div class="form-group"><label class="form-label">Tenant</label><select class="form-input"><option>Select tenant...</option><option>Jane Mwangi</option><option>Kevin Otieno</option><option>New Tenant</option></select></div>
-        <div class="form-group"><label class="form-label">Unit</label><select class="form-input"><option>A-12</option><option>A-21 (Vacant)</option><option>B-03</option></select></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">Start Date</label><input type="date" class="form-input"></div><div class="form-group"><label class="form-label">End Date</label><input type="date" class="form-input"></div></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">Monthly Rent (KES)</label><input type="number" class="form-input" placeholder="20000"></div><div class="form-group"><label class="form-label">Deposit (KES)</label><input type="number" class="form-input" placeholder="40000"></div></div>
-        <div class="modal-footer"><button class="btn-outline" onclick="closeModal('newLeaseModal')">Cancel</button><button class="btn-primary" onclick="alert('Lease created!');closeModal('newLeaseModal')"><i data-lucide="check" width="14" height="14"></i> Create Lease</button></div>
-    </div>
+  <div class="modal">
+    <div class="modal-title">Create New Lease</div>
+    <div class="modal-sub">Create an agreement and share a signing link with the tenant.</div>
+
+    <form method="POST" action="{{ url_for('landlord.create_lease_agreement') }}">
+      <div class="form-group">
+        <label class="form-label">Tenant *</label>
+        <select class="form-input" name="tenant_id" required>
+          <option value="">Select tenant…</option>
+          {% for t in tenants %}
+            <option value="{{ t.id }}">{{ t.property_name }} · {{ t.unit }} · {{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Unit *</label>
+        <select class="form-input" name="unit_id" required>
+          <option value="">Select unit…</option>
+          {% for u in units %}
+            {% if (u.status or '') == 'Vacant' %}
+              <option value="{{ u.id }}">{{ u.property_name }} · {{ u.unit_number }} (Vacant)</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Start Date</label>
+          <input type="date" class="form-input" name="start_date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">End Date</label>
+          <input type="date" class="form-input" name="end_date">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Monthly Rent (KES)</label>
+          <input type="number" class="form-input" name="rent_amount" min="0" placeholder="e.g. 20000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Deposit (KES)</label>
+          <input type="number" class="form-input" name="deposit_amount" min="0" placeholder="e.g. 40000">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Terms</label>
+        <textarea class="form-input" name="terms" rows="3" placeholder="Optional: any terms or notes…"></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" onclick="closeModal('newLeaseModal')">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="check" width="14" height="14"></i> Create Lease
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
+
 <script>
-function openModal(id){document.getElementById(id).classList.add('show')}
+function openModal(id){document.getElementById(id).classList.add('show'); if(window.lucide) lucide.createIcons();}
 function closeModal(id){document.getElementById(id).classList.remove('show')}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show')}))
+
+function copyText(txt){
+  try { navigator.clipboard.writeText(txt); } catch(e) {}
+}
+
+document.getElementById('searchInput')?.addEventListener('input', () => {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  document.querySelectorAll('#leaseTableBody tr').forEach(tr => {
+    const t = (tr.innerText || '').toLowerCase();
+    tr.style.display = !q || t.includes(q) ? '' : 'none';
+  });
+});
 </script>
 {% endblock %}
+

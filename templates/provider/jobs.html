@@ -1,4 +1,4 @@
-{% extends "base_dashboard.html" %}
+{% extends "provider/base_provider.html" %}
 
 {% block title %}My Jobs · SmartRent{% endblock %}
 {% block role_name %}Service Provider{% endblock %}
@@ -6,14 +6,7 @@
 {% block page_sub %}Assigned Work Queue{% endblock %}
 
 {% block extra_styles %}
-.hero { background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%); }
-.nav-item.active { background: #fff7ed; color: #c2410c; }
-.nav-item.active::before { background: #c2410c; }
-.nav-item:hover { background: #fff7ed; color: #c2410c; }
-.btn-primary { background: #c2410c; }
-.btn-primary:hover { background: #9a3412; }
-.card-action { color: #c2410c; background: #fff7ed; }
-.card-action:hover { background: #fed7aa; }
+{{ super() }}
 
 .filter-bar {
     display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px;
@@ -43,50 +36,6 @@
     color: var(--text-3); font-size: 13px;
 }
 .empty-state i { display: block; margin: 0 auto 12px; opacity: 0.3; }
-{% endblock %}
-
-{% block nav_main %}
-<a href="{{ url_for('service.service_dashboard') }}" class="nav-item">
-    <div class="nav-ico"><i data-lucide="layout-dashboard" width="16" height="16"></i></div>
-    <span class="nav-txt">Dashboard</span>
-</a>
-<a href="{{ url_for('service.jobs') }}" class="nav-item active">
-    <div class="nav-ico"><i data-lucide="clipboard-list" width="16" height="16"></i></div>
-    <span class="nav-txt">My Jobs</span>
-    {% if open_count is defined and open_count > 0 %}
-    <span class="nav-pill">{{ open_count }}</span>
-    {% endif %}
-</a>
-<a href="{{ url_for('service.jobs') }}" class="nav-item">
-    <div class="nav-ico"><i data-lucide="check-circle" width="16" height="16"></i></div>
-    <span class="nav-txt">Completed Jobs</span>
-</a>
-<a href="{{ url_for('service.jobs') }}" class="nav-item">
-    <div class="nav-ico"><i data-lucide="banknote" width="16" height="16"></i></div>
-    <span class="nav-txt">Earnings</span>
-</a>
-{% endblock %}
-
-{% block nav_management %}
-<a href="{{ url_for('service.schedule') }}" class="nav-item">
-    <div class="nav-ico"><i data-lucide="calendar-days" width="16" height="16"></i></div>
-    <span class="nav-txt">Schedule</span>
-</a>
-<a href="{{ url_for('service.reviews') }}" class="nav-item">
-    <div class="nav-ico"><i data-lucide="star" width="16" height="16"></i></div>
-    <span class="nav-txt">Reviews & Ratings</span>
-</a>
-<a href="{{ url_for('service.work_photos') }}" class="nav-item">
-    <div class="nav-ico"><i data-lucide="camera" width="16" height="16"></i></div>
-    <span class="nav-txt">Work Photos</span>
-</a>
-<a href="{{ url_for('service.messages') }}" class="nav-item">
-    <div class="nav-ico"><i data-lucide="message-square" width="16" height="16"></i></div>
-    <span class="nav-txt">Messages</span>
-    {% if unread_count is defined and unread_count > 0 %}
-    <span class="nav-pill">{{ unread_count }}</span>
-    {% endif %}
-</a>
 {% endblock %}
 
 {% block hero %}
@@ -186,7 +135,6 @@
                     <div class="job-actions">
                         {% if job.status != 'completed' %}
                         <form method="POST" action="{{ url_for('service.complete_job', job_id=job.id) }}" style="display:inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="job-btn job-btn-done"
                                 onclick="return confirm('Mark this job as done?')">
                                 <i data-lucide="check" width="11" height="11"></i> Done
@@ -196,7 +144,7 @@
                         <a href="{{ url_for('service.job_photos', job_id=job.id) }}" class="job-btn job-btn-photo">
                             <i data-lucide="camera" width="11" height="11"></i> Photo
                         </a>
-                        <a href="{{ url_for('service.messages', job_id=job.id) }}" class="job-btn job-btn-msg">
+                        <a href="{{ url_for('service.message_thread', job_id=job.id) }}" class="job-btn job-btn-msg">
                             <i data-lucide="message-square" width="11" height="11"></i> Msg
                         </a>
                     </div>

@@ -1,0 +1,43 @@
+{% extends "provider/base_provider.html" %}
+
+{% block title %}Reviews · SmartRent{% endblock %}
+{% block page_title %}Reviews{% endblock %}
+{% block page_sub %}Ratings & feedback{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-head">
+        <span class="card-title">
+            <i data-lucide="star" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:5px;color:#c2410c"></i>
+            Reviews & Ratings
+        </span>
+    </div>
+
+    {% if reviews %}
+    <div style="display:grid;gap:12px">
+        {% for r in reviews %}
+        <div style="padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+                <div style="font-size:12px;font-weight:700;color:var(--text)">{{ r.tenant }}</div>
+                <div style="display:flex;gap:2px">
+                    {% for _ in range(r.rating) %}
+                        <i data-lucide="star" width="14" height="14" style="color:#f59e0b"></i>
+                    {% endfor %}
+                    {% for _ in range(5 - r.rating) %}
+                        <i data-lucide="star" width="14" height="14" style="color:var(--border)"></i>
+                    {% endfor %}
+                </div>
+            </div>
+            <div style="font-size:13px;color:var(--text-2);line-height:1.6">{{ r.text }}</div>
+            <div style="margin-top:6px;font-size:11px;color:var(--text-3)">{{ r.age }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding:28px;color:var(--text-3);font-size:13px">
+        No reviews yet.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

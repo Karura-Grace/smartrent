@@ -43,20 +43,19 @@
                 --pink-light: #f472b6;  /* soft pink */
                 --pink-soft: #fbcfe8;   /* very light */
                 --pink-glow: #f9a8d4;   /* highlight */
-                /* Landlord theme: emerald + amber (distinct from agent) */
-                --primary-50:  #ecfdf5;
-                --primary-100: #d1fae5;
-                --primary-200: #a7f3d0;
-                --primary-300: #6ee7b7;
-                --primary-400: #34d399;
-                --primary-500: #10b981;
-                --primary-600: #059669;
-                --primary-700: #047857;
-                --primary-800: #065f46;
-                --primary-900: #064e3b;
-                --accent-400: #fbbf24;
-                --accent-500: #f59e0b;
-                --accent-600: #d97706;
+                --primary-50:  #eff6ff;
+                --primary-100: #dbeafe;
+                --primary-200: #bfdbfe;
+                --primary-300: #93c5fd;
+                --primary-400: #60a5fa;
+                --primary-500: #3b82f6;
+                --primary-600: #2563eb;
+                --primary-700: #1d4ed8;
+                --primary-800: #1e40af;
+                --primary-900: #1e3a8a;
+                --accent-400: #a855f7;
+                --accent-500: #8b5cf6;
+                --accent-600: #7c3aed;
                 --gray-50:  #f9fafb;
                 --gray-100: #f3f4f6;
                 --gray-200: #e5e7eb;
@@ -81,9 +80,44 @@
 
 * { font-family: 'Inter', sans-serif; }
 
+/* Small inline actions (receipt) */
+.name-stack { display:flex; flex-direction:column; gap:4px; }
+.sub-actions { display:flex; gap:10px; align-items:center; }
+.sub-actions a{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11.5px; font-weight:600;
+  color: var(--text-3);
+  text-decoration:none;
+  padding:2px 0;
+}
+.sub-actions a:hover{ color: var(--primary-700); }
+.pay-flag{
+  width:22px; height:22px; border-radius:999px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--border);
+  flex:0 0 auto;
+}
+.pay-flag.paid{ background:#ecfdf5; border-color:#bbf7d0; color:#16a34a; }
+.pay-flag.unpaid{ background:#fff1f2; border-color:#fecdd3; color:#e11d48; }
+.row-actions{ display:flex; justify-content:flex-end; gap:8px; }
+.mini-btn{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11.5px; font-weight:700;
+  padding:6px 10px; border-radius:10px;
+  border:1px solid var(--border);
+  background: white;
+  color: var(--text-2);
+  text-decoration:none;
+  cursor:pointer;
+  transition: all 0.15s;
+}
+.mini-btn:hover{ border-color: var(--primary-300); color: var(--primary-700); box-shadow:0 6px 14px rgba(59,130,246,0.10); transform:translateY(-1px); }
+.mini-btn.primary{ background: var(--purple-main); border-color: var(--purple-main); color:white; }
+.mini-btn.primary:hover{ background: var(--primary-700); border-color: var(--primary-700); }
+
 /* ── COMPACT HERO ── */
 .ld-hero {
-  background: linear-gradient(135deg, var(--text) 0%, var(--purple-dark) 55%, var(--blue-800) 100%);
+  background: linear-gradient(135deg, var(--blue-800) 0%, var(--purple-main) 50%, var(--accent-600) 100%);
   border-radius: 20px;
   padding: 20px 28px;
   margin-bottom: 28px;
@@ -769,27 +803,27 @@
         Quick Actions
       </div>
       <div class="qa-grid-2x2">
-        <a class="qa-tile" href="{{ url_for('properties.properties', open='add_unit') }}">
+        <a class="qa-tile" href="{{ url_for('agent.agent_properties', open='unit') }}">
           <div class="qa-tile-ico"><i data-lucide="home" width="16" height="16"></i></div>
           <div class="qa-tile-name">Add Unit</div>
         </a>
-        <a class="qa-tile" href="{{ url_for('landlord.tenant', open='add') }}">
+        <a class="qa-tile" href="{{ url_for('agent.agent_tenants', open='add') }}">
           <div class="qa-tile-ico"><i data-lucide="user-plus" width="16" height="16"></i></div>
           <div class="qa-tile-name">Add Tenant</div>
         </a>
-        <a class="qa-tile" href="{{ url_for('landlord.send_notices') }}">
+        <a class="qa-tile" href="{{ url_for('agent.notice') }}">
           <div class="qa-tile-ico"><i data-lucide="megaphone" width="16" height="16"></i></div>
           <div class="qa-tile-name">Send Notice</div>
         </a>
-        <a class="qa-tile" href="{{ url_for('landlord.maintenance') }}">
+        <a class="qa-tile" href="{{ url_for('agent.agent_maintenance') }}">
           <div class="qa-tile-ico"><i data-lucide="wrench" width="16" height="16"></i></div>
           <div class="qa-tile-name">Maintenance</div>
         </a>
-        <a class="qa-tile" href="{{ url_for('landlord.reports') }}">
+        <a class="qa-tile" href="{{ url_for('agent.agent_reports') }}">
           <div class="qa-tile-ico"><i data-lucide="bar-chart-3" width="16" height="16"></i></div>
           <div class="qa-tile-name">Analytics</div>
         </a>
-        <a class="qa-tile" href="{{ url_for('landlord.rent_collection') }}">
+        <a class="qa-tile" href="{{ url_for('agent.agent_payments') }}">
           <div class="qa-tile-ico"><i data-lucide="wallet" width="16" height="16"></i></div>
           <div class="qa-tile-name">Collections</div>
         </a>
@@ -910,8 +944,8 @@
           </thead>
           <tbody>
             {% for property in properties %}
-            <tr style="cursor: pointer;" onclick="window.location='{{ url_for('properties.properties') }}'">
-              <td><div class="unit-cell"><div class="unit-icon {{ property.status }}"><i data-lucide="{% if property.status == 'occupied' %}home{% elif property.status == 'vacant' %}door-open{% else %}alert-triangle{% endif %}" width="14" height="14"></i></div><div><div class="unit-name">{{ property.unit_number }}</div><div class="unit-type">{{ property.property_type | default('Unit') }}</div></div></div></td>
+            <tr style="cursor: pointer;" onclick="window.location='{{ url_for('agent.agent_properties') }}'">
+              <td><div class="unit-cell"><div class="unit-icon {{ property.status }}"><i data-lucide="{% if property.status == 'occupied' %}home{% elif property.status == 'vacant' %}door-open{% else %}alert-triangle{% endif %}" width="14" height="14"></i></div><div><div class="unit-name">{{ property.unit_number }}</div><div class="unit-type">{{ property.property_name | default('') }}</div></div></div></td>
               <td><span class="rent-mono">KES {{ property.rent_amount | default('—') }}</span></td>
               <td><span class="badge {% if property.status == 'occupied' %}b-green{% elif property.status == 'vacant' %}b-amber{% else %}b-red{% endif %}">{{ property.status.title() }}</span></td>
               <td><i data-lucide="chevron-right" width="14" height="14" style="color:var(--gray-400);"></i></td>
@@ -923,8 +957,8 @@
         <div class="empty-state"><i data-lucide="building" width="32" height="32" style="margin:0 auto 8px;display:block;opacity:0.3;"></i>No properties yet</div>
         {% endif %}
         <div style="margin-top:16px; display:flex; gap:8px;">
-          <a href="{{ url_for('landlord.add_unit') }}" class="btn-sm btn-primary"><i data-lucide="plus" width="12" height="12"></i> Add Property</a>
-          <a href="{{ url_for('properties.properties') }}" class="btn-sm btn-outline">View all →</a>
+          <a href="{{ url_for('agent.agent_properties') }}" class="btn-sm btn-primary"><i data-lucide="plus" width="12" height="12"></i> Add Property</a>
+          <a href="{{ url_for('agent.agent_properties') }}" class="btn-sm btn-outline">View all →</a>
         </div>
       </div>
 
@@ -932,14 +966,34 @@
       <div id="tab-tenant" style="display:none;">
         {% if tenant %}
         <table class="prop-table">
-          <thead><tr><th>Tenant</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Tenant</th><th>Amount</th><th>Status</th><th style="text-align:right;">Record</th></tr></thead>
           <tbody>
             {% for tenant in tenant %}
-            <tr onclick="window.location='{{ url_for('landlord.tenant') }}'">
-              <td><div class="tenant-row"><div class="tenant-av">{{ tenant.name[0] | upper }}</div><span class="tenant-name">{{ tenant.name }}</span></div></td>
+            <tr>
+              <td>
+                <div class="name-stack">
+                  <span class="tenant-name">{{ tenant.name }}</span>
+                  <div class="sub-actions">
+                    <a href="{{ url_for('agent.agent_tenant_receipt', tenant_id=tenant.id, month=selected_month) }}">
+                      <i data-lucide="receipt" width="13" height="13"></i> Receipt
+                    </a>
+                  </div>
+                </div>
+              </td>
               <td><span class="rent-mono">KES {{ tenant.amount }}</span></td>
-              <td><span class="badge {% if tenant.status == 'Paid' %}b-green{% elif tenant.status == 'Pending' %}b-amber{% else %}b-red{% endif %}">{{ tenant.status }}</span></td>
-              <td><i data-lucide="chevron-right" width="14" height="14" style="color:var(--gray-400);"></i></td>
+              <td>
+                <span class="badge {% if tenant.payment_status == 'Paid' %}b-green{% else %}b-red{% endif %}">
+                  {{ tenant.payment_status }}
+                </span>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button class="mini-btn primary" type="button"
+                          onclick="openRecordPayment('{{ tenant.id }}','{{ tenant.name | e }}','{{ tenant.amount }}')">
+                    <i data-lucide="plus" width="13" height="13"></i> Record
+                  </button>
+                </div>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -947,21 +1001,37 @@
         {% else %}
         <div class="empty-state">No tenant found.</div>
         {% endif %}
-        <div style="margin-top:16px;"><a href="{{ url_for('landlord.tenant') }}" class="btn-sm btn-outline">Manage tenants →</a></div>
+        <div style="margin-top:16px;"><a href="{{ url_for('agent.agent_tenants') }}" class="btn-sm btn-outline">Manage tenants →</a></div>
       </div>
 
       <!-- Payments Tab -->
       <div id="tab-payments" style="display:none;">
-        {% if recent_payments %}
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
+          <div style="font-size:12px; color:var(--text-3); font-weight:600;">Month</div>
+          <select style="padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:white; font-size:12px; font-weight:600; color:var(--text-2);"
+                  onchange="changeMonth(this.value)">
+            {% for m in available_months %}
+              <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if month_payments %}
         <table class="prop-table">
           <thead><tr><th>Tenant</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
           <tbody>
-            {% for payment in recent_payments %}
+            {% for row in month_payments %}
             <tr>
-              <td>{{ payment.tenant_name }}</td>
-              <td><span class="rent-mono">KES {{ payment.amount }}</span></td>
-              <td style="color:var(--text-3); font-size:12px;">{{ payment.date }}</td>
-              <td><span class="badge {% if payment.status == 'Paid' %}b-green{% else %}b-amber{% endif %}">{{ payment.status }}</span></td>
+              <td>
+                <div class="tenant-row" style="gap:10px;">
+                  <span class="pay-flag {% if row.payment_status == 'Paid' %}paid{% else %}unpaid{% endif %}">
+                    <i data-lucide="{% if row.payment_status == 'Paid' %}check-circle-2{% else %}alert-circle{% endif %}" width="14" height="14"></i>
+                  </span>
+                  <span class="tenant-name">{{ row.tenant_name }}</span>
+                </div>
+              </td>
+              <td><span class="rent-mono">KES {{ row.amount }}</span></td>
+              <td style="color:var(--text-3); font-size:12px;">{{ row.paid_on or '—' }}</td>
+              <td><span class="badge {% if row.payment_status == 'Paid' %}b-green{% else %}b-red{% endif %}">{{ row.payment_status }}</span></td>
             </tr>
             {% endfor %}
           </tbody>
@@ -969,7 +1039,7 @@
         {% else %}
         <div class="empty-state">No recent payments.</div>
         {% endif %}
-        <div style="margin-top:16px;"><a href="{{ url_for('landlord.rent_collection') }}" class="btn-sm btn-outline">View all payments →</a></div>
+        <div style="margin-top:16px;"><a href="{{ url_for('agent.agent_payments') }}" class="btn-sm btn-outline">View all payments →</a></div>
       </div>
     </div>
 
@@ -995,4 +1065,94 @@
           {% else %}
             <div class="empty-state">No maintenance tickets found.</div>
           {% endif %}
-          {% endblock %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# Record payment modal #}
+<div class="modal-overlay" id="recordPayModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:999; align-items:center; justify-content:center;">
+  <div class="modal" style="background:white; border-radius:16px; padding:22px 22px; width:100%; max-width:480px; box-shadow:0 24px 60px rgba(0,0,0,0.18);">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+      <div>
+        <div class="modal-title" style="font-size:16px; font-weight:800; color:var(--text);">Record Payment</div>
+        <div class="modal-sub" id="rpSub" style="font-size:12.5px; color:var(--text-3); margin-top:2px;">Save a payment for the selected tenant.</div>
+      </div>
+      <button class="mini-btn" type="button" onclick="closeRecordPayment()" style="padding:6px 10px;">Close</button>
+    </div>
+
+    <form method="POST" action="{{ url_for('agent.agent_record_payment') }}" style="margin-top:16px;">
+      <input type="hidden" name="tenant_id" id="rpTenantId">
+      <input type="hidden" name="month" value="{{ selected_month }}">
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="display:block; font-size:12px; font-weight:700; color:var(--text-2); margin-bottom:6px;">Amount (KES)</label>
+        <input class="form-input" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;" name="amount" id="rpAmount" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="display:block; font-size:12px; font-weight:700; color:var(--text-2); margin-bottom:6px;">Method</label>
+        <select class="form-input" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;" name="method">
+          <option value="Cash">Cash</option>
+          <option value="M-Pesa">M-Pesa</option>
+          <option value="Bank">Bank</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="display:block; font-size:12px; font-weight:700; color:var(--text-2); margin-bottom:6px;">Reference (optional)</label>
+        <input class="form-input" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;" name="reference">
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+        <button class="mini-btn" type="button" onclick="closeRecordPayment()">Cancel</button>
+        <button class="mini-btn primary" type="submit"><i data-lucide="check" width="14" height="14"></i> Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openRecordPayment(tenantId, tenantName, amount){
+    document.getElementById('rpTenantId').value = tenantId || '';
+    document.getElementById('rpSub').textContent = `Save a payment for ${tenantName || 'this tenant'} ({{ selected_month }}).`;
+    const amt = document.getElementById('rpAmount');
+    amt.value = amount || '';
+    const modal = document.getElementById('recordPayModal');
+    modal.style.display = 'flex';
+    setTimeout(() => { try { lucide.createIcons(); } catch(e){} }, 0);
+  }
+  function closeRecordPayment(){
+    const modal = document.getElementById('recordPayModal');
+    modal.style.display = 'none';
+  }
+  function changeMonth(month){
+    const url = new URL(window.location.href);
+    url.searchParams.set('month', month);
+    url.searchParams.set('tab', 'payments');
+    window.location.href = url.toString();
+  }
+  function switchTab(btn, id){
+    document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    ['tab-props','tab-tenant','tab-payments'].forEach(tid => {
+      const el = document.getElementById(tid);
+      if(el){ el.style.display = (tid === id) ? '' : 'none'; }
+    });
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', id.replace('tab-',''));
+    window.history.replaceState({}, '', url.toString());
+    try { lucide.createIcons(); } catch(e) {}
+  }
+  (function initTabs(){
+    const url = new URL(window.location.href);
+    const tab = url.searchParams.get('tab') || 'props';
+    const map = {props:'tab-props', tenant:'tab-tenant', payments:'tab-payments'};
+    const id = map[tab] || 'tab-props';
+    const btn = document.querySelector(`.tab-bar .tab[onclick*="${id}"]`);
+    if(btn){ switchTab(btn, id); }
+  })();
+</script>
+{% endblock %}

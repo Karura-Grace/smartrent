@@ -127,3 +127,4 @@ def arrears_report_pdf():
     return send_file(buffer, as_attachment=True,
                      download_name="arrears-report-2025.pdf",
                      mimetype="application/pdf")
+    

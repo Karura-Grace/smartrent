@@ -1,0 +1,222 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Landlords · SmartRent{% endblock %}
+{% block role_name %}Agent{% endblock %}
+{% block page_title %}Landlords{% endblock %}
+{% block page_sub %}Landlords linked to your agent account{% endblock %}
+
+{% block content %}
+<style>
+.sheet-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+.sheet-left{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.sheet-field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text-2)}
+.sheet-field input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.sheet-wrap{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)}
+.sheet-table{width:100%;border-collapse:separate;border-spacing:0}
+.sheet-table thead th{position:sticky;top:0;background:var(--bg);z-index:1;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);padding:12px 14px;border-bottom:1px solid var(--border)}
+.sheet-table tbody td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.sheet-table tbody tr:hover{background:rgba(99,102,241,.04)}
+.sheet-actions{display:flex;gap:8px;justify-content:flex-end}
+.btn-xs{padding:7px 10px;border-radius:10px;font-size:12px;display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+.btn-xs:hover{background:var(--bg)}
+.btn-xs.danger{border-color:#fecaca;background:#fff1f2;color:#9f1239}
+.btn-xs.danger:hover{background:#ffe4e6}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;color:var(--text-2)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:16px;padding:22px 22px;width:100%;max-width:560px;box-shadow:0 24px 60px rgba(0,0,0,.18)}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:6px}
+.modal-sub{font-size:12.5px;color:var(--text-3);margin-bottom:16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+</style>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}" style="margin-bottom:16px; padding:12px 16px; border-radius:10px; font-size:13px;
+           background:{% if category=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
+           color:{% if category=='success' %}#065f46{% else %}#991b1b{% endif %};">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<div class="sheet-toolbar">
+  <div class="sheet-left">
+    <div class="sheet-field" style="min-width:260px;">
+      <label>Search</label>
+      <input id="landlordSearch" type="text" placeholder="Type a name, email or ID…" oninput="filterLandlords()">
+    </div>
+    <button type="button" class="btn-primary" style="padding:10px 14px; border-radius:10px;" onclick="openModal('createLandlordModal')">
+      <i data-lucide="plus" width="14" height="14"></i> Add Landlord
+    </button>
+  </div>
+
+  <form method="POST" action="{{ url_for('agent.agent_link_landlord') }}" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+    <div class="sheet-field" style="min-width:260px;">
+      <label>Link existing landlord (email)</label>
+      <input type="email" name="landlord_email" placeholder="landlord@email.com">
+    </div>
+    <button type="submit" class="btn-xs" style="padding:10px 12px;">
+      <i data-lucide="link" width="14" height="14"></i> Link
+    </button>
+  </form>
+</div>
+
+<div class="sheet-wrap">
+  {% if landlords %}
+  <div style="max-height:62vh; overflow:auto;">
+    <table class="sheet-table" id="landlordsTable">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Name</th>
+          <th style="text-align:left;">Email</th>
+          <th style="text-align:left;">Properties</th>
+          <th style="text-align:left;">ID</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in landlords %}
+        <tr data-q="{{ (l.full_name ~ ' ' ~ l.email ~ ' ' ~ l.landlord_id)|lower }}">
+          <td>{{ l.full_name }}</td>
+          <td class="mono">{{ l.email }}</td>
+          <td>{{ l.properties_count or 0 }}</td>
+          <td class="mono">#{{ l.landlord_id }}</td>
+          <td>
+            <div class="sheet-actions">
+              <button type="button" class="btn-xs"
+                      onclick="openEditLandlord({{ l.landlord_id }}, '{{ (l.first_name or '')|e }}', '{{ (l.last_name or '')|e }}', '{{ (l.email or '')|e }}')">
+                <i data-lucide="pencil" width="14" height="14"></i> Edit
+              </button>
+              <form method="POST" action="{{ url_for('agent.agent_unlink_landlord', landlord_id=l.landlord_id) }}" style="display:inline;">
+                <button type="submit" class="btn-xs" onclick="return confirm('Unlink {{ l.full_name }} from your agent account?')">
+                  <i data-lucide="link-2-off" width="14" height="14"></i> Unlink
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('agent.agent_delete_landlord', landlord_id=l.landlord_id) }}" style="display:inline;">
+                <button type="submit" class="btn-xs danger"
+                        onclick="return confirm('Delete {{ l.full_name }}? This only works if they have no properties.')">
+                  <i data-lucide="trash-2" width="14" height="14"></i> Delete
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="padding:22px; color:var(--text-3);">No landlords linked yet.</div>
+  {% endif %}
+</div>
+
+{# Create landlord modal #}
+<div class="modal-overlay" id="createLandlordModal">
+  <div class="modal">
+    <div class="modal-title">Add Landlord</div>
+    <div class="modal-sub">Creates a landlord account and links it to your agent account.</div>
+    <form method="POST" action="{{ url_for('agent.agent_create_landlord') }}">
+      <div class="form-row">
+        <div>
+          <label class="sheet-field" style="display:block;">
+            <span style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-2);">First name</span>
+            <input class="form-input" type="text" name="first_name" required>
+          </label>
+        </div>
+        <div>
+          <label class="sheet-field" style="display:block;">
+            <span style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-2);">Last name</span>
+            <input class="form-input" type="text" name="last_name" required>
+          </label>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="sheet-field" style="display:block;">
+          <span style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-2);">Email</span>
+          <input class="form-input" type="email" name="email" required>
+        </label>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="sheet-field" style="display:block;">
+          <span style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-2);">Temporary password</span>
+          <input class="form-input" type="text" name="password" required>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-xs" onclick="closeModal('createLandlordModal')">Cancel</button>
+        <button type="submit" class="btn-primary" style="padding:10px 14px; border-radius:10px;">
+          <i data-lucide="check" width="14" height="14"></i> Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Edit landlord modal #}
+<div class="modal-overlay" id="editLandlordModal">
+  <div class="modal">
+    <div class="modal-title">Edit Landlord</div>
+    <div class="modal-sub">Updates landlord details in the database.</div>
+    <form method="POST" id="editLandlordForm">
+      <div class="form-row">
+        <div>
+          <label class="sheet-field" style="display:block;">
+            <span style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-2);">First name</span>
+            <input class="form-input" type="text" name="first_name" id="editFirstName" required>
+          </label>
+        </div>
+        <div>
+          <label class="sheet-field" style="display:block;">
+            <span style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-2);">Last name</span>
+            <input class="form-input" type="text" name="last_name" id="editLastName" required>
+          </label>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="sheet-field" style="display:block;">
+          <span style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-2);">Email</span>
+          <input class="form-input" type="email" name="email" id="editEmail" required>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-xs" onclick="closeModal('editLandlordModal')">Cancel</button>
+        <button type="submit" class="btn-primary" style="padding:10px 14px; border-radius:10px;">
+          <i data-lucide="check" width="14" height="14"></i> Save changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openModal(id){ const el=document.getElementById(id); if(el) el.classList.add('open'); }
+function closeModal(id){ const el=document.getElementById(id); if(el) el.classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+function filterLandlords(){
+  const q = (document.getElementById('landlordSearch')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('#landlordsTable tbody tr').forEach(tr => {
+    const hay = tr.dataset.q || '';
+    tr.style.display = (!q || hay.includes(q)) ? '' : 'none';
+  });
+}
+
+function openEditLandlord(id, firstName, lastName, email){
+  const form = document.getElementById('editLandlordForm');
+  form.action = `/agent/landlords/edit/${id}`;
+  document.getElementById('editFirstName').value = firstName || '';
+  document.getElementById('editLastName').value = lastName || '';
+  document.getElementById('editEmail').value = email || '';
+  openModal('editLandlordModal');
+}
+
+if (window.lucide) lucide.createIcons();
+</script>
+{% endblock %}

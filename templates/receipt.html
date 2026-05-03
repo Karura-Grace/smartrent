@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ (doc_type or 'Receipt') }} - {{ tenant.name if tenant else 'Tenant' }}</title>
+    <style>
+      :root{ --bg:#fff; --text:#0f172a; --muted:#475569; --border:#e2e8f0; --brand:#2563eb; }
+      *{ box-sizing:border-box; }
+      body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+      .page{ max-width:760px; margin:32px auto; padding:0 18px; }
+      .card{ border:1px solid var(--border); border-radius:14px; padding:22px; }
+      .hdr{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding-bottom:14px; border-bottom:1px dashed var(--border); }
+      .brand{ font-weight:800; color:var(--brand); font-size:18px; }
+      .sub{ font-size:12px; color:var(--muted); margin-top:2px; }
+      .doctype{ text-align:right; }
+      .doctype .t{ font-weight:800; font-size:14px; }
+      .doctype .m{ font-size:12px; color:var(--muted); margin-top:2px; }
+      .rows{ margin-top:14px; }
+      .row{ display:flex; justify-content:space-between; gap:16px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; }
+      .row:last-child{ border-bottom:none; }
+      .k{ color:var(--muted); }
+      .v{ font-weight:600; text-align:right; }
+      .total{ margin-top:14px; padding:12px; border:1px solid var(--border); border-radius:12px; display:flex; justify-content:space-between; font-size:14px; }
+      .foot{ margin-top:16px; color:var(--muted); font-size:11px; line-height:1.5; }
+      @media print{ .page{ margin:0; padding:0; } .card{ border:none; padding:0; } }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="card">
+        <div class="hdr">
+          <div>
+            <div class="brand">SmartRent</div>
+            <div class="sub">Official Payment Receipt</div>
+          </div>
+          <div class="doctype">
+            <div class="t">{{ doc_type or 'Receipt' }}</div>
+            <div class="m">{{ month or '' }}</div>
+          </div>
+        </div>
+
+        <div class="rows">
+          <div class="row"><div class="k">Tenant</div><div class="v">{{ tenant.name if tenant else '—' }}</div></div>
+          <div class="row"><div class="k">Property</div><div class="v">{{ tenant.property_name if tenant else '—' }}</div></div>
+          <div class="row"><div class="k">Unit</div><div class="v">{{ tenant.unit_number if tenant and tenant.unit_number else '—' }}</div></div>
+          <div class="row"><div class="k">Status</div><div class="v">{{ status or 'Unpaid' }}</div></div>
+          {% if paid_on %}<div class="row"><div class="k">Paid On</div><div class="v">{{ paid_on }}</div></div>{% endif %}
+          {% if method %}<div class="row"><div class="k">Method</div><div class="v">{{ method }}</div></div>{% endif %}
+          {% if reference %}<div class="row"><div class="k">Reference</div><div class="v">{{ reference }}</div></div>{% endif %}
+        </div>
+
+        <div class="total">
+          <div class="k">Amount</div>
+          <div class="v">KES {{ "{:,.0f}".format(amount or 0) }}</div>
+        </div>
+
+        <div class="foot">
+          Issued at: {{ issued_at if issued_at else '' }}<br />
+          This receipt is system-generated.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

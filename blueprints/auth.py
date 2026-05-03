@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, session, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-from extensions import mysql
+from extensions import mysql, get_db_connection, get_conn_and_cursor
 from helpers import login_required
 
 auth_bp = Blueprint('auth', __name__)
@@ -19,7 +19,9 @@ def login():
             flash('All fields are required', 'error')
             return redirect(url_for('auth.login'))
 
-        cur = mysql.connection.cursor()
+        # Get connection (use fallback if mysql.connection is None)
+        conn = mysql.connection if mysql.connection is not None else get_db_connection()
+        cur = conn.cursor()
         cur.execute("SELECT * FROM users WHERE email = %s", (email,))
         user = cur.fetchone()
         cur.close()
@@ -44,6 +46,9 @@ def login():
                 return redirect(url_for('landlord.landlord_dashboard'))
             elif user['role'] == 'service_provider':
                 return redirect(url_for('service.service_dashboard'))
+            elif user['role'] == 'agent':
+                return redirect(url_for('agent.agent_dashboard'))
+
 
         else:
             flash('Wrong password', 'error')
@@ -77,7 +82,8 @@ def register():
             flash('Password must be at least 6 characters', 'error')
             return redirect(url_for('auth.register'))
 
-        cur = mysql.connection.cursor()
+        conn = mysql.connection if mysql.connection is not None else get_db_connection()
+        cur = conn.cursor()
         cur.execute("SELECT * FROM users WHERE email = %s", (email,))
         if cur.fetchone():
             flash('Email already exists', 'error')
@@ -90,7 +96,7 @@ def register():
             "INSERT INTO users (first_name, last_name, email, password, role) VALUES (%s, %s, %s, %s, %s)",
             (first_name, last_name, email, hashed_password, role)
         )
-        mysql.connection.commit()
+        conn.commit()
         cur.close()
 
         flash('Registered successfully. Please login.', 'success')
@@ -120,15 +126,37 @@ def settings():
         full_name = request.form.get('full_name', '').strip()
         email = request.form.get('email', '').strip()
         phone = request.form.get('phone', '').strip()
+        tenant_property_id_raw = (request.form.get('tenant_property_id') or '').strip()
+        tenant_unit_id_raw = (request.form.get('tenant_unit_id') or '').strip()
 
         if full_name and email:
-            cur = mysql.connection.cursor()
-            cur.execute(
-                "UPDATE users SET name=%s, email=%s WHERE id=%s",
-                (full_name, email, user_id)
-            )
-            mysql.connection.commit()
-            cur.close()
+            conn, cur, should_close = get_conn_and_cursor()
+            try:
+                # Keep this compatible with existing DBs that store either (first_name,last_name) or name
+                try:
+                    cur.execute(
+                        "UPDATE users SET name=%s, email=%s WHERE id=%s",
+                        (full_name, email, user_id)
+                    )
+                    conn.commit()
+                except Exception:
+                    # Fallback to first_name/last_name schema
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    parts = [p for p in (full_name or "").split(" ") if p.strip()]
+                    first_name = parts[0] if parts else full_name
+                    last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+                    cur.execute(
+                        "UPDATE users SET first_name=%s, last_name=%s, email=%s WHERE id=%s",
+                        (first_name, last_name, email, user_id)
+                    )
+                    conn.commit()
+            finally:
+                cur.close()
+                if should_close:
+                    conn.close()
 
             # Update session so topbar name refreshes
             session['user_name'] = full_name
@@ -138,9 +166,151 @@ def settings():
         else:
             flash('Name and email are required', 'error')
 
+        # Tenant: allow selecting property + unit in profile
+        if (session.get('role') or '').lower() == 'tenant' and tenant_property_id_raw and tenant_unit_id_raw:
+            try:
+                tenant_property_id = int(tenant_property_id_raw)
+                tenant_unit_id = int(tenant_unit_id_raw)
+            except ValueError:
+                flash('Invalid property/unit selection.', 'error')
+                return redirect(url_for('auth.settings'))
+
+            conn, cur, should_close = get_conn_and_cursor()
+            try:
+                # Validate unit belongs to property
+                cur.execute(
+                    """
+                    SELECT id, unit_number, rent, status, tenant_id
+                    FROM units
+                    WHERE id = %s AND property_id = %s
+                    """,
+                    (tenant_unit_id, tenant_property_id),
+                )
+                unit = cur.fetchone()
+                if not unit:
+                    flash('Selected unit not found for that property.', 'error')
+                    return redirect(url_for('auth.settings'))
+
+                # Find or create a tenant profile linked to this user
+                cur.execute("SELECT id, unit_id FROM tenants WHERE user_id = %s LIMIT 1", (user_id,))
+                tenant = cur.fetchone()
+                if not tenant:
+                    cur.execute(
+                        """
+                        INSERT INTO tenants (name, phone, email, unit, amount, status,
+                                             property_id, unit_id, user_id, created_at)
+                        VALUES (%s, %s, %s, %s, %s, 'Active', %s, %s, %s, NOW())
+                        """,
+                        (
+                            full_name or session.get('user_name') or 'Tenant',
+                            phone or None,
+                            email,
+                            unit.get('unit_number'),
+                            float(unit.get('rent') or 0),
+                            tenant_property_id,
+                            tenant_unit_id,
+                            user_id,
+                        ),
+                    )
+                    tenant_id = cur.lastrowid
+                    previous_unit_id = None
+                else:
+                    tenant_id = tenant.get('id')
+                    previous_unit_id = tenant.get('unit_id')
+
+                # Prevent assigning into an already-occupied unit (unless it's already assigned to this tenant)
+                occupied_by = unit.get('tenant_id')
+                if occupied_by and int(occupied_by) != int(tenant_id):
+                    flash('That unit is already assigned to another tenant.', 'error')
+                    return redirect(url_for('auth.settings'))
+
+                # Vacate previous unit (best-effort)
+                if previous_unit_id and int(previous_unit_id) != int(tenant_unit_id):
+                    cur.execute(
+                        """
+                        UPDATE units
+                        SET tenant_id = NULL,
+                            status = CASE WHEN status = 'Occupied' THEN 'Vacant' ELSE status END
+                        WHERE id = %s AND tenant_id = %s
+                        """,
+                        (previous_unit_id, tenant_id),
+                    )
+
+                # Assign this unit to the tenant
+                cur.execute(
+                    """
+                    UPDATE units
+                    SET tenant_id = %s,
+                        status = CASE WHEN status = 'Maintenance' THEN status ELSE 'Occupied' END
+                    WHERE id = %s
+                    """,
+                    (tenant_id, tenant_unit_id),
+                )
+                cur.execute(
+                    """
+                    UPDATE tenants
+                    SET property_id = %s,
+                        unit_id = %s,
+                        unit = %s,
+                        amount = %s,
+                        status = 'Active'
+                    WHERE id = %s
+                    """,
+                    (
+                        tenant_property_id,
+                        tenant_unit_id,
+                        unit.get('unit_number'),
+                        float(unit.get('rent') or 0),
+                        tenant_id,
+                    ),
+                )
+                conn.commit()
+                flash('Rental info updated.', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error saving rental info: {str(e)}', 'error')
+            finally:
+                cur.close()
+                if should_close:
+                    conn.close()
+
         return redirect(url_for('auth.settings'))
 
-    return render_template('settings.html', user=session)
+    properties_list = []
+    tenant_profile = None
+    tenant_units = []
+
+    if (session.get('role') or '').lower() == 'tenant':
+        conn, cur, should_close = get_conn_and_cursor()
+        try:
+            cur.execute("SELECT id, property_id, unit_id FROM tenants WHERE user_id = %s LIMIT 1", (session['user_id'],))
+            tenant_profile = cur.fetchone()
+
+            cur.execute("SELECT id, name, address FROM properties ORDER BY name")
+            properties_list = [dict(r) for r in cur.fetchall()]
+
+            if tenant_profile and tenant_profile.get('property_id'):
+                cur.execute(
+                    """
+                    SELECT id, unit_number, status, tenant_id
+                    FROM units
+                    WHERE property_id = %s
+                    ORDER BY unit_number
+                    """,
+                    (tenant_profile.get('property_id'),),
+                )
+                my_tid = tenant_profile.get('id')
+                for r in cur.fetchall():
+                    row = dict(r)
+                    if row.get('tenant_id') and my_tid and int(row.get('tenant_id')) != int(my_tid):
+                        continue
+                    tenant_units.append({'id': row.get('id'), 'unit_number': row.get('unit_number'), 'status': row.get('status')})
+        finally:
+            cur.close()
+            if should_close:
+                conn.close()
+
+    return render_template('settings.html', user=session, properties_list=properties_list, tenant_profile=tenant_profile, tenant_units=tenant_units)
 
 
 # -------------------------
@@ -166,7 +336,8 @@ def change_password():
             flash('Password must be at least 6 characters', 'error')
             return redirect(url_for('auth.change_password'))
 
-        cur = mysql.connection.cursor()
+        conn = mysql.connection if mysql.connection is not None else get_db_connection()
+        cur = conn.cursor()
         cur.execute("SELECT password FROM users WHERE id = %s", (session['user_id'],))
         user = cur.fetchone()
 
@@ -179,7 +350,7 @@ def change_password():
             "UPDATE users SET password = %s WHERE id = %s",
             (generate_password_hash(new_pw), session['user_id'])
         )
-        mysql.connection.commit()
+        conn.commit()
         cur.close()
 
         flash('Password changed successfully', 'success')

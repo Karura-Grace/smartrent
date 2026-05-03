@@ -1,6 +1,6 @@
 {% extends "base_dashboard.html" %}
 {% block title %}Properties · SmartRent{% endblock %}
-{% block role_name %}Landlord{% endblock %}
+{% block role_name %}{{ 'Agent' if user.role == 'agent' else 'Landlord' }}{% endblock %}
 {% block page_title %}Properties{% endblock %}
 {% block page_sub %}Manage Your Portfolio{% endblock %}
 
@@ -129,6 +129,7 @@
     font-size: 11px; font-weight: 600; color: var(--text-2);
     cursor: pointer; transition: all 0.13s;
     display: flex; align-items: center; justify-content: center; gap: 4px;
+    text-decoration: none;
 }
 .prop-btn:hover        { background: #f0fdfa; color: #570f76; border-color: #99f6e4; }
 .prop-btn.btn-danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
@@ -153,20 +154,6 @@
 .add-card:hover .add-card-ico { background: #ccfbf1; }
 .add-card-txt { font-size: 14px; font-weight: 700; }
 .add-card-sub { font-size: 12px; }
-
-/* ── Units panel (inline below grid) ─────────────── */
-#units-panel {
-    margin-bottom: 24px;
-    border: 1px solid var(--border);
-    border-radius: 14px; overflow: hidden;
-}
-.units-panel-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 20px; background: #f0fdfa; border-bottom: 1px solid var(--border);
-}
-.units-panel-title { font-size: 14px; font-weight: 700; color: #4c065f; }
-.units-panel-close { font-size: 12px; color: var(--text-3); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
-.units-panel-close:hover { background: #ccfbf1; color: #0f766e; }
 
 /* ── Modal ────────────────────────────────────────── */
 .modal-overlay {
@@ -214,10 +201,10 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 
 /* ── Fix image display ───────────────────────────── */
 .prop-photo-img {
-    width: 100% !important;      /* Fill width */
-    height: 100% !important;     /* Fill height */
-    object-fit: cover;           /* Crop to fit without distortion */
-    display: block !important;   /* Ensure it's visible */
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    display: block !important;
 }
 
 
@@ -268,40 +255,19 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 <div class="toolbar">
     <div class="toolbar-left">
         <div class="search-box">
-            <i data-lucide="search" width="14" height="14"></i>
+            <i data-lucide="search" width="14" height="14"></i>S
             <input type="text" id="searchInput" placeholder="Search properties…" oninput="filterCards()">
         </div>
     </div>
     <div style="display:flex;gap:8px;">
-        <button class="btn-outline" onclick="openModal('addUnitModal')">
-            <i data-lucide="plus-square" width="14" height="14"></i> Add Unit
-        </button>
+        <a href="{{ url_for('agent.agent_units') if user.role == 'agent' else url_for('properties.get_units') }}"
+           class="btn-outline"
+           style="text-decoration:none; display:flex; align-items:center; gap:6px; font-size:13px; padding:8px 14px; border-radius:8px;">
+            <i data-lucide="layout-grid" width="14" height="14"></i> Manage Units
+        </a>
         <button class="btn-primary" onclick="openModal('addPropModal')">
             <i data-lucide="plus" width="14" height="14"></i> Add Property
         </button>
-    </div>
-</div>
-
-{# ── Units panel (hidden by default) ─────────────── #}
-<div id="units-panel" style="display:none;">
-    <div class="units-panel-head">
-        <span class="units-panel-title" id="units-panel-title">Units</span>
-        <button class="units-panel-close" onclick="closeUnitsPanel()">
-            <i data-lucide="x" width="13" height="13"></i> Close
-        </button>
-    </div>
-    <div style="overflow-x:auto;">
-        <table class="tbl" id="units-table">
-            <thead>
-                <tr>
-                    <th>Unit</th><th>Floor</th><th>Type</th>
-                    <th>Tenant</th><th>Rent (KES)</th><th>Status</th><th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="units-tbody">
-                <tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px;">Loading…</td></tr>
-            </tbody>
-        </table>
     </div>
 </div>
 
@@ -320,9 +286,9 @@ textarea.form-input { resize: vertical; min-height: 72px; }
                 'linear-gradient(135deg,#ea580c,#fbbf24)'][loop.index0 % 4] }};{% endif %}
         ">
             {% if p.image %}
-                <img src="{{ url_for('static', filename='uploads/properties/' + p.image) }}" 
-     alt="Property Image" 
-     class="prop-photo-img">
+                <img src="{{ url_for('static', filename='uploads/properties/' + p.image) }}"
+                     alt="Property Image"
+                     class="prop-photo-img">
             {% else %}
                 <div class="prop-photo-fallback">
                     {% if p.type == 'Apartments' %}🏢
@@ -371,15 +337,17 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 
         {# Footer actions #}
         <div class="prop-footer">
-            <button class="prop-btn"
-                onclick="loadUnits({{ p.id }}, '{{ p.name }}')">
+            {# ✅ CHANGED: Units button now links to the standalone units page,
+               passing ?prop=ID so it auto-scrolls to this property's section #}
+            <a class="prop-btn"
+               href="{{ url_for('agent.agent_units', prop=p.id) if user.role == 'agent' else url_for('properties.get_units', prop=p.id) }}">
                 <i data-lucide="list" width="12" height="12"></i> Units
-            </button>
+            </a>
             <button class="prop-btn"
                 onclick="openEditModal({{ p.id }}, '{{ p.name|e }}', '{{ p.address|e }}', '{{ p.city|e }}', '{{ p.type }}', {{ p.total_units }}, {{ p.base_rent }}, '{{ p.status }}', '{{ p.description|default('')|e }}')">
                 <i data-lucide="pencil" width="12" height="12"></i> Edit
             </button>
-            <form method="POST" action="{{ url_for('properties.delete', property_id=p.id) }}"
+            <form method="POST" action="{{ url_for('agent.agent_delete_property', property_id=p.id) if user.role == 'agent' else url_for('properties.delete', property_id=p.id) }}"
                   onsubmit="return confirm('Delete {{ p.name }}? This cannot be undone.');"
                   style="flex:1; display:contents;">
                 <button class="prop-btn btn-danger" type="submit">
@@ -395,6 +363,9 @@ textarea.form-input { resize: vertical; min-height: 72px; }
     </div>
     {% endfor %}
 
+</div>{# /prop-grid #}
+
+
 {# ══════════════════════════════════════════════════ #}
 {#   MODALS                                           #}
 {# ══════════════════════════════════════════════════ #}
@@ -404,7 +375,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
   <div class="modal">
     <div class="modal-title">Add New Property</div>
     <div class="modal-sub">Fill in the details. You can add units after saving.</div>
-<form method="POST" action="{{ url_for('properties.add') }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ url_for('agent.agent_add_property') if user.role == 'agent' else url_for('properties.add') }}" enctype="multipart/form-data">
 
       {# Photo upload #}
       <div class="form-group">
@@ -426,7 +397,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 
       <div class="form-group">
         <label class="form-label">Property Name *</label>
-        <input type="text" name="name" class="form-input" placeholder="e.g. Sunset Apartments" required>
+        <input type="text" name="name" class="form-input" placeholder="e.g. villa Apartments" required>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -435,7 +406,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
         </div>
         <div class="form-group">
           <label class="form-label">City</label>
-          <input type="text" name="city" class="form-input" value="Nairobi">
+          <input type="text" name="city" class="form-input" >
         </div>
       </div>
       <div class="form-row">
@@ -559,63 +530,12 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 </div>
 
 
-{# ── Add Unit modal ────────────────────────────────── #}
-<div class="modal-overlay" id="addUnitModal">
-  <div class="modal">
-    <div class="modal-title">Add New Unit</div>
-    <div class="modal-sub">Add a unit to one of your properties.</div>
-
-    <form method="POST" action="{{ url_for('landlord.add_unit') }}">
-      <div class="form-group">
-        <label class="form-label">Property *</label>
-        <select name="property_id" class="form-input" required>
-          {% for p in properties %}
-            <option value="{{ p.id }}">{{ p.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Unit Number *</label>
-          <input type="text" name="unit_number" class="form-input" placeholder="e.g. A-12" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Floor</label>
-          <input type="number" name="floor" class="form-input" min="0" placeholder="e.g. 2">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Unit Type</label>
-          <select name="type" class="form-input">
-            <option>Studio</option>
-            <option>1 Bedroom</option>
-            <option>2 Bedroom</option>
-            <option>3 Bedroom</option>
-            <option>4 Bedroom</option>
-            <option>Penthouse</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Rent (KES)</label>
-          <input type="number" name="rent" class="form-input" min="0" placeholder="e.g. 18000">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-outline" onclick="closeModal('addUnitModal')">Cancel</button>
-        <button type="submit" class="btn-primary">
-          <i data-lucide="check" width="14" height="14"></i> Add Unit
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-
 {# ══════════════════════════════════════════════════ #}
 {#   JAVASCRIPT                                       #}
 {# ══════════════════════════════════════════════════ #}
 <script>
+const PROP_EDIT_BASE = "{{ '/agent/properties/edit' if user.role == 'agent' else '/properties/edit' }}";
+
 /* ── Modal helpers ──────────────────────────────── */
 function openModal(id) {
     document.getElementById(id).classList.add('open');
@@ -626,6 +546,12 @@ function closeModal(id) {
 document.querySelectorAll('.modal-overlay').forEach(ov => {
     ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
 });
+
+// Dashboard deep-link support
+try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('open') === 'property') openModal('addPropModal');
+} catch (e) {}
 
 /* ── Search / filter ────────────────────────────── */
 function filterCards() {
@@ -665,7 +591,7 @@ function handleDrop(event, zoneId, previewId, inputId) {
 
 /* ── Populate edit modal ────────────────────────── */
 function openEditModal(id, name, address, city, type, totalUnits, baseRent, status, description) {
-    document.getElementById('editPropForm').action = `/properties/edit/${id}`;
+    document.getElementById('editPropForm').action = `${PROP_EDIT_BASE}/${id}`;
     document.getElementById('editName').value        = name;
     document.getElementById('editAddress').value     = address;
     document.getElementById('editCity').value        = city;
@@ -683,70 +609,6 @@ function openEditModal(id, name, address, city, type, totalUnits, baseRent, stat
     document.getElementById('editPhotoHint').style.display = 'block';
 
     openModal('editPropModal');
-}
-
-/* ── Load units via fetch ───────────────────────── */
-let _currentPropId = null;
-
-function loadUnits(propId, propName) {
-    _currentPropId = propId;
-    const panel = document.getElementById('units-panel');
-    const tbody = document.getElementById('units-tbody');
-    document.getElementById('units-panel-title').textContent = propName + ' — Units';
-    panel.style.display = 'block';
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px;">Loading…</td></tr>';
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    fetch(`/properties/${propId}/units`)
-        .then(r => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
-        })
-        .then(data => {
-            if (!data.units || data.units.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px;">No units yet. Use "Add Unit" to add one.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.units.map(u => `
-                <tr>
-                    <td><strong>${u.unit_number}</strong></td>
-                    <td>${u.floor ?? '—'}</td>
-                    <td>${u.type}</td>
-                    <td>${u.tenant_name
-                        ? u.tenant_name
-                        : '<span style="color:var(--text-3)">—</span>'}</td>
-                    <td>KES ${Number(u.rent).toLocaleString()}</td>
-                    <td>
-                        <span class="badge ${
-                            u.status === 'Occupied' ? 'b-green' :
-                            u.status === 'Vacant'   ? 'b-amber' : 'b-red'
-                        }">${u.status}</span>
-                    </td>
-                    <td>
-                        <form method="POST" action="/units/delete/${u.id}"
-                              onsubmit="return confirm('Delete unit ${u.unit_number}?');"
-                              style="display:inline;">
-                            <button class="tbl-btn" type="submit"
-                                style="color:#dc2626;border-color:#fecaca;">
-                                <i data-lucide="trash-2" width="11" height="11"></i> Delete
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-            `).join('');
-            // Re-init lucide icons for dynamically added elements
-            if (window.lucide) lucide.createIcons();
-        })
-        .catch(err => {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:24px;">
-                Failed to load units. Check that <code>/properties/${propId}/units</code> is returning valid JSON.<br>
-                <small style="color:var(--text-3)">${err.message}</small>
-            </td></tr>`;
-        });
-}
-
-function closeUnitsPanel() {
-    document.getElementById('units-panel').style.display = 'none';
 }
 </script>
 {% endblock %}

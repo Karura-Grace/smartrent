@@ -1,0 +1,76 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Penalties · SmartRent{% endblock %}
+{% block role_name %}Agent{% endblock %}
+{% block page_title %}Penalties{% endblock %}
+{% block page_sub %}Overdue tenants & what you’re owed{% endblock %}
+
+{% block extra_styles %}
+.hero { background: linear-gradient(135deg, #7c2d12 0%, #b91c1c 100%); }
+.kpis { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--sh-sm); }
+.kpi-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.kpi-value { font-size: 20px; font-weight: 800; margin-top: 6px; }
+.hint { font-size: 12px; color: var(--text-3); margin-top: 6px; line-height: 1.4; }
+.table-wrap { background: white; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 14px 16px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--gray-50); border-bottom: 1px solid var(--border); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--border-lt); font-size: 13px; }
+tr:hover td { background: #fff7ed; }
+.badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; display:inline-block; }
+.b-red { background: #fee2e2; color: #991b1b; }
+.mono { font-family: var(--mono); font-weight: 700; }
+{% endblock %}
+
+{% block content %}
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-label">Overdue Tenants</div>
+    <div class="kpi-value">{{ penalties | length }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Overdue Amount</div>
+    <div class="kpi-value">KES {{ "{:,.0f}".format(total_overdue_amount or 0) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Agent Owed</div>
+    <div class="kpi-value">KES {{ "{:,.0f}".format(total_agent_owed or 0) }}</div>
+    <div class="hint">Calculated at {{ commission_rate_pct }}% per overdue payment (tenant pays landlord, landlord pays agent).</div>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Property</th>
+        <th>Unit</th>
+        <th>Month</th>
+        <th>Status</th>
+        <th>Overdue</th>
+        <th>Agent Owed</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if penalties %}
+        {% for p in penalties %}
+        <tr>
+          <td>{{ p.tenant_name or '—' }}</td>
+          <td>{{ p.property_name or '—' }}</td>
+          <td>{{ p.unit_number or '—' }}</td>
+          <td>{{ p.month or '—' }}</td>
+          <td><span class="badge b-red">{{ p.status or 'Overdue' }}</span></td>
+          <td class="mono">KES {{ "{:,.0f}".format(p.amount or 0) }}</td>
+          <td class="mono">KES {{ "{:,.0f}".format(p.agent_commission or 0) }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="7" style="color:var(--text-3);">No overdue payments found.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
