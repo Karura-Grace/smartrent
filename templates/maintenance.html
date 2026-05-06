@@ -1,5 +1,5 @@
 {% extends "base_dashboard.html" %}
-{% block title %}Maintenance · SmartRent{% endblock %}
+{% block title %}Maintenance - SmartRent{% endblock %}
 {% block role_name %}{{ 'Agent' if user.role == 'agent' else 'Landlord' }}{% endblock %}
 {% block page_title %}Maintenance{% endblock %}
 {% block page_sub %}Requests & Repairs{% endblock %}
@@ -48,6 +48,7 @@
     <select class="filter-select" id="statusFilter">
         <option value="all">All Statuses</option>
         <option value="open">Open</option>
+        <option value="seen">Seen</option>
         <option value="in progress">In Progress</option>
         <option value="resolved">Resolved</option>
         <option value="closed">Closed</option>
@@ -79,11 +80,11 @@
                 data-status="{{ (t.status or '')|lower }}">
                 <td>#{{ t.id }}</td>
                 <td>
-                    <strong>{{ t.tenant_name or '—' }}</strong>
-                    <div style="font-size:11px;color:var(--text-3)">{{ t.unit_number or '—' }}</div>
+                    <strong>{{ t.tenant_name or '-' }}</strong>
+                    <div style="font-size:11px;color:var(--text-3)">{{ t.unit_number or '-' }}</div>
                 </td>
                 <td>
-                    <strong>{{ t.title or '—' }}</strong>
+                    <strong>{{ t.title or '-' }}</strong>
                     {% if t.description %}
                         <div style="font-size:11px;color:var(--text-3);max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                             {{ t.description }}
@@ -91,14 +92,14 @@
                     {% endif %}
                 </td>
                 <td><span class="badge-pri {{ pri_cls }}">{{ pri }}</span></td>
-                <td>{{ t.property_name or '—' }}{% if t.unit_number %} · {{ t.unit_number }}{% endif %}</td>
-                <td>{{ (t.created_at|string)[:10] if t.created_at else '—' }}</td>
+                <td>{{ t.property_name or '-' }}{% if t.unit_number %} - {{ t.unit_number }}{% endif %}</td>
+                <td>{{ (t.created_at|string)[:10] if t.created_at else '-' }}</td>
                 <td><span class="badge b-blue">{{ t.status or 'Open' }}</span></td>
                 <td style="text-align:right">
                     {% set update_url = url_for('agent.update_ticket', ticket_id=t.id) if user.role == 'agent' else url_for('landlord.landlord_update_maintenance_ticket', ticket_id=t.id) %}
                     <form method="POST" action="{{ update_url }}" class="tbl-actions">
                         <select class="filter-select" name="status" style="padding:7px 10px;font-size:12px">
-                            {% for s in ['Open','In Progress','Resolved','Closed'] %}
+                            {% for s in ['Open','Seen','In Progress','Resolved','Closed'] %}
                                 <option value="{{ s }}" {% if (t.status or '') == s %}selected{% endif %}>{{ s }}</option>
                             {% endfor %}
                         </select>
@@ -133,4 +134,3 @@ document.getElementById('statusFilter')?.addEventListener('change', applyFilters
 applyFilters();
 </script>
 {% endblock %}
-

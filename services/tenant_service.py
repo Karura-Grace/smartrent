@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-def get_dashboard_stats(cur, tenant_info, tenant_id, user_id):
+def get_dashboard_stats(cur, tenant_info, tenant_id):
     stats = {}
 
     # 🔹 1. Monthly Rent
@@ -41,9 +41,9 @@ def get_dashboard_stats(cur, tenant_info, tenant_id, user_id):
     cur.execute("""
         SELECT COUNT(*) AS total
         FROM payments
-        WHERE (tenant_id = %s OR user_id = %s)
+        WHERE tenant_id = %s
         AND LOWER(status) = 'paid'
-    """, (tenant_id, user_id))
+    """, (tenant_id,))
 
     stats["payments_made"] = (cur.fetchone() or {}).get("total", 0)
 

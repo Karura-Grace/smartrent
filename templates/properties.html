@@ -1,5 +1,5 @@
 {% extends "base_dashboard.html" %}
-{% block title %}Properties · SmartRent{% endblock %}
+{% block title %}Properties - SmartRent{% endblock %}
 {% block role_name %}{{ 'Agent' if user.role == 'agent' else 'Landlord' }}{% endblock %}
 {% block page_title %}Properties{% endblock %}
 {% block page_sub %}Manage Your Portfolio{% endblock %}
@@ -9,7 +9,7 @@
 
 
 
-/* ── Accent overrides ─────────────────────────────── */
+/* -- Accent overrides ------------------------------- */
 .hero { background: linear-gradient(135deg, #6e2d8f 0%, #8c0b9f 100%); }
 .nav-item.active  { background: #f0fdfa; color: #0f766e; }
 .nav-item.active::before { background: #0f766e; }
@@ -19,7 +19,7 @@
 .card-action      { color: #0f766e; background: #f0fdfa; }
 .card-action:hover{ background: #ccfbf1; }
 
-/* ── Layout ───────────────────────────────────────── */
+/* -- Layout ----------------------------------------- */
 .toolbar {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
@@ -36,14 +36,14 @@
     font-family: inherit; font-size: 13px; color: var(--text); width: 180px;
 }
 
-/* ── Property grid — 3-col card layout ───────────── */
+/* -- Property grid - 3-col card layout ------------- */
 .prop-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 18px; margin-bottom: 28px;
 }
 
-/* ── Property card ────────────────────────────────── */
+/* -- Property card ---------------------------------- */
 .prop-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -134,7 +134,7 @@
 .prop-btn:hover        { background: #f0fdfa; color: #570f76; border-color: #99f6e4; }
 .prop-btn.btn-danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 
-/* ── Add property card ────────────────────────────── */
+/* -- Add property card ------------------------------ */
 .add-card {
     border: 2px dashed var(--border);
     background: var(--bg);
@@ -155,7 +155,7 @@
 .add-card-txt { font-size: 14px; font-weight: 700; }
 .add-card-sub { font-size: 12px; }
 
-/* ── Modal ────────────────────────────────────────── */
+/* -- Modal ------------------------------------------ */
 .modal-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.45); z-index: 999;
@@ -199,7 +199,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 .img-upload-preview { width: 100%; max-height: 140px; object-fit: cover; border-radius: 7px; display: none; }
 .img-upload-hint { font-size: 12px; color: var(--text-3); margin-top: 6px; }
 
-/* ── Fix image display ───────────────────────────── */
+/* -- Fix image display ----------------------------- */
 .prop-photo-img {
     width: 100% !important;
     height: 100% !important;
@@ -238,7 +238,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 
 {% block content %}
 
-{# ── Flash messages ───────────────────────────────── #}
+{# -- Flash messages --------------------------------- #}
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}
@@ -251,16 +251,16 @@ textarea.form-input { resize: vertical; min-height: 72px; }
   {% endif %}
 {% endwith %}
 
-{# ── Toolbar ──────────────────────────────────────── #}
+{# -- Toolbar ---------------------------------------- #}
 <div class="toolbar">
     <div class="toolbar-left">
         <div class="search-box">
             <i data-lucide="search" width="14" height="14"></i>S
-            <input type="text" id="searchInput" placeholder="Search properties…" oninput="filterCards()">
+            <input type="text" id="searchInput" placeholder="Search properties..." oninput="filterCards()">
         </div>
     </div>
     <div style="display:flex;gap:8px;">
-        <a href="{{ url_for('agent.agent_units') if user.role == 'agent' else url_for('properties.get_units') }}"
+        <a href="{{ url_for('agent.agent_units') if user.role == 'agent' else url_for('properties.units_page') }}"
            class="btn-outline"
            style="text-decoration:none; display:flex; align-items:center; gap:6px; font-size:13px; padding:8px 14px; border-radius:8px;">
             <i data-lucide="layout-grid" width="14" height="14"></i> Manage Units
@@ -271,7 +271,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
     </div>
 </div>
 
-{# ── Property grid ────────────────────────────────── #}
+{# -- Property grid ---------------------------------- #}
 <div class="prop-grid" id="propGrid">
 
     {% for p in properties %}
@@ -314,7 +314,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 
             <div class="prop-stats">
                 <div class="prop-stat">
-                    <div class="prop-stat-val">{{ p.unit_count or p.total_units }}</div>
+                    <div class="prop-stat-val">{{ p.unit_count or 0 }}</div>
                     <div class="prop-stat-lbl">Units</div>
                 </div>
                 <div class="prop-stat">
@@ -333,18 +333,24 @@ textarea.form-input { resize: vertical; min-height: 72px; }
                 <span>Base rent</span>
                 <strong>KES {{ '{:,.0f}'.format(p.base_rent) }}</strong>
             </div>
+
+            {% if p.description %}
+              <div class="prop-desc" style="margin-top:10px; color:var(--text-2); font-size:13px; line-height:1.35;">
+                {{ p.description }}
+              </div>
+            {% endif %}
         </div>
 
         {# Footer actions #}
         <div class="prop-footer">
-            {# ✅ CHANGED: Units button now links to the standalone units page,
+            {# OK CHANGED: Units button now links to the standalone units page,
                passing ?prop=ID so it auto-scrolls to this property's section #}
             <a class="prop-btn"
-               href="{{ url_for('agent.agent_units', prop=p.id) if user.role == 'agent' else url_for('properties.get_units', prop=p.id) }}">
+               href="{{ url_for('agent.agent_units', prop=p.id) if user.role == 'agent' else url_for('properties.units_page', prop=p.id) }}">
                 <i data-lucide="list" width="12" height="12"></i> Units
             </a>
             <button class="prop-btn"
-                onclick="openEditModal({{ p.id }}, '{{ p.name|e }}', '{{ p.address|e }}', '{{ p.city|e }}', '{{ p.type }}', {{ p.total_units }}, {{ p.base_rent }}, '{{ p.status }}', '{{ p.description|default('')|e }}')">
+                onclick="openEditModal({{ p.id }}, '{{ p.name|e }}', '{{ p.address|e }}', '{{ p.city|e }}', '{{ p.type }}', {{ p.base_rent }}, '{{ p.status }}', '{{ p.description|default('')|e }}')">
                 <i data-lucide="pencil" width="12" height="12"></i> Edit
             </button>
             <form method="POST" action="{{ url_for('agent.agent_delete_property', property_id=p.id) if user.role == 'agent' else url_for('properties.delete', property_id=p.id) }}"
@@ -366,11 +372,11 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 </div>{# /prop-grid #}
 
 
-{# ══════════════════════════════════════════════════ #}
+{# ================================================== #}
 {#   MODALS                                           #}
-{# ══════════════════════════════════════════════════ #}
+{# ================================================== #}
 
-{# ── Add Property modal ───────────────────────────── #}
+{# -- Add Property modal ----------------------------- #}
 <div class="modal-overlay" id="addPropModal">
   <div class="modal">
     <div class="modal-title">Add New Property</div>
@@ -390,7 +396,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
           <div id="addPhotoHint">
             <i data-lucide="image" width="28" height="28" style="color:var(--text-3);margin-bottom:6px;"></i>
             <div style="font-size:13px;font-weight:600;color:var(--text-2);">Click or drag a photo here</div>
-            <div class="img-upload-hint">JPG, PNG or WEBP · max 5 MB</div>
+            <div class="img-upload-hint">JPG, PNG or WEBP - max 5 MB</div>
           </div>
         </div>
       </div>
@@ -420,10 +426,6 @@ textarea.form-input { resize: vertical; min-height: 72px; }
             <option>Mixed Use</option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">Total Units</label>
-          <input type="number" name="total_units" class="form-input" min="0" placeholder="e.g. 10">
-        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Base Rent (KES)</label>
@@ -431,7 +433,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
       </div>
       <div class="form-group">
         <label class="form-label">Description (optional)</label>
-        <textarea name="description" class="form-input" placeholder="Brief notes about this property…"></textarea>
+        <textarea name="description" class="form-input" placeholder="Brief notes about this property..."></textarea>
       </div>
 
       <div class="modal-footer">
@@ -445,7 +447,7 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 </div>
 
 
-{# ── Edit Property modal ───────────────────────────── #}
+{# -- Edit Property modal ----------------------------- #}
 <div class="modal-overlay" id="editPropModal">
   <div class="modal">
     <div class="modal-title">Edit Property</div>
@@ -506,10 +508,6 @@ textarea.form-input { resize: vertical; min-height: 72px; }
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Total Units</label>
-          <input type="number" name="total_units" id="editTotalUnits" class="form-input" min="0">
-        </div>
-        <div class="form-group">
           <label class="form-label">Base Rent (KES)</label>
           <input type="number" name="base_rent" id="editBaseRent" class="form-input" min="0">
         </div>
@@ -530,13 +528,13 @@ textarea.form-input { resize: vertical; min-height: 72px; }
 </div>
 
 
-{# ══════════════════════════════════════════════════ #}
+{# ================================================== #}
 {#   JAVASCRIPT                                       #}
-{# ══════════════════════════════════════════════════ #}
+{# ================================================== #}
 <script>
 const PROP_EDIT_BASE = "{{ '/agent/properties/edit' if user.role == 'agent' else '/properties/edit' }}";
 
-/* ── Modal helpers ──────────────────────────────── */
+/* -- Modal helpers -------------------------------- */
 function openModal(id) {
     document.getElementById(id).classList.add('open');
 }
@@ -553,7 +551,7 @@ try {
     if (params.get('open') === 'property') openModal('addPropModal');
 } catch (e) {}
 
-/* ── Search / filter ────────────────────────────── */
+/* -- Search / filter ------------------------------ */
 function filterCards() {
     const q = document.getElementById('searchInput').value.toLowerCase();
     document.querySelectorAll('#propGrid .prop-card').forEach(card => {
@@ -562,7 +560,7 @@ function filterCards() {
     });
 }
 
-/* ── Image preview ──────────────────────────────── */
+/* -- Image preview -------------------------------- */
 function previewImage(input, previewId, zoneId) {
     const file = input.files[0];
     if (!file) return;
@@ -589,13 +587,12 @@ function handleDrop(event, zoneId, previewId, inputId) {
     previewImage(input, previewId, zoneId);
 }
 
-/* ── Populate edit modal ────────────────────────── */
-function openEditModal(id, name, address, city, type, totalUnits, baseRent, status, description) {
+/* -- Populate edit modal -------------------------- */
+function openEditModal(id, name, address, city, type, baseRent, status, description) {
     document.getElementById('editPropForm').action = `${PROP_EDIT_BASE}/${id}`;
     document.getElementById('editName').value        = name;
     document.getElementById('editAddress').value     = address;
     document.getElementById('editCity').value        = city;
-    document.getElementById('editTotalUnits').value  = totalUnits;
     document.getElementById('editBaseRent').value    = baseRent;
     document.getElementById('editDescription').value = description;
 

@@ -1,0 +1,93 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Service Requests - SmartRent{% endblock %}
+{% block role_name %}Service Provider{% endblock %}
+{% block page_title %}Service Requests{% endblock %}
+{% block page_sub %}All tenant requests{% endblock %}
+
+{% block extra_styles %}
+.hero { background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%); }
+.nav-item.active { background: #fff7ed; color: #c2410c; }
+.nav-item.active::before { background: #c2410c; }
+.nav-item:hover { background: #fff7ed; color: #c2410c; }
+.btn-primary { background: #c2410c; }
+.btn-primary:hover { background: #9a3412; }
+.card-action { color: #c2410c; background: #fff7ed; }
+.card-action:hover { background: #fed7aa; }
+.tbl-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.btn-xs{padding:6px 10px;border-radius:10px;font-size:12px;font-weight:700;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn-xs:hover{background:var(--bg)}
+.btn-xs.primary{border-color:#fdba74;background:#fff7ed;color:#9a3412}
+.btn-xs.done{border-color:#bbf7d0;background:#dcfce7;color:#166534}
+.badge-pri{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;border:1px solid var(--border)}
+.pri-high{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+.pri-med{background:#fffbeb;color:#92400e;border-color:#fde68a}
+.pri-low{background:#ecfdf5;color:#065f46;border-color:#bbf7d0}
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+  <div class="hero-eye">Requests</div>
+  <h1>Service Requests</h1>
+  <p>Review requests from tenants and update status.</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">All Requests</span>
+  </div>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Tenant</th>
+        <th>Issue</th>
+        <th>Priority</th>
+        <th>Property / Unit</th>
+        <th>Created</th>
+        <th>Status</th>
+        <th style="text-align:right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if jobs %}
+        {% for t in jobs %}
+          {% set pri = (t.priority or 'Medium') %}
+          {% set pri_cls = 'pri-high' if pri in ['High','Urgent'] else ('pri-low' if pri == 'Low' else 'pri-med') %}
+          <tr>
+            <td>#{{ t.id }}</td>
+            <td><strong>{{ t.tenant_name or '-' }}</strong><div style="font-size:11px;color:var(--text-3)">{{ t.unit_number or '-' }}</div></td>
+            <td>
+              <strong>{{ t.title or '-' }}</strong>
+              {% if t.description %}
+                <div style="font-size:11px;color:var(--text-3);max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.description }}</div>
+              {% endif %}
+            </td>
+            <td><span class="badge-pri {{ pri_cls }}">{{ pri }}</span></td>
+            <td>{{ t.property_name or '-' }}{% if t.unit_number %} - {{ t.unit_number }}{% endif %}</td>
+            <td>{{ (t.created_at|string)[:10] if t.created_at else '-' }}</td>
+            <td><span class="badge b-blue">{{ t.status or 'Open' }}</span></td>
+            <td style="text-align:right">
+              <div class="tbl-actions">
+                <form method="POST" action="{{ url_for('service.provider_mark_seen', ticket_id=t.id) }}" style="display:inline">
+                  <button class="btn-xs" type="submit"><i data-lucide="eye" width="14" height="14"></i> Seen</button>
+                </form>
+                <form method="POST" action="{{ url_for('service.provider_accept', ticket_id=t.id) }}" style="display:inline">
+                  <button class="btn-xs primary" type="submit"><i data-lucide="check" width="14" height="14"></i> Accept</button>
+                </form>
+                <form method="POST" action="{{ url_for('service.provider_done', ticket_id=t.id) }}" style="display:inline">
+                  <button class="btn-xs done" type="submit"><i data-lucide="check-circle" width="14" height="14"></i> Done</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="8" style="padding:16px;color:var(--text-3)">No requests found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

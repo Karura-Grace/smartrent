@@ -1,9 +1,9 @@
-{% extends "base_dashboard.html" %}
+﻿{% extends "base_dashboard.html" %}
 
-{% block title %}Landlord Dashboard · SmartRent{% endblock %}
-{% block role_name %}Landlord{% endblock %}
+{% block title %}Agent Dashboard  SmartRent{% endblock %}
+{% block role_name %}Agent {% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-{% block page_sub %}Landlord Overview{% endblock %}
+{% block page_sub %}Agent  Overview{% endblock %}
 
 {% block extra_styles %}
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -115,7 +115,7 @@
 .mini-btn.primary{ background: var(--purple-main); border-color: var(--purple-main); color:white; }
 .mini-btn.primary:hover{ background: var(--primary-700); border-color: var(--primary-700); }
 
-/* ── COMPACT HERO ── */
+/* -- COMPACT HERO -- */
 .ld-hero {
   background: linear-gradient(135deg, var(--blue-800) 0%, var(--purple-main) 50%, var(--accent-600) 100%);
   border-radius: 20px;
@@ -238,7 +238,7 @@
 .stat-trend.up { color: #a7f3d0; background: rgba(16,185,129,0.2); }
 .stat-trend.down { color: #fecaca; background: rgba(239,68,68,0.2); }
 
-/* ── BODY GRID ── */
+/* -- BODY GRID -- */
 .ld-body {
   display: grid;
   grid-template-columns: 320px 1fr;
@@ -246,7 +246,7 @@
   align-items: start;
 }
 
-/* ── LEFT PANEL (Cards) ── */
+/* -- LEFT PANEL (Cards) -- */
 .left-panel {
   display: flex;
   flex-direction: column;
@@ -422,7 +422,7 @@
   white-space: nowrap;
 }
 
-/* ── RIGHT PANEL ── */
+/* -- RIGHT PANEL -- */
 .right-panel {
   display: flex;
   flex-direction: column;
@@ -763,7 +763,7 @@
       </div>
       <div class="hero-info">
         <h1>{{ user.user_name }}</h1>
-        <p>{{ user.user_email }} · Property Owner</p>
+        <p>{{ user.user_email }} - Property Owner</p>
       </div>
     </div>
     <div class="hero-stats">
@@ -774,7 +774,7 @@
       <div class="hero-stat">
         <span class="stat-label">Occupancy</span>
         <span class="stat-value">{{ occupancy_rate  | default(0) }}%</span>
-        <span class="stat-trend up">▲</span>
+        <span class="stat-trend up">?²</span>
       </div>
       <div class="hero-stat">
         <span class="stat-label">Collected</span>
@@ -783,7 +783,7 @@
       <div class="hero-stat">
         <span class="stat-label">Outstanding</span>
         <span class="stat-value">KES {{ rent_outstanding | default(0) }}</span>
-        <span class="stat-trend down">▼</span>
+        <span class="stat-trend down">?¼</span>
       </div>
     </div>
   </div>
@@ -793,7 +793,7 @@
 {% block content %}
 <div class="ld-body">
 
-  <!-- ═══ LEFT PANEL ═══ -->
+  <!--  LEFT PANEL  -->
   <div class="left-panel">
 
     <!-- Quick Actions -->
@@ -807,7 +807,7 @@
           <div class="qa-tile-ico"><i data-lucide="home" width="16" height="16"></i></div>
           <div class="qa-tile-name">Add Unit</div>
         </a>
-        <a class="qa-tile" href="{{ url_for('agent.agent_tenants', open='add') }}">
+        <a class="qa-tile" href="{{ url_for('agent.agent_tenant', open='add') }}">
           <div class="qa-tile-ico"><i data-lucide="user-plus" width="16" height="16"></i></div>
           <div class="qa-tile-name">Add Tenant</div>
         </a>
@@ -880,14 +880,14 @@
           <a class="notice-item" href="{{ url_for('landlord.send_notices') }}">
             <div class="notice-dot normal"></div>
             <div class="notice-text">No recent notices</div>
-            <div class="notice-time">—</div>
+            <div class="notice-time">-</div>
           </a>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- ═══ RIGHT PANEL ═══ -->
+  <!--  RIGHT PANEL  -->
   <div class="right-panel">
 
     <!-- Rent Status Overview Cards -->
@@ -946,7 +946,7 @@
             {% for property in properties %}
             <tr style="cursor: pointer;" onclick="window.location='{{ url_for('agent.agent_properties') }}'">
               <td><div class="unit-cell"><div class="unit-icon {{ property.status }}"><i data-lucide="{% if property.status == 'occupied' %}home{% elif property.status == 'vacant' %}door-open{% else %}alert-triangle{% endif %}" width="14" height="14"></i></div><div><div class="unit-name">{{ property.unit_number }}</div><div class="unit-type">{{ property.property_name | default('') }}</div></div></div></td>
-              <td><span class="rent-mono">KES {{ property.rent_amount | default('—') }}</span></td>
+              <td><span class="rent-mono">KES {{ property.rent_amount | default('-') }}</span></td>
               <td><span class="badge {% if property.status == 'occupied' %}b-green{% elif property.status == 'vacant' %}b-amber{% else %}b-red{% endif %}">{{ property.status.title() }}</span></td>
               <td><i data-lucide="chevron-right" width="14" height="14" style="color:var(--gray-400);"></i></td>
             </tr>
@@ -958,7 +958,7 @@
         {% endif %}
         <div style="margin-top:16px; display:flex; gap:8px;">
           <a href="{{ url_for('agent.agent_properties') }}" class="btn-sm btn-primary"><i data-lucide="plus" width="12" height="12"></i> Add Property</a>
-          <a href="{{ url_for('agent.agent_properties') }}" class="btn-sm btn-outline">View all →</a>
+          <a href="{{ url_for('agent.agent_properties') }}" class="btn-sm btn-outline">View all â†'</a>
         </div>
       </div>
 
@@ -1001,7 +1001,7 @@
         {% else %}
         <div class="empty-state">No tenant found.</div>
         {% endif %}
-        <div style="margin-top:16px;"><a href="{{ url_for('agent.agent_tenants') }}" class="btn-sm btn-outline">Manage tenants →</a></div>
+        <div style="margin-top:16px;"><a href="{{ url_for('agent.agent_tenant') }}" class="btn-sm btn-outline">Manage tenant â†'</a></div>
       </div>
 
       <!-- Payments Tab -->
@@ -1030,7 +1030,7 @@
                 </div>
               </td>
               <td><span class="rent-mono">KES {{ row.amount }}</span></td>
-              <td style="color:var(--text-3); font-size:12px;">{{ row.paid_on or '—' }}</td>
+              <td style="color:var(--text-3); font-size:12px;">{{ row.paid_on or '-' }}</td>
               <td><span class="badge {% if row.payment_status == 'Paid' %}b-green{% else %}b-red{% endif %}">{{ row.payment_status }}</span></td>
             </tr>
             {% endfor %}
@@ -1039,7 +1039,7 @@
         {% else %}
         <div class="empty-state">No recent payments.</div>
         {% endif %}
-        <div style="margin-top:16px;"><a href="{{ url_for('agent.agent_payments') }}" class="btn-sm btn-outline">View all payments →</a></div>
+        <div style="margin-top:16px;"><a href="{{ url_for('agent.agent_payments') }}" class="btn-sm btn-outline">View all payments â†'</a></div>
       </div>
     </div>
 
@@ -1058,7 +1058,7 @@
               <div class="ticket-prio {% if ticket.priority == 'High' %}high{% elif ticket.priority == 'Medium' %}medium{% else %}low{% endif %}"></div>
               <div class="ticket-body">
                 <div class="ticket-title">{{ ticket.title }}</div>
-                <div class="ticket-sub">{{ ticket.unit_number }} · {{ ticket.status }}</div>
+                <div class="ticket-sub">{{ ticket.unit_number }} - {{ ticket.status }}</div>
               </div>
             </a>
             {% endfor %}

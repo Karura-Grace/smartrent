@@ -1,7 +1,7 @@
-import os
+﻿import os
 from flask import Flask, render_template
 from config import Config
-from extensions import mysql, ensure_lease_tables, ensure_units_tenant_column, ensure_units_tenant_fk, ensure_agent_landlords_table, ensure_payments_due_date_penalty_columns, ensure_transactions_table
+from extensions import mysql, ensure_lease_tables, ensure_units_tenant_column, ensure_units_tenant_fk, ensure_payments_due_date_penalty_columns, ensure_transactions_table
 
 
 from blueprints.auth import auth_bp
@@ -23,7 +23,6 @@ def create_app():
     ensure_lease_tables()
     ensure_units_tenant_column()
     ensure_units_tenant_fk()
-    ensure_agent_landlords_table()
     ensure_payments_due_date_penalty_columns()
     ensure_transactions_table()
 
@@ -54,3 +53,4 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     app.run(debug=True)# config.py
+

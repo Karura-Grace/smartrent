@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -57,7 +57,7 @@
             display: flex;
         }
 
-        /* ─── SIDEBAR ─────────────────────── */
+        /* Sidebar */
         .sidebar {
             position: fixed; top:0; left:0; bottom:0;
             width: var(--sidebar-w);
@@ -172,7 +172,7 @@
         .sb-user-name { font-size: 12.5px; font-weight: 600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .sb-user-role { font-size: 11px; color: var(--text-3); white-space:nowrap; }
 
-        /* ─── TOPBAR ──────────────────────── */
+        /* Topbar */
         .topbar {
             position: fixed; top:0;
             left: var(--sidebar-w); right:0;
@@ -244,7 +244,7 @@
         }
         .btn-logout:hover { background:#fef2f2; border-color:#fecaca; color:var(--red); }
 
-        /* ─── MAIN WRAPPER ─────────────────── */
+        /* Main Wrapper */
         .main-wrap {
             margin-left: var(--sidebar-w);
             margin-top: var(--topbar-h);
@@ -255,7 +255,7 @@
 
         .main-content { padding: 28px 28px 64px; }
 
-        /* ─── FLASH ───────────────────────── */
+        /* Flash */
         .flash {
             display:flex; align-items:center; gap:9px;
             padding: 11px 16px; border-radius: 9px;
@@ -264,7 +264,7 @@
         .flash-success { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
         .flash-error   { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
 
-        /* ─── COMPACT HERO ─── */
+        /* Compact Hero */
 .hero {
     background: linear-gradient(135deg, var(--purple-main) 0%, var(--blue-800) 100%);
     border-radius: var(--r); 
@@ -298,7 +298,7 @@
     opacity: 0.8;
 }
 
-/* ─── COMPACT HERO KPIs ─── */
+/* Compact Hero KPIs */
 .hero-kpis {
     display: flex; 
     gap: 20px; /* Reduced gap from 28px */
@@ -316,13 +316,13 @@
     font-size: 13px; /* Reduced from 15px */
     font-weight: 600; 
 }
-        /* ─── SECTION HEADING ─────────────── */
+        /* Section Heading */
         .sec-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
         .sec-title { font-size:13.5px; font-weight:600; color:var(--text); }
         .sec-link  { font-size:12px; color:var(--blue-600); font-weight:500; text-decoration:none; cursor:pointer; }
         .sec-link:hover { text-decoration:underline; }
 
-        /* ─── STAT CARDS ──────────────────── */
+        /* Stat Cards */
         .stats-grid {
             display:grid; grid-template-columns:repeat(auto-fit, minmax(210px,1fr));
             gap:14px; margin-bottom:22px;
@@ -349,10 +349,10 @@
         .stat-name { font-size:12.5px; font-weight:500; color:var(--text-2); }
         .stat-hint { font-size:11px; color:var(--text-3); margin-top:2px; }
 
-        /* ─── CONTENT GRID ─────────────────── */
+        /* Content Grid */
         .content-grid { display:grid; grid-template-columns:1.5fr 1fr; gap:14px; }
 
-        /* ─── CARD ─────────────────────────── */
+        /* Card */
         .card {
             background:var(--surface); border:1px solid var(--border);
             border-radius:var(--r); padding:20px 22px;
@@ -368,7 +368,7 @@
         }
         .card-action:hover { background:var(--blue-100); }
 
-        /* ─── TABLE ────────────────────────── */
+        /* Table */
         .tbl { width:100%; border-collapse:collapse; }
         .tbl th {
             font-size:10.5px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase;
@@ -383,7 +383,7 @@
         .tbl tr:last-child td { border-bottom:none; }
         .tbl tr:hover td { background:var(--blue-50); }
 
-        /* ─── BADGES ───────────────────────── */
+        /* Badges */
         .badge {
             display:inline-flex; align-items:center; gap:4px;
             padding:2px 8px; border-radius:20px;
@@ -397,7 +397,7 @@
         .b-purple { background:#f5f3ff; color:#7c3aed; }
         .b-gray   { background:var(--bg); color:var(--text-2); }
 
-        /* ─── ACTIVITY LIST ─────────────────── */
+        /* Activity List */
         .activity-list { list-style:none; }
         .act-item { display:flex; align-items:flex-start; gap:11px; padding:10px 0; border-bottom:1px solid var(--border-lt); }
         .act-item:last-child { border-bottom:none; }
@@ -407,7 +407,7 @@
         .act-sub   { font-size:11.5px; color:var(--text-3); margin-top:1px; }
         .act-time  { font-size:11px; color:var(--text-3); white-space:nowrap; flex-shrink:0; margin-top:2px; }
 
-        /* ─── QUICK ACTIONS ─────────────────── */
+        /* Quick Actions */
         .qa-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
         .qa-btn {
             display:flex; flex-direction:column; align-items:flex-start; gap:5px;
@@ -420,7 +420,7 @@
         .qa-name  { font-size:12.5px; font-weight:600; color:var(--text); }
         .qa-desc  { font-size:11px; color:var(--text-3); }
 
-        /* ─── BUTTONS ──────────────────────── */
+        /* Buttons */
         .btn-primary {
             display:inline-flex; align-items:center; gap:5px;
             padding: 8px 16px; background:var(--blue-600); color:white;
@@ -439,7 +439,7 @@
         }
         .btn-outline:hover { background:var(--bg); color:var(--text); }
 
-        /* ─── ANIMATIONS ─────────────────── */
+        /* Animations */
         @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         .hero { animation: fadeUp 0.38s ease both; }
         .stats-grid .stat-card:nth-child(1){animation:fadeUp 0.38s 0.07s ease both}
@@ -450,7 +450,7 @@
 
         {% block extra_styles %}{% endblock %}
 
-        /* ─── MOBILE ───────────────────────── */
+        /* Mobile */
         @media (max-width:900px) {
             .sidebar { transform:translateX(-100%); width:var(--sidebar-w) !important; }
             .sidebar.mobile-open { transform:translateX(0); box-shadow:var(--sh-md); }
@@ -474,7 +474,6 @@
 
 <div class="mob-overlay" id="mobOverlay" onclick="closeMob()"></div>
 
-<!-- ══ SIDEBAR ══════════════════════════════ -->
 <aside class="sidebar" id="sidebar">
     <div class="sb-logo">
         <div class="sb-logo-icon">🏠</div>
@@ -521,7 +520,7 @@
 
      <a href="{{ url_for('landlord.tenant') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="users"></i></div>
-        <span class="nav-txt">tenants</span> </a>
+        <span class="nav-txt">tenant</span> </a>
 
 {% elif user.role == 'agent' %}
   <a href="{{ url_for('agent.agent_dashboard') }}" class="nav-item">
@@ -539,12 +538,12 @@
         <span class="nav-txt">Units</span>
     </a>
  
-    <a href="{{ url_for('agent.agent_tenants') }}" class="nav-item">
+    <a href="{{ url_for('agent.agent_tenant') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="users"></i></div>
         <span class="nav-txt">Tenants</span>
     </a>
 
-    <a href="{{ url_for('agent.agent_landlords') }}" class="nav-item">
+    <a href="{{ url_for('agent.agent_landlord') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="user-check"></i></div>
         <span class="nav-txt">Landlords</span>
     </a>
@@ -586,15 +585,15 @@
     </a>
 
 {% elif user.role == 'tenant' %}
-    <a href="{{ url_for('tenant.bills') }}" class="nav-item">
+    <a href="{{ url_for('tenant.services') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="wrench"></i></div>
         <span class="nav-txt">Services $ Repairs</span>
     </a>
 
-  <a href="{{ url_for('tenant.bills') }}" class="nav-item">
+   <a href="{{ url_for('tenant.documents') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="file-text"></i></div>
-        <span class="nav-txt">Document& Receits </span>
-    
+        <span class="nav-txt">Documents & Receipts</span>
+     
     </a>
 
 {% elif user.role == 'agent' %}
@@ -626,12 +625,6 @@
         <span class="nav-txt">Reports</span>
     </a>
  
-    <a href="{{ url_for('agent.notice') }}" class="nav-item">
-        <div class="nav-ico"><i data-lucide="megaphone"></i></div>
-        <span class="nav-txt">Notices</span>
-    </a>
-
-    
 {% endif %} {% endblock %}
         
 
@@ -663,7 +656,6 @@
     </div>
 </aside>
 
-<!-- ══ TOPBAR ═══════════════════════════════ -->
 <header class="topbar" id="topbar">
     <button class="topbar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
     <i data-lucide="panel-left" width="16" height="16"></i>
@@ -695,7 +687,6 @@
     </div>
 </header>
 
-<!-- ══ MAIN ═════════════════════════════════ -->
 <div class="main-wrap" id="mainWrap">
     <div class="main-content">
 
@@ -703,7 +694,7 @@
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="flash flash-{{ category }}">
-                        {{ '✓' if category == 'success' else '⚠' }} {{ message }}
+                        {{ message }}
                     </div>
                 {% endfor %}
             {% endif %}
@@ -713,7 +704,7 @@
 <div class="hero">
     <div class="hero-eye">Dashboard</div>
     <h1>Welcome, {{ user.user_name }}</h1>
-    <p>Here’s your overview</p>
+    <p>Here's your overview</p>
 </div>
 {% endblock %}
 

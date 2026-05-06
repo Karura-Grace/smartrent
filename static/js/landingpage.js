@@ -1,4 +1,4 @@
-console.log("SmartRent loaded");
+﻿console.log("SmartRent loaded");
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <!-- MOBILE DRAWER -->
     <div class="nav-drawer" id="nav-drawer">
-      <button class="drawer-close" id="drawer-close" aria-label="Close menu">✕</button>
+      <button class="drawer-close" id="drawer-close" aria-label="Close menu">x</button>
       <div class="drawer-links">
         <a href="#features" class="drawer-link">Features</a>
         <a href="#how" class="drawer-link">How It Works</a>
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
           Property Management, Reimagined
         </div>
         <h1>Pay Rent Easily.<br><em>Manage Properties Smarter.</em></h1>
-        <p>Manage rentals or pay rent with ease — all in one simple platform built for Kenya.</p>
+        <p>Manage rentals or pay rent with ease - all in one simple platform built for Kenya.</p>
         <div class="hero-btns">
           <a href="/register" class="btn-main">Start for free <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
           <a href="#features" class="btn-ghost">See what's inside</a>
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="features-header">
         <div class="section-label">Features</div>
         <h2>Built for how <em>you</em> actually work.</h2>
-        <p class="section-sub">No more chasing tenants, losing receipts, or juggling WhatsApp threads. SmartRent handles it all.</p>
+        <p class="section-sub">No more chasing tenant, losing receipts, or juggling WhatsApp threads. SmartRent handles it all.</p>
       </div>
       <div class="features-grid" id="features-grid"></div>
     </section>
@@ -100,12 +100,12 @@ document.addEventListener('DOMContentLoaded', function () {
     <section class="cta">
       <div class="cta-inner">
         <h2>Ready to manage smarter?</h2>
-        <p>Join landlords and property managers across Kenya who've simplified their operations with SmartRent.</p>
+        <p>Join landlord and property managers across Kenya who've simplified their operations with SmartRent.</p>
         <a href="/register" class="btn-main">Create your free account <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
       </div>
     </section>
 
-    <!-- FOOTER — slim -->
+    <!-- FOOTER - slim -->
     <footer class="footer">
       <div class="footer-inner">
         <span class="footer-logo">Smart<em>Rent</em></span>
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
     mpesa: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><path d="M6 15h4"/><path d="M14 15h4"/></svg>`,
     lease: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>`,
     maintenance: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
-    tenants: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+    tenant: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
     reports: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><path d="M2 20h20"/></svg>`,
     alerts: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.12h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.73a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
   };
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tag: 'Payments',
       tagClass: 'tag-purple',
       title: 'Rent via M-PESA, automatically.',
-      desc: 'Tenants pay with a tap. You get an instant notification and a clean record — no calls, no drama, no guessing who\'s paid.'
+      desc: 'Tenants pay with a tap. You get an instant notification and a clean record - no calls, no drama, no guessing who\'s paid.'
     },
     {
       iconKey: 'lease',
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tag: 'Leases',
       tagClass: 'tag-pink',
       title: 'Digital leases that sign themselves.',
-      desc: 'Send, sign, and store leases in minutes. No printing, no scanning — everything lives in one place and is legally binding.'
+      desc: 'Send, sign, and store leases in minutes. No printing, no scanning - everything lives in one place and is legally binding.'
     },
     {
       iconKey: 'maintenance',
@@ -156,15 +156,15 @@ document.addEventListener('DOMContentLoaded', function () {
       tag: 'Maintenance',
       tagClass: 'tag-teal',
       title: 'Repairs tracked, not forgotten.',
-      desc: 'Tenants log issues with photos. You assign, track, and close — no more forgotten leaking roofs or long back-and-forth texts.'
+      desc: 'Tenants log issues with photos. You assign, track, and close - no more forgotten leaking roofs or long back-and-forth texts.'
     },
     {
-      iconKey: 'tenants',
+      iconKey: 'tenant',
       iconClass: 'icon-amber',
       tag: 'Tenants',
       tagClass: 'tag-amber',
-      title: 'Know your tenants before they move in.',
-      desc: 'Background checks, ID verification, and rental history — all in one smooth flow. Fill vacancies with confidence.'
+      title: 'Know your tenant before they move in.',
+      desc: 'Background checks, ID verification, and rental history - all in one smooth flow. Fill vacancies with confidence.'
     },
     {
       iconKey: 'reports',
@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tag: 'Reports',
       tagClass: 'tag-blue',
       title: 'Your money, always in view.',
-      desc: 'See exactly what\'s collected, what\'s outstanding, and where your portfolio stands — updated in real time.'
+      desc: 'See exactly what\'s collected, what\'s outstanding, and where your portfolio stands - updated in real time.'
     },
     {
       iconKey: 'alerts',
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tag: 'Alerts',
       tagClass: 'tag-green',
       title: 'Late rent reminders that actually work.',
-      desc: 'Automated SMS nudges go out before rent is due. You stay the friendly landlord — SmartRent does the awkward part.'
+      desc: 'Automated SMS nudges go out before rent is due. You stay the friendly landlord - SmartRent does the awkward part.'
     },
   ];
 
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
     { num: '01', title: 'Create your account', desc: 'Sign up with email. No credit card needed.', color: '#6E3BFF', light: '#E7DDFF' },
     { num: '02', title: 'Add your properties', desc: 'List buildings and units with rent and availability.', color: '#0ea5e9', light: '#e0f2fe' },
     { num: '03', title: 'Connect M-PESA', desc: 'Link your account for automated collections.', color: '#16a34a', light: '#dcfce7' },
-    { num: '04', title: 'Invite tenants', desc: 'They review, sign, and pay — all online.', color: '#de3163', light: '#fce7ef' },
+    { num: '04', title: 'Invite tenant', desc: 'They review, sign, and pay - all online.', color: '#de3163', light: '#fce7ef' },
     { num: '05', title: 'Track everything', desc: 'Monitor rent, arrears, and occupancy live.', color: '#d97706', light: '#fef3c7' },
   ];
 
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     {
       name: 'Growth',
-      tagline: 'For active landlords',
+      tagline: 'For active landlord',
       price: 'KES 100',
       period: '/ unit / month',
       features: [
@@ -248,11 +248,11 @@ document.addEventListener('DOMContentLoaded', function () {
   ];
 
   const useCases = [
-    { title: 'Individual Landlords', desc: 'A few units or many — track rent, leases & maintenance effortlessly.' },
+    { title: 'Individual Landlords', desc: 'A few units or many - track rent, leases & maintenance effortlessly.' },
     { title: 'Property Managers', desc: 'Centralize billing, communications & reporting across portfolios.' },
     { title: 'Real Estate Agencies', desc: 'Offer value-added management services with branded reports.' },
     { title: 'Diaspora Landlords', desc: 'Stay in control from abroad with real-time dashboards & alerts.' },
-    { title: 'Homeowners with Rentals', desc: 'Turn extra rooms into income — handle payments & contracts.' },
+    { title: 'Homeowners with Rentals', desc: 'Turn extra rooms into income - handle payments & contracts.' },
     { title: 'Facility Managers', desc: 'Coordinate teams, log service requests & monitor SLAs.' },
   ];
 

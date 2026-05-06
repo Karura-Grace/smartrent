@@ -1,6 +1,6 @@
 {% extends "provider/base_provider.html" %}
 
-{% block title %}Completed Jobs · SmartRent{% endblock %}
+{% block title %}Completed Jobs - SmartRent{% endblock %}
 {% block page_title %}Completed Jobs{% endblock %}
 {% block page_sub %}Work history{% endblock %}
 
@@ -45,7 +45,7 @@
                     {% if job.scheduled_date %}
                         {{ job.scheduled_date.strftime('%d %b %Y') }}
                     {% else %}
-                        <span style="color:var(--text-3)">—</span>
+                        <span style="color:var(--text-3)">-</span>
                     {% endif %}
                 </td>
             </tr>

@@ -1,8 +1,8 @@
-from datetime import date, datetime
+﻿from datetime import date, datetime
 from services.tenant_service import get_dashboard_stats
 
 import MySQLdb
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for, make_response
 
 from extensions import get_db_connection, mysql, record_transaction
 from helpers import login_required
@@ -28,100 +28,70 @@ def _get_conn_and_cursor():
 def _current_month_label():
     return date.today().strftime("%B %Y")
 
-def _get_tenant_profile(cur, user_id):
+def _get_tenant_profile(cur, tenant_id):
     """
-    Resolve a tenant profile for the logged-in user.
-    
-    Logic:
-    1. Check if the 'users' table already has a 'tenant_id' assigned.
-    2. If not, try to match the 'users.email' with 'tenants.email'.
-    3. If a match is found, update 'users.tenant_id' to create a permanent link.
+    Directly fetches a tenant profile using the Tenant ID.
     """
-
-    # --- 1. PRIORITY: Check for the direct link in the users table ---
+    # 1. Fetch profile using the tenant's primary key
     cur.execute(
         """
-        SELECT t.*,
-               u.unit_number,
-               u.property_id ,
-               p.name AS property_name,
-               p.address
-        FROM   users usr
-        JOIN   tenants t     ON usr.tenant_id = t.id
-        LEFT JOIN units u    ON t.unit_id = u.id
-        LEFT JOIN properties p ON u.property_id = p.id
-        WHERE  usr.id = %s
-        LIMIT  1
-        """,
-        (user_id,),
+        SELECT 
+            t.*, 
+            u.unit_number, 
+            u.property_id, 
+            p.name AS property_name, 
+            p.address 
+        FROM tenant t
+        LEFT JOIN units u ON t.unit_id = u.id 
+        LEFT JOIN properties p ON u.property_id = p.id 
+        WHERE t.id = %s 
+        LIMIT 1
+        """, 
+        (tenant_id,)
     )
+    
     tenant = cur.fetchone()
+    
+    if not tenant:
+        print(f"No tenant found with ID: {tenant_id}")
+        return None
+
+    return tenant
+
+def _resolve_tenant_profile(cur, session_user_id):
+    """
+    Resolves the current tenant row from the session id.
+
+    Historically, `session['user_id']` has been used inconsistently:
+    - sometimes it contains `tenant.id` (tenant_id)
+    - sometimes it contains `users.id` (user_id)
+
+    This helper supports both by trying tenant.id first, then tenant.user_id.
+    """
+    if not session_user_id:
+        return None
+
+    # 1) Treat session id as tenant_id
+    tenant = _get_tenant_profile(cur, session_user_id)
     if tenant:
         return tenant
 
-    # --- 2. FALLBACK: Auto-link by Email ---
-    # Fetch the email of the logged-in user
-    cur.execute("SELECT email FROM users WHERE id = %s LIMIT 1", (user_id,))
-    user_row = cur.fetchone()
-    email = (user_row or {}).get("email")
-    
-    if not email:
-        return None
-
-    # Search the tenants table for a matching email that isn't linked to a user yet
+    # 2) Treat session id as users.id (tenant.user_id)
     cur.execute(
         """
-        SELECT t.id
-        FROM   tenants t
-        WHERE  LOWER(t.email) = LOWER(%s)
-          AND  t.id NOT IN (SELECT tenant_id FROM users WHERE tenant_id IS NOT NULL)
-        ORDER BY t.id DESC
+        SELECT id
+        FROM tenant
+        WHERE user_id = %s
         LIMIT 1
         """,
-        (email,),
+        (session_user_id,),
     )
-    row = cur.fetchone()
-    
-    if not row:
-        # No tenant record found for this email
+    row = cur.fetchone() or {}
+    tenant_id = row.get("id")
+    if not tenant_id:
         return None
+    return _get_tenant_profile(cur, tenant_id)
 
-    found_tenant_id = row.get("id")
-
-    # --- 3. CREATE THE LINK: Update the users table ---
-    try:
-        # Using cur.connection ensures the commit works within the blueprint scope
-        conn = cur.connection 
-        cur.execute(
-            "UPDATE users SET tenant_id = %s WHERE id = %s", 
-            (found_tenant_id, user_id)
-        )
-        conn.commit()
-    except Exception as e:
-        print(f"Error establishing link: {e}")
-        try:
-            cur.connection.rollback()
-        except:
-            pass
-        return None
-
-    # --- 4. RETURN DATA: Fetch the profile now that it's linked ---
-    cur.execute(
-        """
-        SELECT t.*,
-               u.unit_number,
-               u.property_id AS unit_property_id,
-               p.name AS property_name,
-               p.address
-        FROM   tenants t
-        LEFT JOIN units u    ON t.unit_id = u.id
-        LEFT JOIN properties p ON u.property_id = p.id
-        WHERE  t.id = %s
-        LIMIT  1
-        """,
-        (found_tenant_id,),
-    )
-    return cur.fetchone()
 
 def _ensure_monthly_rent_bill(conn, tenant_id, rent_amount, month_label=None, due_date=None):
     if not tenant_id:
@@ -183,8 +153,8 @@ def tenant_required(f):
 
     @wraps(f)
     def decorated(*args, **kwargs):
-        user_id = session.get("user_id")
-        if not user_id:
+        session_user_id = session.get("user_id")
+        if not session_user_id:
             flash("Please login first", "error")
             return redirect(url_for("landing"))
 
@@ -194,7 +164,7 @@ def tenant_required(f):
 
         conn, cur, should_close = _get_conn_and_cursor()
         try:
-            tenant = _get_tenant_profile(cur, user_id)
+            tenant = _resolve_tenant_profile(cur, session_user_id)
             if not tenant:
                 flash("Tenant profile not found. Contact administrator.", "error")
                 return redirect(url_for("landing"))
@@ -215,20 +185,23 @@ def tenant_dashboard():
     conn, cur, should_close = _get_conn_and_cursor()
 
     try:
-        tenant_info = _get_tenant_profile(cur, user_id) or {}
-        tenant_id = tenant_info.get("id") or user_id
+        tenant_info = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant_info.get("id")
+        if not tenant_id:
+            flash("Tenant profile not found. Contact administrator.", "error")
+            return redirect(url_for("landing"))
 
-        # 🔥 GET STATS FROM SERVICE
-        stats = get_dashboard_stats(cur, tenant_info, tenant_id, user_id)
+        #  GET STATS FROM SERVICE
+        stats = get_dashboard_stats(cur, tenant_info, tenant_id)
 
         # recent payments (for activity)
         cur.execute("""
             SELECT Amount AS amount, status, paid_on AS date, method, month
             FROM payments
-            WHERE tenant_id = %s OR user_id = %s
+            WHERE tenant_id = %s
             ORDER BY paid_on DESC
             LIMIT 5
-        """, (tenant_id, user_id))
+        """, (tenant_id,))
 
         activity_items = []
         for row in cur.fetchall():
@@ -237,7 +210,7 @@ def tenant_dashboard():
                 "title": pay.get("month") or "Payment",
                 "amount": f"KES {float(pay.get('amount') or 0):,.0f}",
                 "status": pay.get("status"),
-                "date": str(pay.get("date"))[:10] if pay.get("date") else "—",
+                "date": str(pay.get("date"))[:10] if pay.get("date") else "-",
                 "badge_class": "b-green" if (pay.get("status") or "").lower() == "paid" else "b-orange"
             })
 
@@ -246,7 +219,7 @@ def tenant_dashboard():
             user=session,
             tenant_info=tenant_info,
 
-            # 🔥 PASS STATS
+            # PASS STATS
             stats=stats,
 
             # other data
@@ -270,8 +243,11 @@ def payments():
     user_id = session["user_id"]
     conn, cur, should_close = _get_conn_and_cursor()
     try:
-        tenant_info = _get_tenant_profile(cur, user_id) or {}
-        tenant_id = tenant_info.get("id") or user_id
+        tenant_info = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant_info.get("id")
+        if not tenant_id:
+            flash("Tenant profile not found. Contact administrator.", "error")
+            return redirect(url_for("landing"))
 
         rent_amount = tenant_info.get("amount") or 0
         if (not rent_amount) and tenant_info.get("unit_id"):
@@ -341,10 +317,10 @@ def payments():
             """
             SELECT id, Amount AS amount, status, paid_on AS date, method, reference, month
             FROM payments
-            WHERE tenant_id = %s OR user_id = %s
+            WHERE tenant_id = %s
             ORDER BY paid_on DESC
             """,
-            (tenant_id, user_id),
+            (tenant_id,),
         )
         payment_history = []
         last_payment_amount = 0
@@ -359,7 +335,7 @@ def payments():
             payment_history.append(
                 {
                     "id": pay.get("id"),
-                    "date": str(pay.get("date"))[:10] if pay.get("date") else "—",
+                    "date": str(pay.get("date"))[:10] if pay.get("date") else "-",
                     "description": pay.get("month") or "Rent Payment",
                     "method": pay.get("method") or "Unknown",
                     "amount": f"KES {float(pay.get('amount') or 0):,.2f}",
@@ -369,7 +345,7 @@ def payments():
                     else "b-orange"
                     if status.lower() == "pending"
                     else "b-red",
-                    "reference": pay.get("reference") or "—",
+                    "reference": pay.get("reference") or "-",
                 }
             )
 
@@ -383,8 +359,8 @@ def payments():
         )
         active_requests = int((cur.fetchone() or {}).get("total") or 0)
 
-        tenant_unit = tenant_info.get("unit_number") or tenant_info.get("unit") or "—"
-        property_name = tenant_info.get("property_name") or "—"
+        tenant_unit = tenant_info.get("unit_number") or tenant_info.get("unit") or "-"
+        property_name = tenant_info.get("property_name") or "-"
         next_due_date_str = str(next_due_date) if next_due_date else "N/A"
 
         return render_template(
@@ -438,8 +414,11 @@ def tenant_pay():
 
     conn, cur, should_close = _get_conn_and_cursor()
     try:
-        tenant = _get_tenant_profile(cur, user_id) or {}
-        tenant_id = tenant.get("id") or user_id
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant.get("id")
+        if not tenant_id:
+            flash("Tenant profile not found. Contact administrator.", "error")
+            return redirect(url_for("landing"))
 
         property_id = tenant.get("property_id") or tenant.get("unit_property_id")
 
@@ -537,8 +516,11 @@ def bills():
     user_id = session["user_id"]
     conn, cur, should_close = _get_conn_and_cursor()
     try:
-        tenant = _get_tenant_profile(cur, user_id) or {}
-        tenant_id = tenant.get("id") or user_id
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant.get("id")
+        if not tenant_id:
+            flash("Tenant profile not found. Contact administrator.", "error")
+            return redirect(url_for("landing"))
         
         # Ensure monthly rent bill exists
         rent_amount = tenant.get("amount") or 0
@@ -649,11 +631,11 @@ def bills():
             """
             SELECT id, Amount AS amount, status, paid_on AS date, method, reference, month
             FROM payments
-            WHERE tenant_id = %s OR user_id = %s
+            WHERE tenant_id = %s
             ORDER BY paid_on DESC
             LIMIT 10
             """,
-            (tenant_id, user_id),
+            (tenant_id,),
         )
         
         bill_history = []
@@ -670,7 +652,7 @@ def bills():
             if pay_date and isinstance(pay_date, (date, datetime)):
                 date_str = pay_date.strftime("%Y-%m-%d")
             else:
-                date_str = str(pay_date)[:10] if pay_date else "—"
+                date_str = str(pay_date)[:10] if pay_date else "-"
             
             bill_history.append({
                 "id": pay.get("id"),
@@ -693,7 +675,7 @@ def bills():
         
         # Get property info for context
         property_name = tenant.get("property_name") or "Your Property"
-        tenant_unit = tenant.get("unit_number") or tenant.get("unit") or "—"
+        tenant_unit = tenant.get("unit_number") or tenant.get("unit") or "-"
         
         return render_template(
             "bills.html",
@@ -727,8 +709,8 @@ def bills():
             rent_due_amount="KES 0",
             electricity_due_amount="KES 0",
             water_due_amount="KES 0",
-            property_name="—",
-            tenant_unit="—",
+            property_name="-",
+            tenant_unit="-",
             period_label=_current_month_label(),
         )
     finally:
@@ -744,8 +726,11 @@ def services():
     user_id = session["user_id"]
     conn, cur, should_close = _get_conn_and_cursor()
     try:
-        tenant = _get_tenant_profile(cur, user_id) or {}
-        tenant_id = tenant.get("id") or user_id
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant.get("id")
+        if not tenant_id:
+            flash("Tenant profile not found. Contact administrator.", "error")
+            return redirect(url_for("landing"))
         cur.execute(
             """
             SELECT id, title, description, priority, status, created_at
@@ -757,6 +742,92 @@ def services():
         )
         requests_list = [dict(r) for r in cur.fetchall()]
         return render_template("services.html", user=session, requests=requests_list)
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+
+
+@tenant_bp.route("/documents")
+@login_required
+@tenant_required
+def documents():
+    """Tenant: documents & receipts area (currently: receipts)."""
+    user_id = session["user_id"]
+    conn, cur, should_close = _get_conn_and_cursor()
+    try:
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant.get("id")
+        if not tenant_id:
+            flash("Tenant profile not found. Contact administrator.", "error")
+            return redirect(url_for("landing"))
+
+        cur.execute(
+            """
+            SELECT month,
+                   MAX(paid_on) AS last_paid_on,
+                   SUM(CASE WHEN LOWER(status)='paid' THEN Amount ELSE 0 END) AS total_paid
+            FROM payments
+            WHERE tenant_id = %s AND month IS NOT NULL AND month != ''
+            GROUP BY month
+            ORDER BY MAX(paid_on) DESC
+            """,
+            (tenant_id,),
+        )
+        receipts = [dict(r) for r in cur.fetchall()]
+        return render_template("documents.html", user=session, receipts=receipts)
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+
+
+@tenant_bp.route("/receipt")
+@login_required
+@tenant_required
+def tenant_receipt():
+    """Tenant: download an HTML receipt for a given month."""
+    user_id = session["user_id"]
+    month = (request.args.get("month") or "").strip() or date.today().strftime("%B %Y")
+    conn, cur, should_close = _get_conn_and_cursor()
+    try:
+        tenant = _resolve_tenant_profile(cur, user_id)
+        if not tenant:
+            flash("Tenant profile not found.", "error")
+            return redirect(url_for("tenant.documents"))
+
+        tenant_id = tenant.get("id")
+        property_id = tenant.get("property_id") or tenant.get("unit_property_id")
+        cur.execute(
+            """
+            SELECT Amount AS amount, status, paid_on, method, reference
+            FROM payments
+            WHERE tenant_id = %s AND property_id = %s AND month = %s
+            ORDER BY paid_on DESC
+            LIMIT 1
+            """,
+            (tenant_id, property_id, month),
+        )
+        pay = cur.fetchone() or {}
+        if not isinstance(pay, dict):
+            pay = dict(pay)
+
+        html = render_template(
+            "receipt.html",
+            doc_type="Receipt",
+            month=month,
+            tenant=tenant,
+            amount=pay.get("amount") if pay.get("amount") is not None else (tenant.get("amount") or 0),
+            status=pay.get("status") or "Unpaid",
+            paid_on=pay.get("paid_on"),
+            method=pay.get("method"),
+            reference=pay.get("reference"),
+            issued_at=datetime.now(),
+        )
+        resp = make_response(html)
+        resp.headers["Content-Type"] = "text/html; charset=utf-8"
+        resp.headers["Content-Disposition"] = f'attachment; filename="Receipt-{tenant_id}-{month.replace(" ", "-")}.html"'
+        return resp
     finally:
         cur.close()
         if should_close:
@@ -778,20 +849,27 @@ def submit_request():
     user_id = session["user_id"]
     conn, cur, should_close = _get_conn_and_cursor()
     try:
-        tenant = _get_tenant_profile(cur, user_id) or {}
-        tenant_id = tenant.get("id") or user_id
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant.get("id")
+        if not tenant_id:
+            flash("Tenant profile not found. Contact administrator.", "error")
+            return redirect(url_for("landing"))
         unit_id = tenant.get("unit_id")
         if not unit_id:
             flash("Missing unit assignment. Update your rental info in Settings.", "error")
+            return redirect(url_for("tenant.services"))
+        property_id = tenant.get("property_id") or tenant.get("unit_property_id")
+        if not property_id:
+            flash("Missing property assignment. Update your rental info in Settings.", "error")
             return redirect(url_for("tenant.services"))
 
         cur.execute(
             """
             INSERT INTO maintenance_requests
-                (tenant_id, unit_id, title, description, priority, status, created_at)
-            VALUES (%s, %s, %s, %s, %s, 'Open', NOW())
+                (tenant_id, unit_id, property_id, title, description, priority, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, 'Open', NOW())
             """,
-            (tenant_id, unit_id, title, description, priority),
+            (tenant_id, unit_id, property_id, title, description, priority),
         )
         conn.commit()
         flash("Maintenance request submitted!", "success")
@@ -813,7 +891,10 @@ def notices():
     user_id = session["user_id"]
     conn, cur, should_close = _get_conn_and_cursor()
     try:
-        tenant = _get_tenant_profile(cur, user_id) or {}
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        if not tenant.get("id"):
+            flash("Tenant profile not found. Contact administrator.", "error")
+            return redirect(url_for("landing"))
         property_id = tenant.get("property_id") or tenant.get("unit_property_id")
 
         notices_list = []
@@ -834,4 +915,3 @@ def notices():
         cur.close()
         if should_close:
             conn.close()
-

@@ -1,5 +1,5 @@
-{% extends "base_dashboard.html" %}
-{% block title %}Send Notices · SmartRent{% endblock %}
+﻿{% extends "base_dashboard.html" %}
+{% block title %}Send Notices - SmartRent{% endblock %}
 {% block role_name %}{{ 'Agent' if user.role == 'agent' else 'Landlord' }}{% endblock %}
 {% block page_title %}Send Notices{% endblock %}
 {% block page_sub %}Broadcast to Tenants{% endblock %}
@@ -37,11 +37,11 @@
 <div class="hero">
     <div class="hero-eye">Notices</div>
     <h1>Send Notices</h1>
-    <p>Send announcements, reminders and alerts to your tenants.</p>
+    <p>Send announcements, reminders and alerts to your tenant.</p>
     <div class="hero-kpis">
         <div class="hero-kpi"><span class="hero-kpi-label">Sent This Month</span><span class="hero-kpi-value">{{ sent_this_month or 0 }}</span></div>
         <div class="hero-kpi"><span class="hero-kpi-label">Recipients</span><span class="hero-kpi-value">{{ recipients_total or 0 }}</span></div>
-        <div class="hero-kpi"><span class="hero-kpi-label">Last Sent</span><span class="hero-kpi-value">{{ (last_sent|string)[:10] if last_sent else '—' }}</span></div>
+        <div class="hero-kpi"><span class="hero-kpi-label">Last Sent</span><span class="hero-kpi-value">{{ (last_sent|string)[:10] if last_sent else '-' }}</span></div>
     </div>
 </div>
 {% endblock %}
@@ -58,10 +58,10 @@
             <div class="form-group">
                 <label class="form-label">Quick Templates</label>
                 <div class="template-grid">
-                    <button class="tmpl-btn" type="button" onclick="useTemplate('rent')">💳 Rent Reminder</button>
-                    <button class="tmpl-btn" type="button" onclick="useTemplate('maintenance')">🔧 Maintenance Alert</button>
-                    <button class="tmpl-btn" type="button" onclick="useTemplate('water')">💧 Water Outage</button>
-                    <button class="tmpl-btn" type="button" onclick="useTemplate('general')">📢 General Notice</button>
+                    <button class="tmpl-btn" type="button" onclick="useTemplate('rent')"><i data-lucide="bell" width="14" height="14" style="vertical-align:middle;margin-right:6px;"></i>Rent Reminder</button>
+                    <button class="tmpl-btn" type="button" onclick="useTemplate('maintenance')"><i data-lucide="wrench" width="14" height="14" style="vertical-align:middle;margin-right:6px;"></i>Maintenance Alert</button>
+                    <button class="tmpl-btn" type="button" onclick="useTemplate('water')"><i data-lucide="droplet" width="14" height="14" style="vertical-align:middle;margin-right:6px;"></i>Water Outage</button>
+                    <button class="tmpl-btn" type="button" onclick="useTemplate('general')"><i data-lucide="megaphone" width="14" height="14" style="vertical-align:middle;margin-right:6px;"></i>General Notice</button>
                 </div>
             </div>
 
@@ -93,7 +93,7 @@
                         <input type="checkbox" name="via" value="email" style="accent-color:#0f766e"> Email
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-                        <input type="checkbox" name="via" value="in_app" checked style="accent-color:#0f766e"> In‑App
+                        <input type="checkbox" name="via" value="in_app" checked style="accent-color:#0f766e"> In-App
                     </label>
                 </div>
                 <div class="muted" style="font-size:12px;margin-top:6px">
@@ -114,7 +114,7 @@
                     {% if notices %}
                         {% for n in notices %}
                         <tr>
-                            <td>{{ (n.sent_at|string)[:10] if n.sent_at else '—' }}</td>
+                            <td>{{ (n.sent_at|string)[:10] if n.sent_at else '-' }}</td>
                             <td style="max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ n.message }}</td>
                             <td><span class="badge b-blue">{{ n.type or 'normal' }}</span></td>
                         </tr>
@@ -146,8 +146,8 @@
         </div>
 
         <div class="recipient-list" id="recipientList">
-            {% if tenants %}
-                {% for t in tenants %}
+            {% if tenant %}
+                {% for t in tenant %}
                 <label class="recipient-item" data-property-id="{{ t.property_id }}">
                     <input type="checkbox" class="rec-check"
                            name="tenant_ids" value="{{ t.id }}"
@@ -155,13 +155,13 @@
                     <div class="recipient-avatar">{{ (t.name or 'T')[:2]|upper }}</div>
                     <div style="min-width:0">
                         <div class="recipient-name">{{ t.name or 'Tenant' }}</div>
-                        <div class="recipient-unit">{{ (t.unit or '—') }} · {{ t.property_name or '—' }}</div>
-                        <div class="recipient-meta">{{ t.email or '—' }} · {{ t.phone or '—' }}</div>
+                        <div class="recipient-unit">{{ (t.unit or '-') }} - {{ t.property_name or '-' }}</div>
+                        <div class="recipient-meta">{{ t.email or '-' }} - {{ t.phone or '-' }}</div>
                     </div>
                 </label>
                 {% endfor %}
             {% else %}
-                <div class="muted" style="padding:10px 6px">No tenants found for your account.</div>
+                <div class="muted" style="padding:10px 6px">No tenant found for your account.</div>
             {% endif %}
         </div>
 
@@ -219,7 +219,7 @@ function updateCount(){
     const preview = [];
     if (emails.length) preview.push(`${emails.length} email(s)`);
     if (phones.length) preview.push(`${phones.length} phone(s)`);
-    document.getElementById('selectedPreview').textContent = preview.length ? preview.join(' · ') : '';
+    document.getElementById('selectedPreview').textContent = preview.length ? preview.join(' - ') : '';
 }
 
 function validateRecipients() {
@@ -235,7 +235,7 @@ async function copySelected(kind) {
     const values = selected.map(x => (kind === 'email' ? x.dataset.email : x.dataset.phone) || '')
         .map(s => s.trim()).filter(Boolean);
     if (!values.length) {
-        alert(`No ${kind}s found for the selected tenants.`);
+        alert(`No ${kind}s found for the selected tenant.`);
         return;
     }
     const text = values.join(kind === 'email' ? ', ' : ', ');

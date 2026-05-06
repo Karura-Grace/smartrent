@@ -1,4 +1,4 @@
-# extensions.py
+﻿# extensions.py
 import os
 from flask_mysqldb import MySQL
 import MySQLdb
@@ -95,7 +95,7 @@ def ensure_lease_tables():
         conn.commit()
     except Exception as e:
         # Do not crash app startup if DB user can't CREATE TABLE.
-        print(f"⚠️ ensure_lease_tables skipped: {e}")
+        print(f"ensure_lease_tables skipped: {e}")
         try:
             if conn:
                 conn.rollback()
@@ -118,7 +118,7 @@ def ensure_units_tenant_column():
     """
     Best-effort addition of tenant_id column to units table.
 
-    This allows units to be linked to tenants directly.
+    This allows units to be linked to tenant directly.
     """
     conn = None
     cur = None
@@ -141,12 +141,12 @@ def ensure_units_tenant_column():
                 AFTER status
             """)
             conn.commit()
-            print("✓ Added tenant_id column to units table")
+            print("Added tenant_id column to units table")
         else:
-            print("✓ tenant_id column already exists in units table")
+            print("tenant_id column already exists in units table")
     except Exception as e:
         # Do not crash app startup if DB user can't ALTER TABLE.
-        print(f"⚠️ ensure_units_tenant_column skipped: {e}")
+        print(f"ensure_units_tenant_column skipped: {e}")
         try:
             if conn:
                 conn.rollback()
@@ -169,7 +169,7 @@ def ensure_units_tenant_fk():
     """
     Best-effort foreign key fix for units.tenant_id.
 
-    The project treats `units.tenant_id` as a reference to `tenants.id`, but some
+    The project treats `units.tenant_id` as a reference to `tenant.id`, but some
     DBs were created with a FK pointing to `users.id`, which breaks assigning a
     tenant record to a unit.
     """
@@ -179,18 +179,18 @@ def ensure_units_tenant_fk():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Ensure tenants table exists before attempting FK changes
+        # Ensure tenant table exists before attempting FK changes
         cur.execute(
             """
             SELECT 1
             FROM INFORMATION_SCHEMA.TABLES
             WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'tenants'
+              AND TABLE_NAME = 'tenant'
             LIMIT 1
             """
         )
         if not cur.fetchone():
-            print("⚠️ ensure_units_tenant_fk skipped: tenants table missing")
+            print("ensure_units_tenant_fk skipped: tenant table missing")
             return
 
         # Find any existing FK on units(tenant_id)
@@ -206,13 +206,13 @@ def ensure_units_tenant_fk():
         )
         fk_rows = cur.fetchall() or []
 
-        # If it's already referencing tenants, nothing to do
+        # If it's already referencing tenant, nothing to do
         for row in fk_rows:
             # row may be tuple when using a non-dict cursor
             constraint_name = row[0]
             referenced_table = row[1]
-            if (referenced_table or '').lower() == 'tenants':
-                print("✓ units.tenant_id FK already references tenants")
+            if (referenced_table or '').lower() == 'tenant':
+                print("units.tenant_id FK already references tenant")
                 return
 
         # Drop FK if it points at users (or anything else)
@@ -222,10 +222,10 @@ def ensure_units_tenant_fk():
             try:
                 cur.execute(f"ALTER TABLE units DROP FOREIGN KEY `{constraint_name}`")
                 conn.commit()
-                print(f"✓ Dropped FK {constraint_name} (was referencing {referenced_table})")
+                print(f"Dropped FK {constraint_name} (was referencing {referenced_table})")
             except Exception as e:
                 conn.rollback()
-                print(f"⚠️ ensure_units_tenant_fk: couldn't drop FK {constraint_name}: {e}")
+                print(f"ensure_units_tenant_fk: couldn't drop FK {constraint_name}: {e}")
 
         # Ensure there's an index on tenant_id (required for FK)
         try:
@@ -244,9 +244,9 @@ def ensure_units_tenant_fk():
                 conn.commit()
         except Exception as e:
             conn.rollback()
-            print(f"⚠️ ensure_units_tenant_fk: index check/create skipped: {e}")
+            print(f"ensure_units_tenant_fk: index check/create skipped: {e}")
 
-        # Add FK to tenants(id) if none exists now
+        # Add FK to tenant(id) if none exists now
         cur.execute(
             """
             SELECT 1
@@ -254,12 +254,12 @@ def ensure_units_tenant_fk():
             WHERE TABLE_SCHEMA = DATABASE()
               AND TABLE_NAME = 'units'
               AND COLUMN_NAME = 'tenant_id'
-              AND REFERENCED_TABLE_NAME = 'tenants'
+              AND REFERENCED_TABLE_NAME = 'tenant'
             LIMIT 1
             """
         )
         if cur.fetchone():
-            print("✓ units.tenant_id FK already present (tenants)")
+            print("units.tenant_id FK already present (tenant)")
             return
 
         try:
@@ -267,17 +267,17 @@ def ensure_units_tenant_fk():
                 """
                 ALTER TABLE units
                 ADD CONSTRAINT fk_units_tenant_id
-                FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+                FOREIGN KEY (tenant_id) REFERENCES tenant(id)
                 ON DELETE SET NULL
                 """
             )
             conn.commit()
-            print("✓ Added FK fk_units_tenant_id: units.tenant_id -> tenants.id")
+            print("Added FK fk_units_tenant_id: units.tenant_id -> tenant.id")
         except Exception as e:
             conn.rollback()
-            print(f"⚠️ ensure_units_tenant_fk skipped: {e}")
+            print(f"ensure_units_tenant_fk skipped: {e}")
     except Exception as e:
-        print(f"⚠️ ensure_units_tenant_fk skipped: {e}")
+        print(f"ensure_units_tenant_fk skipped: {e}")
         try:
             if conn:
                 conn.rollback()
@@ -294,53 +294,6 @@ def ensure_units_tenant_fk():
                 conn.close()
         except Exception:
             pass
-
-
-def ensure_agent_landlords_table():
-    """
-    Best-effort creation of agent_landlords table.
-
-    This table lets agents link to landlords they work with, without exposing
-    other landlords globally.
-    """
-    conn = None
-    cur = None
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS agent_landlords (
-              id INT AUTO_INCREMENT PRIMARY KEY,
-              agent_id INT NOT NULL,
-              landlord_id INT NOT NULL,
-              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              UNIQUE KEY uniq_agent_landlord (agent_id, landlord_id),
-              INDEX idx_agent_landlords_agent (agent_id),
-              INDEX idx_agent_landlords_landlord (landlord_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """
-        )
-        conn.commit()
-    except Exception as e:
-        print(f"⚠️ ensure_agent_landlords_table skipped: {e}")
-        try:
-            if conn:
-                conn.rollback()
-        except Exception:
-            pass
-    finally:
-        try:
-            if cur:
-                cur.close()
-        except Exception:
-            pass
-        try:
-            if conn:
-                conn.close()
-        except Exception:
-            pass
-
 
 def ensure_payments_due_date_penalty_columns():
     conn = None
@@ -362,13 +315,13 @@ def ensure_payments_due_date_penalty_columns():
         if 'due_date' not in existing:
             cur.execute("ALTER TABLE payments ADD COLUMN due_date DATE NULL AFTER paid_on")
             conn.commit()
-            print('✓ Added due_date column to payments table')
+            print('Added due_date column to payments table')
         if 'penalty_amount' not in existing:
             cur.execute("ALTER TABLE payments ADD COLUMN penalty_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER due_date")
             conn.commit()
-            print('✓ Added penalty_amount column to payments table')
+            print('Added penalty_amount column to payments table')
     except Exception as e:
-        print(f"⚠️ ensure_payments_due_date_penalty_columns skipped: {e}")
+        print(f"ensure_payments_due_date_penalty_columns skipped: {e}")
         try:
             if conn:
                 conn.rollback()
@@ -417,7 +370,7 @@ def ensure_transactions_table():
         )
         conn.commit()
     except Exception as e:
-        print(f"⚠️ ensure_transactions_table skipped: {e}")
+        print(f"ensure_transactions_table skipped: {e}")
         try:
             if conn:
                 conn.rollback()
@@ -452,7 +405,7 @@ def record_transaction(payment_id, tenant_id, property_id, amount, status, metho
         )
         conn.commit()
     except Exception as e:
-        print(f"⚠️ record_transaction skipped: {e}")
+        print(f"record_transaction skipped: {e}")
         try:
             if conn:
                 conn.rollback()

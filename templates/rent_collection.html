@@ -1,6 +1,6 @@
-{% extends "base_dashboard.html" %}
+﻿{% extends "base_dashboard.html" %}
 
-{% block title %}Rent Collection · SmartRent{% endblock %}
+{% block title %}Rent Collection - SmartRent{% endblock %}
 {% block role_name %}Landlord{% endblock %}
 {% block page_title %}Rent Collection{% endblock %}
 {% block page_sub %}{{ stats.month | default('This Month') }}{% endblock %}
@@ -140,7 +140,7 @@
 
 {% block content %}
 
-{# ── Flash messages ───────────────────────────────── #}
+{#  Flash messages  #}
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}
@@ -153,7 +153,7 @@
   {% endif %}
 {% endwith %}
 
-{# ── Stat cards ───────────────────────────────────── #}
+{#  Stat cards  #}
 <div class="stats-grid" style="margin-bottom:20px;">
   <div class="stat-card">
     <div class="stat-top">
@@ -183,7 +183,7 @@
     </div>
     <div class="stat-val">{{ stats.total_units - stats.units_paid }}</div>
     <div class="stat-name">Unpaid Tenants</div>
-    <div class="stat-hint">Record payments or bill tenants</div>
+    <div class="stat-hint">Record payments or bill tenant</div>
   </div>
   <div class="stat-card">
     <div class="stat-top">
@@ -192,11 +192,11 @@
     </div>
     <div class="stat-val">{{ stats.total_units }}</div>
     <div class="stat-name">Total Payment Records</div>
-    <div class="stat-hint">All tenants tracked</div>
+    <div class="stat-hint">All tenant tracked</div>
   </div>
 </div>
 
-{# ── Filter bar ───────────────────────────────────── #}
+{#  Filter bar  #}
 <div class="filter-bar">
   <div class="search-wrap">
     <i data-lucide="search" width="14" height="14"></i>
@@ -224,7 +224,7 @@
   </button>
 </div>
 
-{# ── Main table ───────────────────────────────────── #}
+{#  Main table  #}
 <div class="card">
   <div class="card-head">
     <span class="card-title">All Payment Records</span>
@@ -252,7 +252,7 @@
                 <i data-lucide="{% if p.status == 'Paid' %}check-circle-2{% else %}alert-circle{% endif %}" width="14" height="14"></i>
               </span>
               <div class="name-stack">
-                <strong>{{ p.full_name or '—' }}</strong>
+                <strong>{{ p.full_name or '-' }}</strong>
                 <div class="sub-actions">
                 
                   <a href="{{ url_for('landlord.landlord_tenant_receipt', tenant_id=p.tenant_id, month=selected_month) }}">
@@ -262,14 +262,14 @@
               </div>
             </div>
           </td>
-          <td>{{ p.unit or '—' }}</td>
-          <td>{{ p.property_name or '—' }}</td>
+          <td>{{ p.unit or '-' }}</td>
+          <td>{{ p.property_name or '-' }}</td>
           <td><strong>KES {{ "{:,.0f}".format(p.amount_due) }}</strong></td>
-          <td>{{ p.paid_on or '—' }}</td>
+          <td>{{ p.paid_on or '-' }}</td>
           <td>
-            {% if p.method and p.method != '—' %}
+            {% if p.method and p.method != '-' %}
               <span class="badge b-green">{{ p.method }}</span>
-            {% else %}—{% endif %}
+            {% else %}-{% endif %}
           </td>
           <td>
             <span class="badge {% if p.status == 'Paid' %}b-green{% else %}b-red{% endif %}">
@@ -305,9 +305,9 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════ #}
+{# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• #}
 {#   RECORD PAYMENT MODAL                            #}
-{# ══════════════════════════════════════════════════ #}
+{# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• #}
 <div class="modal-overlay" id="recordModal">
   <div class="modal">
     <div class="modal-title">Record Manual Payment</div>
@@ -317,9 +317,9 @@
       <div class="form-group">
         <label class="form-label">Select Tenant</label>
         <select class="form-input" id="tenantSelect" name="tenant_id" required>
-          <option value="">— Select tenant —</option>
-          {% for t in tenants %}
-            <option value="{{ t.id }}">{{ t.name }} — {{ t.unit or 'No unit' }}</option>
+          <option value="">- Select tenant -</option>
+          {% for t in tenant %}
+            <option value="{{ t.id }}">{{ t.name }} - {{ t.unit or 'No unit' }}</option>
           {% endfor %}
         </select>
       </div>
@@ -354,7 +354,7 @@
   </div>
 </div>
 
-{# ── Receipt modal ────────────────────────────────── #}
+{#  Receipt modal  #}
 {# Bill tenant modal #}
 <div class="modal-overlay" id="billModal">
   <div class="modal">
@@ -365,9 +365,9 @@
       <div class="form-group">
         <label class="form-label">Select Tenant</label>
         <select class="form-input" id="billTenantSelect" name="tenant_id" required>
-          <option value="">— Select tenant —</option>
-          {% for t in tenants %}
-            <option value="{{ t.id }}">{{ t.name }} — {{ t.unit or 'No unit' }}</option>
+          <option value="">- Select tenant -</option>
+          {% for t in tenant %}
+            <option value="{{ t.id }}">{{ t.name }} - {{ t.unit or 'No unit' }}</option>
           {% endfor %}
         </select>
       </div>
@@ -418,7 +418,7 @@
 
 
 <script>
-/* ── Modal helpers ──────────────────────────────── */
+/* -- Modal helpers -------------------------------- */
 function openModal(id) {
   document.getElementById(id).classList.add('show');
   if (window.lucide) lucide.createIcons();
@@ -430,7 +430,7 @@ document.querySelectorAll('.modal-overlay').forEach(ov => {
   ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); });
 });
 
-/* ── Auto-fill from tenant dropdown ─────────────── */
+/* -- Auto-fill from tenant dropdown -------------- */
 function changeMonth(month){
   const url = new URL(window.location.href);
   url.searchParams.set('month', month);
@@ -453,7 +453,7 @@ function openBillForTenant(tenantId, tenantName, amount){
   if(amt && amount){ amt.value = amount; }
 }
 
-/* ── Table filter ───────────────────────────────── */
+/* -- Table filter -------------------------------- */
 function filterTable() {
   const search = document.getElementById('searchInput').value.toLowerCase();
   const status = document.getElementById('statusFilter').value;
@@ -472,7 +472,7 @@ function filterTable() {
   });
 }
 
-/* ── View receipt ───────────────────────────────── */
+/* -- View receipt -------------------------------- */
 function viewReceipt(name, amount, paidOn, method, ref) {
   document.getElementById('receiptContent').innerHTML = `
     <div style="text-align:center; margin-bottom:12px;">
@@ -486,17 +486,17 @@ function viewReceipt(name, amount, paidOn, method, ref) {
     <div><span style="color:var(--text-3); font-size:11px;">METHOD</span><br><strong>${method}</strong></div>
     <div><span style="color:var(--text-3); font-size:11px;">REFERENCE</span><br><strong>${ref || 'N/A'}</strong></div>
     <hr style="border:none; border-top:1px solid var(--border); margin:10px 0;">
-    <div style="text-align:center; font-size:11px; color:var(--text-3);">Generated by SmartRent · ${new Date().toLocaleDateString()}</div>
+    <div style="text-align:center; font-size:11px; color:var(--text-3);">Generated by SmartRent - ${new Date().toLocaleDateString()}</div>
   `;
   openModal('receiptModal');
 }
 
-/* ── Reminders (SMS integration placeholder) ────── */
+/* -- Reminders (SMS integration placeholder) ------ */
 function sendReminder(name, phone) {
   alert(`Reminder sent to ${name} (${phone || 'no phone'}) via SMS.`);
 }
 function sendAllReminders() {
-  alert('Reminders sent to all pending and overdue tenants.');
+  alert('Reminders sent to all pending and overdue tenant.');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -504,3 +504,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 {% endblock %}
+

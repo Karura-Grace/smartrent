@@ -1,6 +1,6 @@
-{% extends "base_dashboard.html" %}
+﻿{% extends "base_dashboard.html" %}
 
-{% block title %}Landlord Dashboard · SmartRent{% endblock %}
+{% block title %}Landlord Dashboard - SmartRent{% endblock %}
 {% block role_name %}Landlord{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 {% block page_sub %}Landlord Overview{% endblock %}
@@ -81,7 +81,7 @@
 
 * { font-family: 'Inter', sans-serif; }
 
-/* ── COMPACT HERO ── */
+/* -- COMPACT HERO -- */
 .ld-hero {
   background: linear-gradient(135deg, var(--text) 0%, var(--purple-dark) 55%, var(--blue-800) 100%);
   border-radius: 20px;
@@ -204,7 +204,7 @@
 .stat-trend.up { color: #a7f3d0; background: rgba(16,185,129,0.2); }
 .stat-trend.down { color: #fecaca; background: rgba(239,68,68,0.2); }
 
-/* ── BODY GRID ── */
+/* -- BODY GRID -- */
 .ld-body {
   display: grid;
   grid-template-columns: 320px 1fr;
@@ -212,7 +212,7 @@
   align-items: start;
 }
 
-/* ── LEFT PANEL (Cards) ── */
+/* -- LEFT PANEL (Cards) -- */
 .left-panel {
   display: flex;
   flex-direction: column;
@@ -388,7 +388,7 @@
   white-space: nowrap;
 }
 
-/* ── RIGHT PANEL ── */
+/* -- RIGHT PANEL -- */
 .right-panel {
   display: flex;
   flex-direction: column;
@@ -729,7 +729,7 @@
       </div>
       <div class="hero-info">
         <h1>{{ user.user_name }}</h1>
-        <p>{{ user.user_email }} · Property Owner</p>
+        <p>{{ user.user_email }} - Property Owner</p>
       </div>
     </div>
     <div class="hero-stats">
@@ -740,7 +740,7 @@
       <div class="hero-stat">
         <span class="stat-label">Occupancy</span>
         <span class="stat-value">{{ occupancy_rate  | default(0) }}%</span>
-        <span class="stat-trend up">▲</span>
+        <span class="stat-trend up">+</span>
       </div>
       <div class="hero-stat">
         <span class="stat-label">Collected</span>
@@ -749,7 +749,7 @@
       <div class="hero-stat">
         <span class="stat-label">Outstanding</span>
         <span class="stat-value">KES {{ rent_outstanding | default(0) }}</span>
-        <span class="stat-trend down">▼</span>
+        <span class="stat-trend down">-</span>
       </div>
     </div>
   </div>
@@ -759,7 +759,7 @@
 {% block content %}
 <div class="ld-body">
 
-  <!-- ═══ LEFT PANEL ═══ -->
+  <!-- === LEFT PANEL === -->
   <div class="left-panel">
 
     <!-- Quick Actions -->
@@ -829,7 +829,7 @@
     <!-- Recent Notices -->
     <div class="panel-card">
       <div class="panel-title">
-        <i data-lucide="bell"></i>
+        <i data-lucide="bell" width="16" height="16"></i>
         Recent Notices
         <a href="{{ url_for('landlord.send_notices') }}" style="margin-left:auto; font-size:11px; color:var(--primary-600); text-transform:none; letter-spacing:0; font-weight:600; text-decoration:none;">+ New</a>
       </div>
@@ -846,14 +846,14 @@
           <a class="notice-item" href="{{ url_for('landlord.send_notices') }}">
             <div class="notice-dot normal"></div>
             <div class="notice-text">No recent notices</div>
-            <div class="notice-time">—</div>
+            <div class="notice-time">-</div>
           </a>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- ═══ RIGHT PANEL ═══ -->
+  <!-- === RIGHT PANEL === -->
   <div class="right-panel">
 
     <!-- Rent Status Overview Cards -->
@@ -912,7 +912,7 @@
             {% for property in properties %}
             <tr style="cursor: pointer;" onclick="window.location='{{ url_for('properties.properties') }}'">
               <td><div class="unit-cell"><div class="unit-icon {{ property.status }}"><i data-lucide="{% if property.status == 'occupied' %}home{% elif property.status == 'vacant' %}door-open{% else %}alert-triangle{% endif %}" width="14" height="14"></i></div><div><div class="unit-name">{{ property.unit_number }}</div><div class="unit-type">{{ property.property_type | default('Unit') }}</div></div></div></td>
-              <td><span class="rent-mono">KES {{ property.rent_amount | default('—') }}</span></td>
+              <td><span class="rent-mono">KES {{ property.rent_amount | default('-') }}</span></td>
               <td><span class="badge {% if property.status == 'occupied' %}b-green{% elif property.status == 'vacant' %}b-amber{% else %}b-red{% endif %}">{{ property.status.title() }}</span></td>
               <td><i data-lucide="chevron-right" width="14" height="14" style="color:var(--gray-400);"></i></td>
             </tr>
@@ -924,7 +924,7 @@
         {% endif %}
         <div style="margin-top:16px; display:flex; gap:8px;">
           <a href="{{ url_for('landlord.add_unit') }}" class="btn-sm btn-primary"><i data-lucide="plus" width="12" height="12"></i> Add Property</a>
-          <a href="{{ url_for('properties.properties') }}" class="btn-sm btn-outline">View all →</a>
+          <a href="{{ url_for('properties.properties') }}" class="btn-sm btn-outline">View all &rarr;</a>
         </div>
       </div>
 
@@ -947,7 +947,7 @@
         {% else %}
         <div class="empty-state">No tenant found.</div>
         {% endif %}
-        <div style="margin-top:16px;"><a href="{{ url_for('landlord.tenant') }}" class="btn-sm btn-outline">Manage tenants →</a></div>
+        <div style="margin-top:16px;"><a href="{{ url_for('landlord.tenant') }}" class="btn-sm btn-outline">Manage tenant &rarr;</a></div>
       </div>
 
       <!-- Payments Tab -->
@@ -969,7 +969,7 @@
         {% else %}
         <div class="empty-state">No recent payments.</div>
         {% endif %}
-        <div style="margin-top:16px;"><a href="{{ url_for('landlord.rent_collection') }}" class="btn-sm btn-outline">View all payments →</a></div>
+        <div style="margin-top:16px;"><a href="{{ url_for('landlord.rent_collection') }}" class="btn-sm btn-outline">View all payments &rarr;</a></div>
       </div>
     </div>
 
@@ -988,7 +988,7 @@
               <div class="ticket-prio {% if ticket.priority == 'High' %}high{% elif ticket.priority == 'Medium' %}medium{% else %}low{% endif %}"></div>
               <div class="ticket-body">
                 <div class="ticket-title">{{ ticket.title }}</div>
-                <div class="ticket-sub">{{ ticket.unit_number }} · {{ ticket.status }}</div>
+                <div class="ticket-sub">{{ ticket.unit_number }} - {{ ticket.status }}</div>
               </div>
             </a>
             {% endfor %}

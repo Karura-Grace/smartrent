@@ -1,0 +1,53 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Documents & Receipts - SmartRent{% endblock %}
+{% block role_name %}Tenant{% endblock %}
+{% block page_title %}Documents & Receipts{% endblock %}
+{% block page_sub %}Lease and payment receipts{% endblock %}
+
+{% block extra_styles %}
+.hero{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%)}
+.nav-item.active{background:#f0fdfa;color:#0f766e}.nav-item.active::before{background:#0f766e}
+.nav-item:hover{background:#f0fdfa;color:#0f766e}
+.btn-primary{background:#0f766e}.btn-primary:hover{background:#065f46}
+.card-action{color:#0f766e;background:#f0fdfa}
+.doc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-lt)}
+.doc-row:last-child{border-bottom:none}
+.doc-name{font-weight:800;font-size:13px}
+.doc-meta{font-size:11px;color:var(--text-3);margin-top:2px}
+.btn-xs{padding:7px 10px;border-radius:10px;font-size:12px;font-weight:700;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:inline-flex;gap:6px;align-items:center;text-decoration:none;color:var(--text)}
+.btn-xs:hover{background:var(--bg)}
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+  <div class="hero-eye">Documents</div>
+  <h1>Documents & Receipts</h1>
+  <p>Download your payment receipts.</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-head"><span class="card-title">Receipts</span></div>
+  <div style="padding:2px 18px 12px;">
+    {% if receipts %}
+      {% for r in receipts %}
+        <div class="doc-row">
+          <div>
+            <div class="doc-name"><i data-lucide="receipt" width="14" height="14" style="vertical-align:middle;margin-right:6px;"></i>{{ r.month }}</div>
+            <div class="doc-meta">
+              Last paid: {{ (r.last_paid_on|string)[:10] if r.last_paid_on else '-' }} · Total: KES {{ "{:,.0f}".format(r.total_paid or 0) }}
+            </div>
+          </div>
+          <a class="btn-xs" href="{{ url_for('tenant.tenant_receipt', month=r.month) }}">
+            <i data-lucide="download" width="14" height="14"></i> Download
+          </a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="padding:16px 0;color:var(--text-3);font-size:13px">No receipts found yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

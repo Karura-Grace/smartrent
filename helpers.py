@@ -34,9 +34,9 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # IMAGE SAVING
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def save_property_image(image_file, property_id, upload_folder):
     """Save property image and return unique filename."""
     target_folder = os.path.join(upload_folder, 'properties')
@@ -61,7 +61,7 @@ def save_property_image(image_file, property_id, upload_folder):
             if ext.lower() in ('.jpg', '.jpeg') and img.mode != 'RGB':
                 img = img.convert('RGB')
             img.save(filepath, 'JPEG', quality=85, optimize=True)
-        print(f"✅ SAVED: {filepath}")
+        print(f"OK SAVED: {filepath}")
         return unique_name
     except Exception as e:
         print(f"❌ FAILED: {e}")
@@ -70,9 +70,9 @@ def save_property_image(image_file, property_id, upload_folder):
         return None
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # SERIALIZATION
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def serialize_units(units):
     """Convert row-mappings to plain dicts, casting Decimal → float."""
     return [
@@ -81,9 +81,9 @@ def serialize_units(units):
     ]
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # SYNC UNIT COUNT  (raw MySQL version)
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def sync_unit_count(property_id):
     """Recalculate and persist total_units for a property."""
     conn, cur = get_cursor()
@@ -103,9 +103,9 @@ def sync_unit_count(property_id):
         cur.close()
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # LANDLORD STATS  (raw MySQL version)
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def get_landlord_stats(landlord_id):
     """Return aggregated property/unit stats for a landlord."""
     conn, cur = get_cursor()
@@ -141,9 +141,9 @@ def get_landlord_stats(landlord_id):
         cur.close()
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # GENERIC USER STATS
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def get_user_stats(user_id, role='landlord'):
     """Safe stats for any role."""
     if role == 'landlord':
@@ -151,9 +151,9 @@ def get_user_stats(user_id, role='landlord'):
     return {'total_bills': 0, 'pending_bills_count': 0, 'paid_bills': 0}
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # LOGIN REQUIRED DECORATOR
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):

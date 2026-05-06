@@ -1,6 +1,6 @@
 {% extends "base_dashboard.html" %}
 
-{% block title %}Help & Support – SmartRent{% endblock %}
+{% block title %}Help & Support - SmartRent{% endblock %}
 {% block page_title %}Help & Support{% endblock %}
 {% block page_sub %}FAQs, guides and contact{% endblock %}
 {% block role_name %}{{ user.role | capitalize }}{% endblock %}
@@ -103,7 +103,7 @@
 <!-- Search -->
 <div class="help-search-wrap">
     <span class="help-search-ico"><i data-lucide="search" width="18" height="18"></i></span>
-    <input type="text" id="faqSearch" placeholder="Search for answers… e.g. 'how to pay rent'" oninput="filterFAQ(this)">
+    <input type="text" id="faqSearch" placeholder="Search for answers... e.g. 'how to pay rent'" oninput="filterFAQ(this)">
     <button class="help-search-clear" id="searchClear" onclick="clearSearch()">
         <i data-lucide="x" width="15" height="15"></i>
     </button>
@@ -127,7 +127,7 @@
         <div class="contact-icon ico-bg-amber"><i data-lucide="phone" width="20" height="20"></i></div>
         <div class="contact-name">Call us</div>
         <div class="contact-desc">+254 800 000 000</div>
-        <div class="contact-badge cb-amber"><i data-lucide="sun" width="8" height="8"></i> Mon – Fri, 8am – 6pm</div>
+        <div class="contact-badge cb-amber"><i data-lucide="sun" width="8" height="8"></i> Mon - Fri, 8am - 6pm</div>
     </a>
 </div>
 
@@ -297,7 +297,7 @@
             <div class="aside-head"><div class="aside-head-ico ico-bg-blue"><i data-lucide="contact" width="14" height="14"></i></div>Contact Details</div>
             <div class="aside-body">
                 <div class="aside-row"><div class="aside-row-ico"><i data-lucide="mail" width="14" height="14"></i></div><div class="aside-row-body"><div>support@smartrent.com</div><div class="aside-row-sub">General enquiries</div></div></div>
-                <div class="aside-row"><div class="aside-row-ico"><i data-lucide="phone" width="14" height="14"></i></div><div class="aside-row-body"><div>+254 800 000 000</div><div class="aside-row-sub">Mon–Fri 8am–6pm</div></div></div>
+                <div class="aside-row"><div class="aside-row-ico"><i data-lucide="phone" width="14" height="14"></i></div><div class="aside-row-body"><div>+254 800 000 000</div><div class="aside-row-sub">Mon-Fri 8am-6pm</div></div></div>
                 <div class="aside-row"><div class="aside-row-ico"><i data-lucide="map-pin" width="14" height="14"></i></div><div class="aside-row-body"><div>Nairobi, Kenya</div><div class="aside-row-sub">Head office</div></div></div>
             </div>
         </div>
@@ -351,7 +351,7 @@ function vote(btn) {
 function feedback(btn, type) {
     document.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('voted'));
     btn.classList.add('voted');
-    document.getElementById('feedbackText').textContent = type === 'yes' ? 'Thanks for the feedback!' : "Thanks — we'll work on improving this.";
+    document.getElementById('feedbackText').textContent = type === 'yes' ? 'Thanks for the feedback!' : "Thanks - we'll work on improving this.";
 }
 lucide.createIcons();
 </script>

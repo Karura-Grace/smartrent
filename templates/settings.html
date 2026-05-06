@@ -1,6 +1,6 @@
 {% extends "base_dashboard.html" %}
 
-{% block title %}Settings – SmartRent{% endblock %}
+{% block title %}Settings - SmartRent{% endblock %}
 {% block page_title %}Settings{% endblock %}
 {% block page_sub %}Account & Preferences{% endblock %}
 {% block role_name %}{{ user.role | capitalize }}{% endblock %}
@@ -195,16 +195,6 @@
                         <input class="s-input" type="tel" name="phone" placeholder="+254 700 000 000">
                     </div>
                 </div>
-                <div class="srow">
-                    <div class="srow-ico ico-bg-purple"><i data-lucide="map-pin" width="15" height="15"></i></div>
-                    <div class="srow-body">
-                        <div class="srow-label">Location</div>
-                        <div class="srow-sub">City or area you're based in</div>
-                    </div>
-                    <div class="srow-ctrl">
-                        <input class="s-input" type="text" name="location" placeholder="Nairobi, Kenya">
-                    </div>
-                </div>
 
                 {% if user.role == 'tenant' %}
                 <div class="srow">
@@ -218,7 +208,7 @@
                             <option value="">Select a property</option>
                             {% for p in properties_list %}
                             <option value="{{ p.id }}" {% if tenant_profile and tenant_profile.property_id == p.id %}selected{% endif %}>
-                                {{ p.name }}{% if p.address %} — {{ p.address }}{% endif %}
+                                {{ p.name }}{% if p.address %} - {{ p.address }}{% endif %}
                             </option>
                             {% endfor %}
                         </select>
@@ -320,10 +310,10 @@
                     <div class="srow-body"><div class="srow-label">Currency</div><div class="srow-sub">Used for amounts and reports</div></div>
                     <div class="srow-ctrl">
                         <select class="s-select" name="currency">
-                            <option value="KES">KES – Kenyan Shilling</option>
-                            <option value="USD">USD – US Dollar</option>
-                            <option value="EUR">EUR – Euro</option>
-                            <option value="GBP">GBP – British Pound</option>
+                            <option value="KES">KES - Kenyan Shilling</option>
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="GBP">GBP - British Pound</option>
                         </select>
                     </div>
                 </div>
@@ -443,7 +433,7 @@ const tenantPropertySelect = document.getElementById('tenantPropertySelect');
 const tenantUnitSelect = document.getElementById('tenantUnitSelect');
 async function loadTenantUnits(propertyId) {
     if (!tenantUnitSelect) return;
-    tenantUnitSelect.innerHTML = '<option value="">Loading units…</option>';
+    tenantUnitSelect.innerHTML = '<option value="">Loading units...</option>';
     try {
         const resp = await fetch(`/tenant/api/properties/${propertyId}/units`);
         const data = await resp.json();

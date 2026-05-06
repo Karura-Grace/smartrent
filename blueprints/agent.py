@@ -1,4 +1,4 @@
-# blueprints/agent.py
+﻿# blueprints/agent.py
 import os
 from flask import Blueprint, render_template, redirect, session, url_for, flash, request, current_app, make_response
 from helpers import login_required, save_property_image, sync_unit_count, serialize_units
@@ -7,6 +7,7 @@ from functools import wraps
 import MySQLdb
 from datetime import date, timedelta, datetime
 from werkzeug.security import generate_password_hash
+import secrets
 
 agent_bp = Blueprint('agent', __name__)
 
@@ -24,6 +25,14 @@ def get_cursor():
     except Exception:
         return conn.cursor()
 
+def _landlord_supports_agent_id(cur):
+    """True if `landlord` table has an `agent_id` column."""
+    try:
+        cur.execute("SHOW COLUMNS FROM landlord LIKE %s", ("agent_id",))
+        return bool(cur.fetchone())
+    except Exception:
+        return False
+
 
 def agent_required(f):
     @wraps(f)
@@ -34,10 +43,6 @@ def agent_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
-# ─────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────
 
 def get_overdue_count(agent_id):
     """Returns count of pending+overdue payments for this agent's properties."""
@@ -58,45 +63,61 @@ def get_overdue_count(agent_id):
         return 0
 
 
-# ─────────────────────────────────────────────
-# LANDLORDS (Agent-linked)
-# ─────────────────────────────────────────────
 
-@agent_bp.route('/agent/landlords')
+
+@agent_bp.route('/agent/landlord')
 @login_required
 @agent_required
-def agent_landlords():
+def agent_landlord():
     agent_id = session['user_id']
     cur = get_cursor()
     try:
-        cur.execute("""
-            SELECT al.id AS link_id,
-                   u.id AS landlord_id,
-                   u.first_name,
-                   u.last_name,
-                   u.email,
-                   (SELECT COUNT(*) FROM properties p WHERE p.landlord_id = u.id) AS properties_count
-            FROM agent_landlords al
-            JOIN users u ON u.id = al.landlord_id
-            WHERE al.agent_id = %s AND LOWER(u.role) = 'landlord'
-            ORDER BY u.first_name, u.last_name
-        """, (agent_id,))
-        landlords = []
+        if _landlord_supports_agent_id(cur):
+            cur.execute(
+                """
+                SELECT l.id AS landlord_id,
+                       l.first_name,
+                       l.last_name,
+                       l.email,
+                       (SELECT COUNT(*) FROM properties p WHERE p.landlord_id = l.id) AS properties_count
+                FROM landlord l
+                WHERE l.agent_id = %s
+                ORDER BY l.first_name, l.last_name
+                """,
+                (agent_id,),
+            )
+        else:
+            # Legacy: link table + landlord table
+            cur.execute(
+                """
+                SELECT l.id AS landlord_id,
+                       l.first_name,
+                       l.last_name,
+                       l.email,
+                       (SELECT COUNT(*) FROM properties p WHERE p.landlord_id = l.id) AS properties_count
+                FROM agent_landlord al
+                JOIN landlord l ON l.id = al.landlord_id
+                WHERE al.agent_id = %s
+                ORDER BY l.first_name, l.last_name
+                """,
+                (agent_id,),
+            )
+        landlord = []
         for r in cur.fetchall():
             row = dict(r)
             row['full_name'] = (
                 f"{row.get('first_name') or ''} {row.get('last_name') or ''}".strip()
                 or row.get('email') or 'Landlord'
             )
-            landlords.append(row)
+            landlord.append(row)
     except Exception:
-        landlords = []
+        landlord = []
     finally:
         cur.close()
-    return render_template('agent_landlords.html', user=session, landlords=landlords)
+    return render_template('agent_landlord.html', user=session, landlord=landlord)
 
 
-@agent_bp.route('/agent/landlords/link', methods=['POST'])
+@agent_bp.route('/agent/landlord/link', methods=['POST'])
 @login_required
 @agent_required
 def agent_link_landlord():
@@ -104,35 +125,45 @@ def agent_link_landlord():
     landlord_email = (request.form.get('landlord_email') or '').strip().lower()
     if not landlord_email:
         flash('Enter the landlord email.', 'error')
-        return redirect(url_for('agent.agent_landlords'))
+        return redirect(url_for('agent.agent_landlord'))
 
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        cur.execute(
-            "SELECT id, first_name, last_name, email, role FROM users WHERE LOWER(email) = %s LIMIT 1",
-            (landlord_email,)
-        )
-        u = cur.fetchone()
-        if not u or (u.get('role') or '').lower() != 'landlord':
+        cur.execute("SELECT id, email, agent_id FROM landlord WHERE LOWER(email) = %s LIMIT 1", (landlord_email,))
+        l = cur.fetchone()
+        if not l:
             flash('No landlord account found with that email.', 'error')
-            return redirect(url_for('agent.agent_landlords'))
+            return redirect(url_for('agent.agent_landlord'))
 
-        cur.execute(
-            "INSERT IGNORE INTO agent_landlords (agent_id, landlord_id) VALUES (%s, %s)",
-            (agent_id, u['id']),
-        )
-        conn.commit()
-        flash('Landlord linked successfully.', 'success')
+        if _landlord_supports_agent_id(cur):
+            current_agent = l.get("agent_id")
+            if current_agent == agent_id:
+                flash('That landlord is already linked to your agent account.', 'success')
+                return redirect(url_for('agent.agent_landlord'))
+            if current_agent:
+                flash('That landlord is already linked to another agent.', 'error')
+                return redirect(url_for('agent.agent_landlord'))
+
+            cur.execute("UPDATE landlord SET agent_id=%s WHERE id=%s", (agent_id, l["id"]))
+            conn.commit()
+            flash('Landlord linked successfully.', 'success')
+        else:
+            cur.execute(
+                "INSERT INTO agent_landlord (agent_id, landlord_id) VALUES (%s, %s)",
+                (agent_id, l["id"]),
+            )
+            conn.commit()
+            flash('Landlord linked successfully.', 'success')
     except Exception as e:
         conn.rollback()
         flash(f'Error linking landlord: {str(e)}', 'error')
     finally:
         cur.close()
-    return redirect(url_for('agent.agent_landlords'))
+    return redirect(url_for('agent.agent_landlord'))
 
 
-@agent_bp.route('/agent/landlords/create', methods=['POST'])
+@agent_bp.route('/agent/landlord/create', methods=['POST'])
 @login_required
 @agent_required
 def agent_create_landlord():
@@ -144,34 +175,46 @@ def agent_create_landlord():
 
     if not first_name or not last_name or not email or not password:
         flash('First name, last name, email and password are required.', 'error')
-        return redirect(url_for('agent.agent_landlords'))
+        return redirect(url_for('agent.agent_landlord'))
 
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        cur.execute("SELECT id, role FROM users WHERE LOWER(email) = %s LIMIT 1", (email,))
+        cur.execute("SELECT id, agent_id, user_id FROM landlord WHERE LOWER(email)=%s LIMIT 1", (email,))
         existing = cur.fetchone()
         if existing:
-            if (existing.get('role') or '').lower() != 'landlord':
-                flash('That email exists but is not a landlord account.', 'error')
-                return redirect(url_for('agent.agent_landlords'))
-            landlord_id = existing['id']
+            existing_agent = existing.get("agent_id")
+            if existing_agent and existing_agent != agent_id:
+                flash('That landlord email already exists and is linked to another agent.', 'error')
+                return redirect(url_for('agent.agent_landlord'))
+            landlord_id = existing["id"]
+            if _landlord_supports_agent_id(cur) and existing_agent != agent_id:
+                cur.execute("UPDATE landlord SET agent_id=%s WHERE id=%s", (agent_id, landlord_id))
         else:
-            # users.name is NOT NULL — set it to full name
-            full_name = f"{first_name} {last_name}".strip()
-            cur.execute(
-                """
-                INSERT INTO users (name, first_name, last_name, email, password, role)
-                VALUES (%s, %s, %s, %s, %s, 'landlord')
-                """,
-                (full_name, first_name, last_name, email, generate_password_hash(password)),
-            )
+            if _landlord_supports_agent_id(cur):
+                cur.execute(
+                    """
+                    INSERT INTO landlord (first_name, last_name, email, password, role, agent_id)
+                    VALUES (%s, %s, %s, %s, 'landlord', %s)
+                    """,
+                    (first_name, last_name, email, generate_password_hash(password), agent_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO landlord (first_name, last_name, email, password, role)
+                    VALUES (%s, %s, %s, %s, 'landlord')
+                    """,
+                    (first_name, last_name, email, generate_password_hash(password)),
+                )
             landlord_id = cur.lastrowid
 
-        cur.execute(
-            "INSERT IGNORE INTO agent_landlords (agent_id, landlord_id) VALUES (%s, %s)",
-            (agent_id, landlord_id),
-        )
+            if not _landlord_supports_agent_id(cur):
+                cur.execute(
+                    "INSERT INTO agent_landlord (agent_id, landlord_id) VALUES (%s, %s)",
+                    (agent_id, landlord_id),
+                )
+
         conn.commit()
         flash('Landlord saved and linked to your agent account.', 'success')
     except Exception as e:
@@ -179,10 +222,10 @@ def agent_create_landlord():
         flash(f'Error creating landlord: {str(e)}', 'error')
     finally:
         cur.close()
-    return redirect(url_for('agent.agent_landlords'))
+    return redirect(url_for('agent.agent_landlord'))
 
 
-@agent_bp.route('/agent/landlords/edit/<int:landlord_id>', methods=['POST'])
+@agent_bp.route('/agent/landlord/edit/<int:landlord_id>', methods=['POST'])
 @login_required
 @agent_required
 def agent_edit_landlord(landlord_id):
@@ -193,26 +236,35 @@ def agent_edit_landlord(landlord_id):
 
     if not first_name or not last_name or not email:
         flash('First name, last name, and email are required.', 'error')
-        return redirect(url_for('agent.agent_landlords'))
+        return redirect(url_for('agent.agent_landlord'))
 
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        cur.execute(
-            "SELECT 1 FROM agent_landlords WHERE agent_id = %s AND landlord_id = %s",
-            (agent_id, landlord_id),
-        )
-        if not cur.fetchone():
-            flash('Landlord not found for your account.', 'error')
-            return redirect(url_for('agent.agent_landlords'))
+        if _landlord_supports_agent_id(cur):
+            cur.execute("SELECT user_id FROM landlord WHERE id=%s AND agent_id=%s LIMIT 1", (landlord_id, agent_id))
+            row = cur.fetchone()
+            if not row:
+                flash('Landlord not found for your account.', 'error')
+                return redirect(url_for('agent.agent_landlord'))
+            user_id = (row or {}).get("user_id")
 
-        full_name = f"{first_name} {last_name}".strip()
-        cur.execute(
-            """UPDATE users
-               SET name=%s, first_name=%s, last_name=%s, email=%s
-               WHERE id=%s AND LOWER(role)='landlord'""",
-            (full_name, first_name, last_name, email, landlord_id),
-        )
+            cur.execute(
+                "UPDATE landlord SET first_name=%s, last_name=%s, email=%s WHERE id=%s AND agent_id=%s",
+                (first_name, last_name, email, landlord_id, agent_id),
+            )
+            if user_id:
+                cur.execute("UPDATE users SET email=%s WHERE id=%s", (email, user_id))
+        else:
+            cur.execute("SELECT 1 FROM agent_landlord WHERE agent_id=%s AND landlord_id=%s", (agent_id, landlord_id))
+            if not cur.fetchone():
+                flash('Landlord not found for your account.', 'error')
+                return redirect(url_for('agent.agent_landlord'))
+            cur.execute(
+                "UPDATE landlord SET first_name=%s, last_name=%s, email=%s WHERE id=%s",
+                (first_name, last_name, email, landlord_id),
+            )
+
         conn.commit()
         flash('Landlord updated.', 'success')
     except Exception as e:
@@ -220,10 +272,10 @@ def agent_edit_landlord(landlord_id):
         flash(f'Error updating landlord: {str(e)}', 'error')
     finally:
         cur.close()
-    return redirect(url_for('agent.agent_landlords'))
+    return redirect(url_for('agent.agent_landlord'))
 
 
-@agent_bp.route('/agent/landlords/unlink/<int:landlord_id>', methods=['POST'])
+@agent_bp.route('/agent/landlord/unlink/<int:landlord_id>', methods=['POST'])
 @login_required
 @agent_required
 def agent_unlink_landlord(landlord_id):
@@ -231,10 +283,13 @@ def agent_unlink_landlord(landlord_id):
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        cur.execute(
-            "DELETE FROM agent_landlords WHERE agent_id = %s AND landlord_id = %s",
-            (agent_id, landlord_id),
-        )
+        if _landlord_supports_agent_id(cur):
+            cur.execute("UPDATE landlord SET agent_id=NULL WHERE id=%s AND agent_id=%s", (landlord_id, agent_id))
+        else:
+            cur.execute(
+                "DELETE FROM agent_landlord WHERE agent_id = %s AND landlord_id = %s",
+                (agent_id, landlord_id),
+            )
         conn.commit()
         flash('Landlord unlinked.', 'success')
     except Exception as e:
@@ -242,10 +297,10 @@ def agent_unlink_landlord(landlord_id):
         flash(f'Error unlinking landlord: {str(e)}', 'error')
     finally:
         cur.close()
-    return redirect(url_for('agent.agent_landlords'))
+    return redirect(url_for('agent.agent_landlord'))
 
 
-@agent_bp.route('/agent/landlords/delete/<int:landlord_id>', methods=['POST'])
+@agent_bp.route('/agent/landlord/delete/<int:landlord_id>', methods=['POST'])
 @login_required
 @agent_required
 def agent_delete_landlord(landlord_id):
@@ -253,21 +308,32 @@ def agent_delete_landlord(landlord_id):
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        cur.execute(
-            "SELECT 1 FROM agent_landlords WHERE agent_id = %s AND landlord_id = %s",
-            (agent_id, landlord_id),
-        )
-        if not cur.fetchone():
-            flash('Landlord not found for your account.', 'error')
-            return redirect(url_for('agent.agent_landlords'))
+        user_id = None
+        if _landlord_supports_agent_id(cur):
+            cur.execute("SELECT user_id FROM landlord WHERE id=%s AND agent_id=%s LIMIT 1", (landlord_id, agent_id))
+            row = cur.fetchone()
+            if not row:
+                flash('Landlord not found for your account.', 'error')
+                return redirect(url_for('agent.agent_landlord'))
+            user_id = (row or {}).get("user_id")
+        else:
+            cur.execute("SELECT 1 FROM agent_landlord WHERE agent_id = %s AND landlord_id = %s", (agent_id, landlord_id))
+            if not cur.fetchone():
+                flash('Landlord not found for your account.', 'error')
+                return redirect(url_for('agent.agent_landlord'))
 
         cur.execute("SELECT COUNT(*) AS total FROM properties WHERE landlord_id = %s", (landlord_id,))
         if int((cur.fetchone() or {}).get('total') or 0) > 0:
             flash('Cannot delete this landlord because they have properties. Unlink instead.', 'error')
-            return redirect(url_for('agent.agent_landlords'))
+            return redirect(url_for('agent.agent_landlord'))
 
-        cur.execute("DELETE FROM agent_landlords WHERE agent_id = %s AND landlord_id = %s", (agent_id, landlord_id))
-        cur.execute("DELETE FROM users WHERE id = %s AND LOWER(role) = 'landlord'", (landlord_id,))
+        if _landlord_supports_agent_id(cur):
+            cur.execute("DELETE FROM landlord WHERE id=%s AND agent_id=%s", (landlord_id, agent_id))
+            if user_id:
+                cur.execute("DELETE FROM users WHERE id=%s AND LOWER(role)='landlord'", (user_id,))
+        else:
+            cur.execute("DELETE FROM agent_landlord WHERE agent_id = %s AND landlord_id = %s", (agent_id, landlord_id))
+            cur.execute("DELETE FROM landlord WHERE id=%s", (landlord_id,))
         conn.commit()
         flash('Landlord deleted.', 'success')
     except Exception as e:
@@ -275,12 +341,17 @@ def agent_delete_landlord(landlord_id):
         flash(f'Error deleting landlord: {str(e)}', 'error')
     finally:
         cur.close()
-    return redirect(url_for('agent.agent_landlords'))
+    return redirect(url_for('agent.agent_landlord'))
+
+@agent_bp.route('/my-landlords')
+@login_required
+@agent_required
+def list_landlords():
+    # Backwards-compatible alias for the agent landlords page.
+    return redirect(url_for('agent.agent_landlord'))
 
 
-# ─────────────────────────────────────────────
 # AGENT DASHBOARD
-# ─────────────────────────────────────────────
 
 @agent_bp.route('/agent-dashboard')
 @login_required
@@ -320,19 +391,19 @@ def agent_dashboard():
     """, (agent_id,))
     recent_units = [dict(r) for r in cur.fetchall()]
 
-    # Tenants — DB has no `unit` column; use unit_id joined to units.unit_number
+    # Tenants - DB has no `unit` column; use unit_id joined to units.unit_number
     cur.execute("""
         SELECT t.id, t.name, t.email, t.phone,
                u.unit_number,
                p.name AS property_name,
                t.status, t.amount
-        FROM   tenants t
+        FROM   tenant t
         JOIN   properties p ON t.property_id = p.id
         LEFT JOIN units u   ON u.id = t.unit_id
         WHERE  p.agent_id = %s
         ORDER  BY t.name
     """, (agent_id,))
-    tenants = [dict(r) for r in cur.fetchall()]
+    tenant = [dict(r) for r in cur.fetchall()]
 
     # Available months
     cur.execute("""
@@ -349,7 +420,7 @@ def agent_dashboard():
     seen = set()
     available_months = [m for m in available_months if not (m in seen or seen.add(m))]
 
-    # Month payments — payments.tenant_id links to tenants.id
+    # Month payments - payments.tenant_id links to tenant.id
     cur.execute("""
         SELECT pay.tenant_id,
                pay.Amount AS amount,
@@ -366,13 +437,13 @@ def agent_dashboard():
         if tid is not None and tid not in month_by_tenant:
             month_by_tenant[tid] = dict(r)
 
-    for t in tenants:
+    for t in tenant:
         pr = month_by_tenant.get(t.get('id'))
         st = (pr.get('status') if pr else '') or ''
         t['payment_status'] = 'Paid' if st.strip().lower() == 'paid' else 'Unpaid'
 
     month_payments = []
-    for t in tenants:
+    for t in tenant:
         pr = month_by_tenant.get(t.get('id')) or {}
         paid_on = pr.get('paid_on')
         month_payments.append({
@@ -383,7 +454,7 @@ def agent_dashboard():
             'payment_status': 'Paid' if t.get('payment_status') == 'Paid' else 'Unpaid',
         })
 
-    # Maintenance tickets — join unit_id, then property via units
+    # Maintenance tickets - join unit_id, then property via units
     cur.execute("""
         SELECT m.id, m.title, m.priority, m.status,
                m.unit_id, p.name AS property_name, m.created_at
@@ -396,7 +467,7 @@ def agent_dashboard():
     """, (agent_id,))
     tickets = [dict(r) for r in cur.fetchall()]
 
-    # Notices — notices has no `message` column named differently; use message column
+    # Notices - notices has no `message` column named differently; use message column
     cur.execute("""
         SELECT title, message, type, created_at AS sent_at
         FROM   notices
@@ -406,14 +477,14 @@ def agent_dashboard():
     """, (agent_id,))
     notices = [dict(r) for r in cur.fetchall()]
 
-    # Recent payments — Amount (capital A), join tenants.id = payments.tenant_id
+    # Recent payments - Amount (capital A), join tenant.id = payments.tenant_id
     cur.execute("""
         SELECT t.name AS tenant_name,
                pay.Amount AS amount,
                pay.paid_on AS date,
                pay.status
         FROM   payments pay
-        JOIN   tenants t    ON pay.tenant_id   = t.id
+        JOIN   tenant t    ON pay.tenant_id   = t.id
         JOIN   properties p ON pay.property_id = p.id
         WHERE  p.agent_id = %s
         ORDER  BY pay.paid_on DESC
@@ -426,12 +497,12 @@ def agent_dashboard():
     occupied_units   = sum(p['occupied_count'] for p in properties_summary)
     occupancy_rate   = round((occupied_units / total_units * 100) if total_units else 0)
     rent_collected   = sum(float(p.get('amount') or 0) for p in recent_payments if p.get('status') == 'Paid')
-    rent_outstanding = sum(float(t.get('amount') or 0) for t in tenants if t.get('payment_status') != 'Paid')
+    rent_outstanding = sum(float(t.get('amount') or 0) for t in tenant if t.get('payment_status') != 'Paid')
 
     return render_template('agent_dashboard.html',
         user             = session,
         properties       = recent_units,
-        tenant           = tenants,
+        tenant           = tenant,
         tickets          = tickets,
         notices          = notices,
         recent_payments  = recent_payments,
@@ -447,9 +518,8 @@ def agent_dashboard():
     )
 
 
-# ─────────────────────────────────────────────
+
 # RECORD PAYMENT
-# ─────────────────────────────────────────────
 
 @agent_bp.route('/agent/payments/record', methods=['POST'])
 @login_required
@@ -472,11 +542,11 @@ def agent_record_payment():
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        # tenants has no `unit` text column — get unit_number from joined units table
+        # tenant has no `unit` text column - get unit_number from joined units table
         cur.execute("""
             SELECT t.id, t.name, t.phone, t.unit_id, t.property_id,
                    u.unit_number
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE t.id = %s AND p.agent_id = %s
@@ -514,9 +584,9 @@ def agent_record_payment():
     return redirect(url_for('agent.agent_dashboard', tab='payments', month=month))
 
 
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 # RECEIPT HELPERS
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 
 def _agent_tenant_for_doc(agent_id: int, tenant_id: int):
     cur = get_cursor()
@@ -525,7 +595,7 @@ def _agent_tenant_for_doc(agent_id: int, tenant_id: int):
             SELECT t.id, t.name, t.email, t.phone, t.amount,
                    u.unit_number,
                    p.name AS property_name, p.id AS property_id
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE t.id = %s AND p.agent_id = %s
@@ -536,7 +606,7 @@ def _agent_tenant_for_doc(agent_id: int, tenant_id: int):
         cur.close()
 
 
-@agent_bp.route('/agent/tenants/<int:tenant_id>/receipt')
+@agent_bp.route('/agent/tenant/<int:tenant_id>/receipt')
 @login_required
 @agent_required
 def agent_tenant_receipt(tenant_id):
@@ -573,9 +643,9 @@ def agent_tenant_receipt(tenant_id):
     return resp
 
 
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 # PROPERTIES
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 
 @agent_bp.route('/agent/properties')
 @login_required
@@ -638,11 +708,12 @@ def agent_add_property():
     prop_type   = request.form.get('type', 'Apartments')
     description = request.form.get('description', '').strip()
 
+    # Total units is derived from the units table; start at 0 for new properties.
+    total_units = 0
     try:
-        total_units = int(request.form.get('total_units') or 0)
-        base_rent   = float(request.form.get('base_rent') or 0)
+        base_rent = float(request.form.get('base_rent') or 0)
     except (ValueError, TypeError):
-        total_units, base_rent = 0, 0.0
+        base_rent = 0.0
 
     if not name or not address:
         flash('Name and address are required.', 'error')
@@ -652,7 +723,7 @@ def agent_add_property():
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        # properties.landlord_id is NOT NULL — agent acts as landlord when self-creating
+        # properties.landlord_id is NOT NULL - agent acts as landlord when self-creating
         cur.execute("""
             INSERT INTO properties
                 (landlord_id, agent_id, name, address, city, type, total_units,
@@ -695,10 +766,9 @@ def agent_edit_property(property_id):
     description = (request.form.get('description') or '').strip()
 
     try:
-        total_units = int(request.form.get('total_units') or 0)
-        base_rent   = float(request.form.get('base_rent') or 0)
+        base_rent = float(request.form.get('base_rent') or 0)
     except (ValueError, TypeError):
-        total_units, base_rent = 0, 0.0
+        base_rent = 0.0
 
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -727,17 +797,17 @@ def agent_edit_property(property_id):
         if new_filename:
             cur.execute("""
                 UPDATE properties
-                SET name=%s, address=%s, city=%s, `type`=%s, total_units=%s,
+                SET name=%s, address=%s, city=%s, `type`=%s,
                     base_rent=%s, description=%s, status=%s, image=%s
                 WHERE id=%s AND agent_id=%s
-            """, (name, address, city, prop_type, total_units, base_rent, description, status, new_filename, property_id, agent_id))
+            """, (name, address, city, prop_type, base_rent, description, status, new_filename, property_id, agent_id))
         else:
             cur.execute("""
                 UPDATE properties
-                SET name=%s, address=%s, city=%s, `type`=%s, total_units=%s,
+                SET name=%s, address=%s, city=%s, `type`=%s,
                     base_rent=%s, description=%s, status=%s
                 WHERE id=%s AND agent_id=%s
-            """, (name, address, city, prop_type, total_units, base_rent, description, status, property_id, agent_id))
+            """, (name, address, city, prop_type, base_rent, description, status, property_id, agent_id))
 
         conn.commit()
         flash('Property updated successfully!', 'success')
@@ -789,9 +859,9 @@ def agent_delete_property(property_id):
     return redirect(url_for('agent.agent_properties'))
 
 
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 # UNITS
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 
 @agent_bp.route('/agent/properties/<int:property_id>/units')
 @login_required
@@ -812,7 +882,7 @@ def agent_get_units(property_id):
                t.name  AS tenant_name,
                t.phone AS tenant_phone
         FROM units u
-        LEFT JOIN tenants t ON t.id = u.tenant_id
+        LEFT JOIN tenant t ON t.id = u.tenant_id
         WHERE u.property_id = %s
         ORDER BY u.unit_number
     """, (property_id,))
@@ -834,16 +904,16 @@ def agent_units():
         """, (agent_id,))
         properties = [dict(r) for r in cur.fetchall()]
 
-        # Tenants — name via tenants.name; unit number via join
+    # Tenants - name via tenant.name; unit number via join
         cur.execute("""
-            SELECT t.id, t.name, u.unit_number AS unit, t.phone
-            FROM tenants t
+            SELECT t.id, t.name, u.unit_number AS unit, t.phone, t.property_id
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE p.agent_id = %s
             ORDER BY t.name
         """, (agent_id,))
-        tenants = [dict(r) for r in cur.fetchall()]
+        tenant = [dict(r) for r in cur.fetchall()]
 
         cur.execute("""
             SELECT COUNT(*) AS total FROM units u
@@ -868,7 +938,7 @@ def agent_units():
         stats = {'total_units': total_units, 'occupied': occupied, 'vacant': vacant}
     finally:
         cur.close()
-    return render_template('units.html', user=session, properties=properties, tenants=tenants, stats=stats)
+    return render_template('units.html', user=session, properties=properties, tenant=tenant, stats=stats)
 
 
 @agent_bp.route('/agent/units/add', methods=['POST'])
@@ -922,12 +992,12 @@ def agent_add_unit():
 
         if tenant_id:
             cur.execute("""
-                SELECT t.id FROM tenants t
+                SELECT t.id FROM tenant t
                 JOIN properties p ON p.id = t.property_id
-                WHERE t.id = %s AND p.agent_id = %s
-            """, (tenant_id, agent_id))
+                WHERE t.id = %s AND p.agent_id = %s AND t.property_id = %s
+            """, (tenant_id, agent_id, property_id_int))
             if not cur.fetchone():
-                flash('Selected tenant not found for your account.', 'error')
+                flash('Selected tenant not found for this property.', 'error')
                 return redirect(request.referrer or url_for('agent.agent_units'))
             if status != 'Maintenance':
                 status = 'Occupied'
@@ -942,9 +1012,9 @@ def agent_add_unit():
         new_unit_id = cur.lastrowid
         conn.commit()
 
-        # Keep tenants.unit_id in sync
+        # Keep tenant.unit_id in sync
         if tenant_id:
-            cur.execute("UPDATE tenants SET unit_id = %s WHERE id = %s", (new_unit_id, tenant_id))
+            cur.execute("UPDATE tenant SET unit_id = %s WHERE id = %s", (new_unit_id, tenant_id))
             conn.commit()
 
         sync_unit_count(property_id_int)
@@ -1000,18 +1070,18 @@ def agent_edit_unit(unit_id):
         # Clear old tenant's unit_id if changing tenant
         if previous_tenant_id and previous_tenant_id != tenant_id:
             cur.execute(
-                "UPDATE tenants SET unit_id = NULL WHERE id = %s AND unit_id = %s",
+                "UPDATE tenant SET unit_id = NULL WHERE id = %s AND unit_id = %s",
                 (previous_tenant_id, unit_id),
             )
 
         if tenant_id:
             cur.execute("""
-                SELECT t.id FROM tenants t
+                SELECT t.id FROM tenant t
                 JOIN properties p ON p.id = t.property_id
-                WHERE t.id = %s AND p.agent_id = %s
-            """, (tenant_id, agent_id))
+                WHERE t.id = %s AND p.agent_id = %s AND t.property_id = %s
+            """, (tenant_id, agent_id, property_id))
             if not cur.fetchone():
-                flash('Selected tenant not found for your account.', 'error')
+                flash('Selected tenant not found for this property.', 'error')
                 return redirect(url_for('agent.agent_units'))
 
             # Vacate any other unit this tenant was assigned to
@@ -1023,9 +1093,9 @@ def agent_edit_unit(unit_id):
                 WHERE u.tenant_id = %s AND u.id <> %s AND p.agent_id = %s
             """, (tenant_id, unit_id, agent_id))
 
-            # Update tenant record — use unit_id (FK) and amount for rent
+            # Update tenant record - use unit_id (FK) and amount for rent
             cur.execute("""
-                UPDATE tenants
+                UPDATE tenant
                 SET property_id = %s, unit_id = %s, amount = %s
                 WHERE id = %s
             """, (property_id, unit_id, rent, tenant_id))
@@ -1072,7 +1142,7 @@ def agent_delete_unit(unit_id):
 
         property_id = unit['property_id']
         # Orphan tenant's unit reference before deleting
-        cur.execute("UPDATE tenants SET unit_id = NULL WHERE unit_id = %s", (unit_id,))
+        cur.execute("UPDATE tenant SET unit_id = NULL WHERE unit_id = %s", (unit_id,))
         cur.execute("DELETE FROM units WHERE id = %s", (unit_id,))
         conn.commit()
         sync_unit_count(property_id)
@@ -1086,22 +1156,22 @@ def agent_delete_unit(unit_id):
         cur.close()
 
 
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 # TENANTS
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 
-@agent_bp.route('/agent/tenants')
+@agent_bp.route('/agent/tenant')
 @login_required
 @agent_required
-def agent_tenants():
+def agent_tenant():
     agent_id = session['user_id']
     cur = get_cursor()
     cur.execute("""
         SELECT t.id, t.user_id, t.name, t.name, t.email, t.phone,
-               t.amount, t.status, t.property_id, t.created_at,
+               t.amount, t.status, t.property_id, t.unit_id, t.created_at,
                u.unit_number,
                p.name AS property_name
-        FROM   tenants t
+        FROM   tenant t
         LEFT JOIN properties p ON p.id = t.property_id
         LEFT JOIN units u      ON u.id = t.unit_id
         WHERE  p.agent_id = %s
@@ -1114,11 +1184,10 @@ def agent_tenants():
             continue
         t['id']           = int(t['id'])
         t['rent']         = float(t.get('amount') or 0)
-        t['unit_number']  = t.get('unit_number') or '—'
-        t['property_name'] = t.get('property_name') or '—'
-        # No lease_start/lease_end in tenants table — omit or show placeholder
-        t['lease_start']  = '—'
-        t['lease_end']    = '—'
+        t['unit_number']  = t.get('unit_number') or '-'
+        t['property_name'] = t.get('property_name') or '-'
+        t['unit_id']      = int(t.get('unit_id') or 0) if t.get('unit_id') else None
+        t['property_id']  = int(t.get('property_id') or 0) if t.get('property_id') else None
         status = (t.get('status') or 'Active').strip().title()
         t['status']       = status
         t['status_color'] = 'active' if status == 'Active' else 'expiring' if status == 'Expiring' else 'inactive'
@@ -1127,35 +1196,17 @@ def agent_tenants():
     cur.execute("SELECT id, name FROM properties WHERE agent_id = %s ORDER BY name", (agent_id,))
     properties = [dict(r) for r in cur.fetchall()]
 
-    cur.execute("""
-        SELECT u.id, u.unit_number, p.name AS property_name, u.rent
-        FROM units u
-        JOIN properties p ON p.id = u.property_id
-        WHERE u.status = 'Vacant' AND p.agent_id = %s
-        ORDER BY p.name, u.unit_number
-        LIMIT 20
-    """, (agent_id,))
-    vacant_units = [dict(r) for r in cur.fetchall()]
-
     today       = date.today()
     month_start = today.replace(day=1)
 
     cur.execute("""
-        SELECT COUNT(*) AS cnt FROM tenants t
+        SELECT COUNT(*) AS cnt FROM tenant t
         JOIN properties p ON p.id = t.property_id
         WHERE p.agent_id = %s AND t.created_at >= %s
     """, (agent_id, month_start))
     new_this_month = (cur.fetchone() or {}).get('cnt', 0)
 
-    # Expiring: use leases table since tenants has no lease_end
-    cur.execute("""
-        SELECT COUNT(*) AS cnt FROM leases l
-        JOIN properties p ON p.id = l.property_id
-        WHERE p.agent_id = %s
-          AND l.end_date BETWEEN %s AND %s
-          AND LOWER(l.status) = 'active'
-    """, (agent_id, today, today + timedelta(days=60)))
-    expiring = (cur.fetchone() or {}).get('cnt', 0)
+    expiring = 0
 
     cur.execute("""
         SELECT COUNT(*) AS cnt FROM units u
@@ -1168,56 +1219,75 @@ def agent_tenants():
     cur.close()
     return render_template('tenant.html',
         user=session, tenant=tenant_list, properties=properties,
-        vacant_units=vacant_units, stats=stats,
+        vacant_units=[], stats=stats,
         pending_overdue=get_overdue_count(agent_id),
     )
 
 
-@agent_bp.route('/agent/tenants/add', methods=['POST'])
+@agent_bp.route('/agent/tenant/add', methods=['POST'])
 @login_required
 @agent_required
 def agent_add_tenant():
-    name        = request.form.get('name', '').strip()
-    phone       = request.form.get('phone', '').strip()
-    email       = request.form.get('email', '').strip()
-    first_name  = request.form.get('first_name', '').strip()
-    last_name   = request.form.get('last_name', '').strip()
-    amount      = request.form.get('amount', '0').strip()
-    property_id = request.form.get('property_id', '').strip()
-    unit_id_raw = request.form.get('unit_id', '').strip()
+    name        = (request.form.get('name') or '').strip()
+    phone       = (request.form.get('phone') or '').strip()
+    email       = (request.form.get('email') or '').strip().lower()
+    property_id = (request.form.get('property_id') or '').strip()
+    unit_id_raw = (request.form.get('unit_id') or '').strip()
 
-    # Allow name to be derived from first+last if not supplied separately
-    if not name and first_name:
-        name = f"{first_name} {last_name}".strip()
-
-    if not name or not phone or not property_id:
-        flash('Name, phone, and property are required.', 'error')
-        return redirect(url_for('agent.agent_tenants'))
+    if not name or not phone or not email or not property_id or not unit_id_raw:
+        flash('Name, phone, email, property, and unit are required.', 'error')
+        return redirect(url_for('agent.agent_tenant'))
 
     try:
         property_id_int = int(property_id)
-        amount_f        = float(amount)
-        unit_id         = int(unit_id_raw) if unit_id_raw else None
+        unit_id         = int(unit_id_raw)
     except ValueError:
-        flash('Invalid property, unit, or rent amount.', 'error')
-        return redirect(url_for('agent.agent_tenants'))
+        flash('Invalid property or unit.', 'error')
+        return redirect(url_for('agent.agent_tenant'))
 
     agent_id = session['user_id']
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        cur.execute("SELECT id FROM properties WHERE id = %s AND agent_id = %s", (property_id_int, agent_id))
-        if not cur.fetchone():
+        cur.execute("SELECT id, base_rent FROM properties WHERE id = %s AND agent_id = %s LIMIT 1", (property_id_int, agent_id))
+        prop = cur.fetchone()
+        if not prop:
             flash('Property not found.', 'error')
-            return redirect(url_for('agent.agent_tenants'))
+            return redirect(url_for('agent.agent_tenant'))
 
         cur.execute("""
-            INSERT INTO tenants
+            SELECT u.id, u.unit_number, u.tenant_id, u.status, u.rent
+            FROM units u
+            JOIN properties p ON p.id = u.property_id
+            WHERE u.id = %s AND p.id = %s AND p.agent_id = %s
+            LIMIT 1
+        """, (unit_id, property_id_int, agent_id))
+        unit_row = cur.fetchone()
+        if not unit_row:
+            flash('Unit not found for that property.', 'error')
+            return redirect(url_for('agent.agent_tenant'))
+        if (unit_row.get('tenant_id') or None) is not None:
+            flash('That unit is already assigned to another tenant.', 'error')
+            return redirect(url_for('agent.agent_tenant'))
+        if (unit_row.get('status') or '') != 'Vacant':
+            flash('That unit is not available (must be Vacant).', 'error')
+            return redirect(url_for('agent.agent_tenant'))
+
+        unit_label = unit_row.get('unit_number')
+        rent_amount = float(unit_row.get('rent') or 0) or float((prop or {}).get('base_rent') or 0) or 0.0
+
+        temp_password = secrets.token_urlsafe(8)
+        hashed_password = generate_password_hash(temp_password)
+
+        cur.execute("""
+            INSERT INTO tenant
                 (name, phone, email, amount, status,
                  property_id, unit_id, created_at)
             VALUES (%s, %s, %s, %s, 'Active', %s, %s, NOW())
-        """, (name, phone, email, amount_f, property_id_int, unit_id))
+        """, (name, phone, email, rent_amount, property_id_int, unit_id))
         new_tenant_id = cur.lastrowid
+
+        cur.execute("UPDATE tenant SET unit=%s, password=%s, role='tenant' WHERE id=%s", (unit_label, hashed_password, new_tenant_id))
 
         # Mark unit as occupied
         if unit_id:
@@ -1226,64 +1296,93 @@ def agent_add_tenant():
                 (new_tenant_id, unit_id)
             )
         conn.commit()
-        flash(f'{name} added successfully!', 'success')
+        flash(f'{name} added. Tenant login email: {email} | Temporary password: {temp_password}', 'success')
     except Exception as e:
         conn.rollback()
         flash(f'Error adding tenant: {str(e)}', 'error')
     finally:
         cur.close()
-    return redirect(url_for('agent.agent_tenants'))
+    return redirect(url_for('agent.agent_tenant'))
 
 
-@agent_bp.route('/agent/tenants/edit/<int:tenant_id>', methods=['POST'])
+@agent_bp.route('/agent/tenant/edit/<int:tenant_id>', methods=['POST'])
 @login_required
 @agent_required
 def agent_edit_tenant(tenant_id):
-    name        = request.form.get('name', '').strip()
-    phone       = request.form.get('phone', '').strip()
-    email       = request.form.get('email', '').strip()
-    first_name  = request.form.get('first_name', '').strip()
-    last_name   = request.form.get('last_name', '').strip()
-    amount      = request.form.get('amount', '0').strip()
-    property_id = request.form.get('property_id', '').strip()
-    unit_id_raw = request.form.get('unit_id', '').strip()
+    name        = (request.form.get('name') or '').strip()
+    phone       = (request.form.get('phone') or '').strip()
+    email       = (request.form.get('email') or '').strip().lower()
+    property_id = (request.form.get('property_id') or '').strip()
+    unit_id_raw = (request.form.get('unit_id') or '').strip()
+
+    if not name or not phone or not email or not property_id or not unit_id_raw:
+        flash('Name, phone, email, property, and unit are required.', 'error')
+        return redirect(url_for('agent.agent_tenant'))
 
     try:
-        amount_f    = float(amount) if amount != '' else 0.0
-        property_id = int(property_id) if property_id else None
-        unit_id     = int(unit_id_raw) if unit_id_raw else None
+        property_id = int(property_id)
+        unit_id     = int(unit_id_raw)
     except ValueError:
-        flash('Invalid values.', 'error')
-        return redirect(url_for('agent.agent_tenants'))
+        flash('Invalid property or unit.', 'error')
+        return redirect(url_for('agent.agent_tenant'))
 
     agent_id = session['user_id']
     conn = get_conn()
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     try:
-        if not name and first_name:
-            name = f"{first_name} {last_name}".strip()
-
         cur.execute("""
-            SELECT t.id FROM tenants t
+            SELECT t.id, t.unit_id AS previous_unit_id
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             WHERE t.id = %s AND p.agent_id = %s
         """, (tenant_id, agent_id))
-        if not cur.fetchone():
+        existing = cur.fetchone()
+        if not existing:
             flash('Tenant not found.', 'error')
-            return redirect(url_for('agent.agent_tenants'))
+            return redirect(url_for('agent.agent_tenant'))
+        previous_unit_id = existing.get('previous_unit_id')
 
-        if property_id:
-            cur.execute("SELECT id FROM properties WHERE id = %s AND agent_id = %s", (property_id, agent_id))
-            if not cur.fetchone():
-                flash('Property not found.', 'error')
-                return redirect(url_for('agent.agent_tenants'))
+        cur.execute("SELECT id, base_rent FROM properties WHERE id = %s AND agent_id = %s LIMIT 1", (property_id, agent_id))
+        prop = cur.fetchone()
+        if not prop:
+            flash('Property not found.', 'error')
+            return redirect(url_for('agent.agent_tenant'))
 
         cur.execute("""
-            UPDATE tenants
+            SELECT u.id, u.unit_number, u.tenant_id, u.status, u.rent
+            FROM units u
+            JOIN properties p ON p.id = u.property_id
+            WHERE u.id = %s AND p.id = %s AND p.agent_id = %s
+            LIMIT 1
+        """, (unit_id, property_id, agent_id))
+        unit_row = cur.fetchone()
+        if not unit_row:
+            flash('Unit not found for that property.', 'error')
+            return redirect(url_for('agent.agent_tenant'))
+        occupied_by = unit_row.get('tenant_id')
+        if occupied_by and int(occupied_by) != int(tenant_id):
+            flash('That unit is already assigned to another tenant.', 'error')
+            return redirect(url_for('agent.agent_tenant'))
+        if not occupied_by and (unit_row.get('status') or '') != 'Vacant':
+            flash('That unit is not available (must be Vacant).', 'error')
+            return redirect(url_for('agent.agent_tenant'))
+
+        unit_label = unit_row.get('unit_number')
+        rent_amount = float(unit_row.get('rent') or 0) or float((prop or {}).get('base_rent') or 0) or 0.0
+
+        cur.execute("""
+            UPDATE tenant
             SET name=%s, phone=%s, email=%s,
                 amount=%s, property_id=%s, unit_id=%s
             WHERE id=%s
-        """, (name, phone, email, amount_f, property_id, unit_id, tenant_id))
+        """, (name, phone, email, rent_amount, property_id, unit_id, tenant_id))
+        cur.execute("UPDATE tenant SET unit=%s WHERE id=%s", (unit_label, tenant_id))
+
+        if previous_unit_id and int(previous_unit_id) != int(unit_id):
+            cur.execute(
+                "UPDATE units SET status='Vacant', tenant_id=NULL WHERE id=%s AND tenant_id=%s",
+                (previous_unit_id, tenant_id),
+            )
 
         if unit_id:
             cur.execute(
@@ -1297,10 +1396,10 @@ def agent_edit_tenant(tenant_id):
         flash(f'Error updating tenant: {str(e)}', 'error')
     finally:
         cur.close()
-    return redirect(url_for('agent.agent_tenants'))
+    return redirect(url_for('agent.agent_tenant'))
 
 
-@agent_bp.route('/agent/tenants/<int:tenant_id>/delete', methods=['POST'])
+@agent_bp.route('/agent/tenant/<int:tenant_id>/delete', methods=['POST'])
 @login_required
 @agent_required
 def agent_delete_tenant(tenant_id):
@@ -1310,14 +1409,14 @@ def agent_delete_tenant(tenant_id):
     try:
         cur.execute("""
             SELECT t.id, t.name, t.unit_id
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             WHERE t.id = %s AND p.agent_id = %s
         """, (tenant_id, agent_id))
         t = cur.fetchone()
         if not t:
             flash('Tenant not found.', 'error')
-            return redirect(url_for('agent.agent_tenants'))
+            return redirect(url_for('agent.agent_tenant'))
 
         # Free the unit
         if t.get('unit_id'):
@@ -1325,7 +1424,7 @@ def agent_delete_tenant(tenant_id):
                 "UPDATE units SET status='Vacant', tenant_id=NULL WHERE id=%s AND tenant_id=%s",
                 (t['unit_id'], tenant_id)
             )
-        cur.execute("DELETE FROM tenants WHERE id = %s", (tenant_id,))
+        cur.execute("DELETE FROM tenant WHERE id = %s", (tenant_id,))
         conn.commit()
         flash(f'{t.get("name") or "Tenant"} removed successfully.', 'success')
     except Exception as e:
@@ -1333,12 +1432,8 @@ def agent_delete_tenant(tenant_id):
         flash(f'Error removing tenant: {str(e)}', 'error')
     finally:
         cur.close()
-    return redirect(url_for('agent.agent_tenants'))
+    return redirect(url_for('agent.agent_tenant'))
 
-
-# ─────────────────────────────────────────────
-# MAINTENANCE
-# ─────────────────────────────────────────────
 
 @agent_bp.route('/agent/maintenance')
 @login_required
@@ -1346,18 +1441,18 @@ def agent_delete_tenant(tenant_id):
 def agent_maintenance():
     agent_id = session['user_id']
     cur = get_cursor()
-    # maintenance_requests.property_id exists — use it directly (faster, no unit join needed)
+    # maintenance_requests.property_id exists - use it directly (faster, no unit join needed)
     cur.execute("""
         SELECT m.id, m.title, m.description, m.priority, m.status,
                m.unit_id, 
                p.name AS property_name,
                u.unit_number,
-               COALESCE(t.name, '—') AS tenant_name,
+               COALESCE(t.name, '-') AS tenant_name,
                m.created_at, m.updated_at
         FROM maintenance_requests m
         LEFT JOIN properties p ON p.id = m.property_id
         LEFT JOIN units u      ON u.id = m.unit_id
-        LEFT JOIN tenants t    ON t.unit_id = m.unit_id
+        LEFT JOIN tenant t    ON t.unit_id = m.unit_id
         WHERE p.agent_id = %s
         ORDER BY FIELD(m.priority,'High','Medium','Low'), m.created_at DESC
     """, (agent_id,))
@@ -1390,7 +1485,7 @@ def agent_maintenance():
 @agent_required
 def update_ticket(ticket_id):
     new_status = request.form.get('status', '').strip()
-    if new_status not in {'Open', 'In Progress', 'Resolved', 'Closed'}:
+    if new_status not in {'Open', 'Seen', 'In Progress', 'Resolved', 'Closed'}:
         flash('Invalid status.', 'error')
         return redirect(url_for('agent.agent_maintenance'))
 
@@ -1414,9 +1509,9 @@ def update_ticket(ticket_id):
     return redirect(url_for('agent.agent_maintenance'))
 
 
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 # NOTICES
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 
 @agent_bp.route('/agent/notices')
 @login_required
@@ -1439,13 +1534,13 @@ def agent_notices():
         SELECT t.id, t.name, t.email, t.phone, t.property_id,
                u.unit_number,
                p.name AS property_name
-        FROM tenants t
+        FROM tenant t
         JOIN properties p ON p.id = t.property_id
         LEFT JOIN units u ON u.id = t.unit_id
         WHERE p.agent_id = %s
         ORDER BY p.name, u.unit_number, t.name
     """, (agent_id,))
-    tenants = [dict(r) for r in cur.fetchall()]
+    tenant = [dict(r) for r in cur.fetchall()]
 
     today = date.today()
     month_start = today.replace(day=1)
@@ -1457,8 +1552,8 @@ def agent_notices():
     last_sent = notices[0]['sent_at'] if notices else None
     cur.close()
     return render_template('send_notices.html',
-        user=session, notices=notices, properties=properties, tenants=tenants,
-        sent_this_month=sent_this_month, recipients_total=len(tenants),
+        user=session, notices=notices, properties=properties, tenant=tenant,
+        sent_this_month=sent_this_month, recipients_total=len(tenant),
         last_sent=last_sent, pending_overdue=get_overdue_count(agent_id),
     )
 
@@ -1490,7 +1585,7 @@ def notice():
         placeholders = ",".join(["%s"] * len(tenant_ids))
         cur.execute(f"""
             SELECT DISTINCT t.property_id, p.landlord_id
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             WHERE t.id IN ({placeholders}) AND p.agent_id = %s
         """, (*tenant_ids, agent_id))
@@ -1518,9 +1613,9 @@ def notice():
     return redirect(url_for('agent.agent_notices'))
 
 
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 # PAYMENTS
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 
 @agent_bp.route('/agent/payments')
 @login_required
@@ -1559,7 +1654,7 @@ def agent_payments():
         SELECT t.id, t.name, t.phone, t.email, t.amount,
                u.unit_number,
                p.id AS property_id, p.name AS property_name
-        FROM tenants t
+        FROM tenant t
         JOIN properties p ON p.id = t.property_id
         LEFT JOIN units u ON u.id = t.unit_id
         WHERE p.agent_id = %s
@@ -1571,7 +1666,7 @@ def agent_payments():
     sql += " ORDER BY p.name, t.name"
 
     cur.execute(sql, tuple(params))
-    tenants = [dict(r) for r in cur.fetchall()]
+    tenant = [dict(r) for r in cur.fetchall()]
 
     cur.execute("""
         SELECT pay.tenant_id,
@@ -1584,20 +1679,20 @@ def agent_payments():
     payment_by_tenant = {r['tenant_id']: dict(r) for r in cur.fetchall() if r.get('tenant_id')}
 
     payments = []
-    for t in tenants:
+    for t in tenant:
         tid = t.get('id')
         pay = payment_by_tenant.get(tid) or {}
         is_paid = (pay.get('status') or '').strip().lower() == 'paid'
         payments.append({
             'tenant_id':    tid,
             'full_name':    t.get('name'),
-            'unit':         t.get('unit_number') or '—',
-            'property_name': t.get('property_name') or '—',
+            'unit':         t.get('unit_number') or '-',
+            'property_name': t.get('property_name') or '-',
             'amount_due':   float(pay.get('amount') or t.get('amount') or 0),
-            'paid_on':      str(pay.get('paid_on'))[:10] if pay.get('paid_on') else '—',
-            'method':       pay.get('method') or '—',
+            'paid_on':      str(pay.get('paid_on'))[:10] if pay.get('paid_on') else '-',
+            'method':       pay.get('method') or '-',
             'status':       'Paid' if is_paid else 'Unpaid',
-            'reference':    pay.get('reference') or '—',
+            'reference':    pay.get('reference') or '-',
         })
 
     collected       = sum(p['amount_due'] for p in payments if p['status'] == 'Paid')
@@ -1613,7 +1708,7 @@ def agent_payments():
     cur.close()
     return render_template('agent_payments.html',
         user=session, properties=properties,
-        selected_property_id=property_id_int, tenants=tenants,
+        selected_property_id=property_id_int, tenant=tenant,
         payments=payments, stats=stats,
         available_months=available_months, selected_month=selected_month,
         paid_count=units_paid, unpaid_count=total_units_cnt - units_paid,
@@ -1621,9 +1716,9 @@ def agent_payments():
     )
 
 
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 # PENALTIES
-# ─────────────────────────────────────────────
+# ----------------------------------------------
 
 @agent_bp.route('/agent/penalties')
 @login_required
@@ -1637,7 +1732,7 @@ def agent_penalties():
                pay.status, u.unit_number,
                p.name AS property_name, pay.month
         FROM   payments pay
-        JOIN   tenants t    ON pay.tenant_id    = t.id
+        JOIN   tenant t    ON pay.tenant_id    = t.id
         JOIN   properties p ON pay.property_id  = p.id
         LEFT JOIN units u   ON pay.unit_id      = u.id
         WHERE  p.agent_id = %s AND LOWER(pay.status) = 'overdue'
@@ -1649,7 +1744,7 @@ def agent_penalties():
         amt = float(r.get('amount') or 0)
         r['amount']          = amt
         r['agent_commission'] = round(amt * COMMISSION_RATE, 2)
-        r['date']            = str(r.get('date'))[:10] if r.get('date') else '—'
+        r['date']            = str(r.get('date'))[:10] if r.get('date') else '-'
         penalties.append(r)
 
     total_overdue_amount = round(sum(p['amount'] for p in penalties), 2)
@@ -1664,9 +1759,8 @@ def agent_penalties():
     )
 
 
-# ─────────────────────────────────────────────
 # WALLET
-# ─────────────────────────────────────────────
+
 
 @agent_bp.route('/agent/wallet')
 @login_required
@@ -1727,7 +1821,7 @@ def agent_wallet():
                pay.paid_on     AS date,
                p.name          AS property_name
         FROM   payments pay
-        JOIN   tenants t    ON pay.tenant_id    = t.id
+        JOIN   tenant t    ON pay.tenant_id    = t.id
         JOIN   properties p ON pay.property_id  = p.id
         WHERE  p.agent_id = %s AND LOWER(pay.status) = 'paid'
         ORDER  BY pay.paid_on DESC
@@ -1738,7 +1832,7 @@ def agent_wallet():
         r = dict(row)
         r['rent_amount'] = float(r.get('rent_amount') or 0)
         r['commission']  = float(r.get('commission') or 0)
-        r['date']        = str(r.get('date'))[:10] if r.get('date') else '—'
+        r['date']        = str(r.get('date'))[:10] if r.get('date') else '-'
         transactions.append(r)
     cur.close()
 
@@ -1751,41 +1845,62 @@ def agent_wallet():
     )
 
 
-# ─────────────────────────────────────────────
+
 # REPORTS
-# ─────────────────────────────────────────────
 
 @agent_bp.route('/agent/reports')
 @login_required
 @agent_required
 def agent_reports():
     agent_id = session['user_id']
-    cur = get_cursor()
-    cur.execute("""
-        SELECT p.name,
-               COUNT(u.id)                                         AS total_units,
-               SUM(u.status = 'Occupied')                          AS occupied,
-               ROUND(SUM(u.status='Occupied') / COUNT(u.id) * 100) AS occupancy_pct
-        FROM   properties p
-        JOIN   units u ON u.property_id = p.id
-        WHERE  p.agent_id = %s
-        GROUP  BY p.id, p.name
-    """, (agent_id,))
-    occupancy_report = [dict(r) for r in cur.fetchall()]
+    from datetime import date as _date
+    import blueprints.reports as reports_mod
 
-    cur.execute("""
-        SELECT
-            SUM(CASE WHEN LOWER(pay.status)='paid'  THEN pay.Amount ELSE 0 END) AS collected,
-            SUM(CASE WHEN LOWER(pay.status)!='paid' THEN pay.Amount ELSE 0 END) AS outstanding
-        FROM   payments pay
-        JOIN   properties p ON pay.property_id = p.id
-        WHERE  p.agent_id = %s
-          AND  MONTH(pay.paid_on) = MONTH(NOW())
-          AND  YEAR(pay.paid_on)  = YEAR(NOW())
-    """, (agent_id,))
-    monthly = dict(cur.fetchone() or {})
-    cur.close()
-    return render_template('reports.html',
-        user=session, occupancy_report=occupancy_report, monthly=monthly,
+    today = _date.today()
+    year = today.year
+    month = today.month
+    months = list(range(max(1, month - 5), month + 1))
+
+    monthly_rows = reports_mod._get_income_expense_monthly(year, months)
+    property_rows = reports_mod._get_occupancy_by_property(year, month)
+
+    income_m = (monthly_rows[-1]["income"] if monthly_rows else 0)
+    expenses_m = (monthly_rows[-1]["expenses"] if monthly_rows else 0)
+    net_m = (monthly_rows[-1]["net"] if monthly_rows else 0)
+
+    # YTD income
+    cur = get_cursor()
+    try:
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(CASE WHEN LOWER(pay.status)='paid' THEN pay.Amount ELSE 0 END),0) AS ytd_income
+            FROM payments pay
+            JOIN properties p ON p.id = pay.property_id
+            WHERE p.agent_id = %s
+              AND pay.paid_on >= %s
+              AND pay.paid_on < %s
+            """,
+            (agent_id, _date(year, 1, 1), _date(year + 1, 1, 1)),
+        )
+        ytd_income = float((cur.fetchone() or {}).get("ytd_income") or 0)
+    finally:
+        cur.close()
+
+    kpis = {
+        "month_label": today.strftime("%b"),
+        "income_month": income_m,
+        "expenses_month": expenses_m,
+        "net_month": net_m,
+        "ytd_income": ytd_income,
+    }
+
+    return render_template(
+        'reports.html',
+        user=session,
+        kpis=kpis,
+        monthly_rows=monthly_rows,
+        property_rows=property_rows,
+        year=year,
+        month=month,
         pending_overdue=get_overdue_count(agent_id),
     )

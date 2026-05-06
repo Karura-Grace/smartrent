@@ -1,6 +1,6 @@
-{% extends "base_dashboard.html" %}
+﻿{% extends "base_dashboard.html" %}
 
-{% block title %}Landlords · SmartRent{% endblock %}
+{% block title %}Landlords - SmartRent{% endblock %}
 {% block role_name %}Agent{% endblock %}
 {% block page_title %}Landlords{% endblock %}
 {% block page_sub %}Landlords linked to your agent account{% endblock %}
@@ -48,7 +48,7 @@
   <div class="sheet-left">
     <div class="sheet-field" style="min-width:260px;">
       <label>Search</label>
-      <input id="landlordSearch" type="text" placeholder="Type a name, email or ID…" oninput="filterLandlords()">
+      <input id="landlordSearch" type="text" placeholder="Type a name, email or ID..." oninput="filterLandlords()">
     </div>
     <button type="button" class="btn-primary" style="padding:10px 14px; border-radius:10px;" onclick="openModal('createLandlordModal')">
       <i data-lucide="plus" width="14" height="14"></i> Add Landlord
@@ -67,9 +67,9 @@
 </div>
 
 <div class="sheet-wrap">
-  {% if landlords %}
+  {% if landlord %}
   <div style="max-height:62vh; overflow:auto;">
-    <table class="sheet-table" id="landlordsTable">
+    <table class="sheet-table" id="landlordTable">
       <thead>
         <tr>
           <th style="text-align:left;">Name</th>
@@ -80,7 +80,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for l in landlords %}
+        {% for l in landlord %}
         <tr data-q="{{ (l.full_name ~ ' ' ~ l.email ~ ' ' ~ l.landlord_id)|lower }}">
           <td>{{ l.full_name }}</td>
           <td class="mono">{{ l.email }}</td>
@@ -111,7 +111,7 @@
     </table>
   </div>
   {% else %}
-  <div style="padding:22px; color:var(--text-3);">No landlords linked yet.</div>
+  <div style="padding:22px; color:var(--text-3);">No landlord linked yet.</div>
   {% endif %}
 </div>
 
@@ -202,7 +202,7 @@ document.querySelectorAll('.modal-overlay').forEach(ov => {
 
 function filterLandlords(){
   const q = (document.getElementById('landlordSearch')?.value || '').toLowerCase().trim();
-  document.querySelectorAll('#landlordsTable tbody tr').forEach(tr => {
+  document.querySelectorAll('#landlordTable tbody tr').forEach(tr => {
     const hay = tr.dataset.q || '';
     tr.style.display = (!q || hay.includes(q)) ? '' : 'none';
   });
@@ -210,7 +210,7 @@ function filterLandlords(){
 
 function openEditLandlord(id, firstName, lastName, email){
   const form = document.getElementById('editLandlordForm');
-  form.action = `/agent/landlords/edit/${id}`;
+  form.action = `/agent/landlord/edit/${id}`;
   document.getElementById('editFirstName').value = firstName || '';
   document.getElementById('editLastName').value = lastName || '';
   document.getElementById('editEmail').value = email || '';
@@ -220,3 +220,4 @@ function openEditLandlord(id, firstName, lastName, email){
 if (window.lucide) lucide.createIcons();
 </script>
 {% endblock %}
+

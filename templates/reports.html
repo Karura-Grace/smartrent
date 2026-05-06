@@ -1,8 +1,9 @@
 {% extends "base_dashboard.html" %}
-{% block title %}Reports · SmartRent{% endblock %}
+{% block title %}Reports - SmartRent{% endblock %}
 {% block role_name %}Landlord{% endblock %}
 {% block page_title %}Reports{% endblock %}
 {% block page_sub %}Financial Overview{% endblock %}
+{% block hero %}{% endblock %}
 {% block extra_styles %}
 .hero{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%)}
 .nav-item.active{background:#f0fdfa;color:#0f766e}.nav-item.active::before{background:#0f766e}
@@ -23,20 +24,6 @@
 .bar.current{background:#0f766e}
 .bar-labels{display:flex;gap:6px;margin-top:4px}
 .bar-lbl{flex:1;text-align:center;font-size:9px;color:var(--text-3);min-width:0}
-{% endblock %}
-
-{% block hero %}
-<div class="hero">
-    <div class="hero-eye">Reports</div>
-    <h1>Financial Reports</h1>
-    <p>Income, expenses and occupancy summaries for your portfolio.</p>
-    <div class="hero-kpis">
-        <div class="hero-kpi"><span class="hero-kpi-label">Total Income (Mar)</span><span class="hero-kpi-value">KES 142,000</span></div>
-        <div class="hero-kpi"><span class="hero-kpi-label">Expenses (Mar)</span><span class="hero-kpi-value">KES 18,500</span></div>
-        <div class="hero-kpi"><span class="hero-kpi-label">Net Profit</span><span class="hero-kpi-value">KES 123,500</span></div>
-        <div class="hero-kpi"><span class="hero-kpi-label">YTD Income</span><span class="hero-kpi-value">KES 412,000</span></div>
-    </div>
-</div>
 {% endblock %}
 {% block content %}
 <div class="report-grid">
@@ -64,44 +51,6 @@
         <div class="report-name">Arrears Report</div>
         <div class="report-desc">Outstanding balances and overdue rent per tenant.</div>
         <div class="report-badge"><span class="badge b-amber">Download PDF</span></div>
-    </div>
-</div>
-<div class="content-grid">
-    <div class="card">
-        <div class="card-head"><span class="card-title">Monthly Income — 2025</span><button class="card-action" onclick="alert('Export CSV coming soon!')"><i data-lucide="download" width="12" height="12" style="display:inline;margin-right:3px;vertical-align:-1px"></i>CSV</button></div>
-        <div class="month-bar">
-            <div class="bar" style="height:65%"><div class="bar-tip">138K</div></div>
-            <div class="bar" style="height:70%"><div class="bar-tip">141K</div></div>
-            <div class="bar current" style="height:72%"><div class="bar-tip">142K</div></div>
-            <div class="bar" style="height:30%;opacity:0.4"></div>
-            <div class="bar" style="height:30%;opacity:0.4"></div>
-            <div class="bar" style="height:30%;opacity:0.4"></div>
-        </div>
-        <div class="bar-labels"><div class="bar-lbl">Jan</div><div class="bar-lbl">Feb</div><div class="bar-lbl">Mar</div><div class="bar-lbl">Apr</div><div class="bar-lbl">May</div><div class="bar-lbl">Jun</div></div>
-        <table class="tbl" style="margin-top:18px">
-            <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Rate</th></tr></thead>
-            <tbody>
-                <tr><td>January</td><td>KES 138,000</td><td>KES 12,000</td><td>KES 126,000</td><td><span class="badge b-green">80%</span></td></tr>
-                <tr><td>February</td><td>KES 141,500</td><td>KES 9,500</td><td>KES 132,000</td><td><span class="badge b-green">82%</span></td></tr>
-                <tr><td><strong>March</strong></td><td><strong>KES 142,000</strong></td><td><strong>KES 18,500</strong></td><td><strong>KES 123,500</strong></td><td><span class="badge b-green">83%</span></td></tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="card">
-        <div class="card-head"><span class="card-title">By Property — March</span></div>
-        <table class="tbl">
-            <thead><tr><th>Property</th><th>Collected</th><th>Occupancy</th></tr></thead>
-            <tbody>
-                <tr><td><strong>Sunset Apts</strong></td><td>KES 68,000</td><td><span class="badge b-green">80%</span></td></tr>
-                <tr><td><strong>Sunrise Apts</strong></td><td>KES 52,000</td><td><span class="badge b-green">100%</span></td></tr>
-                <tr><td><strong>Greenview</strong></td><td>KES 22,000</td><td><span class="badge b-amber">67%</span></td></tr>
-            </tbody>
-        </table>
-        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border-lt)">
-            <button class="btn-primary" style="width:100%;justify-content:center" onclick="alert('Full report PDF coming soon!')">
-                <i data-lucide="download" width="14" height="14"></i> Download Full Report
-            </button>
-        </div>
     </div>
 </div>
 {% endblock %}

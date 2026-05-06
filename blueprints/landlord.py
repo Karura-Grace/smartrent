@@ -1,10 +1,11 @@
-import os
+﻿import os
 from datetime import date, timedelta, datetime
 from flask import Blueprint, render_template, request, redirect, session, url_for, flash, jsonify, current_app, make_response
 from extensions import mysql, get_conn_and_cursor, record_transaction
 from helpers import login_required, save_property_image, serialize_units, sync_unit_count, get_landlord_stats
 import MySQLdb
 import secrets
+from werkzeug.security import generate_password_hash
 
 landlord_bp = Blueprint('landlord', __name__)
 
@@ -13,9 +14,9 @@ def _get_conn_cur():
     return get_conn_and_cursor()
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # LANDLORD DASHBOARD
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/landlord_dashboard')
 @login_required
@@ -62,10 +63,10 @@ def landlord_dashboard():
         """, (landlord_id,))
         rent_outstanding = float((cur.fetchone() or {}).get('total') or 0)
 
-        # tenants has no `unit` text col — join units for unit_number
+        # tenant has no `unit` text col - join units for unit_number
         cur.execute("""
             SELECT t.name, u.unit_number, t.amount, t.status, p.name AS property_name
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE p.landlord_id = %s
@@ -84,7 +85,7 @@ def landlord_dashboard():
         """, (landlord_id,))
         properties = [dict(r) for r in cur.fetchall()]
 
-        # payments — use tenant_id FK (not userid alias), Amount (capital A)
+        # payments - use tenant_id FK (not userid alias), Amount (capital A)
         cur.execute("""
             SELECT pay.tenant_id, pay.Amount, pay.status,
                    pay.`phone no` AS phone,
@@ -99,7 +100,7 @@ def landlord_dashboard():
         for row in cur.fetchall():
             p = dict(row)
             p['amount']  = float(p.get('Amount') or 0)
-            p['paid_on'] = str(p.get('paid_on'))[:10] if p.get('paid_on') else '—'
+            p['paid_on'] = str(p.get('paid_on'))[:10] if p.get('paid_on') else '-'
             recent_payments.append(p)
 
         # notices has title + message columns
@@ -145,9 +146,9 @@ def landlord_dashboard():
     )
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # PROFILE
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/profile')
 @login_required
@@ -158,9 +159,9 @@ def profile():
     return render_template('profile.html', user=session)
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # RENT COLLECTION
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/rent-collection')
 @login_required
@@ -190,20 +191,20 @@ def rent_collection():
         cur.execute("SELECT id, name FROM properties WHERE landlord_id = %s ORDER BY name", (landlord_id,))
         properties = [dict(r) for r in cur.fetchall()]
 
-        # tenants has no `unit` text col — join for unit_number
+        # tenant has no `unit` text col - join for unit_number
         cur.execute("""
             SELECT t.id, t.name, t.phone, t.email, t.amount,
                    t.property_id, p.name AS property_name,
                    u.unit_number
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE p.landlord_id = %s
             ORDER BY t.name
         """, (landlord_id,))
-        tenants = [dict(r) for r in cur.fetchall()]
+        tenant = [dict(r) for r in cur.fetchall()]
 
-        # payments — use tenant_id FK
+        # payments - use tenant_id FK
         cur.execute("""
             SELECT pay.tenant_id,
                    pay.Amount AS amount, pay.status,
@@ -220,22 +221,22 @@ def rent_collection():
                 pay_map[tid] = dict(r)
 
         payments = []
-        for t in tenants:
+        for t in tenant:
             pr   = pay_map.get(t.get('id')) or {}
             paid = (pr.get('status') or '').strip().lower() == 'paid'
             payments.append({
                 'tenant_id':    t.get('id'),
                 'full_name':    t.get('name'),
                 'phone':        t.get('phone'),
-                'unit':         t.get('unit_number') or '—',
+                'unit':         t.get('unit_number') or '-',
                 'property_id':  t.get('property_id'),
-                'property_name': t.get('property_name') or '—',
+                'property_name': t.get('property_name') or '-',
                 'amount_due':   float(t.get('amount') or 0),
                 'amount_paid':  float(pr.get('amount') or 0) if pr else 0,
                 'status':       'Paid' if paid else 'Unpaid',
                 'paid_on':      str(pr.get('paid_on'))[:10] if pr.get('paid_on') else None,
-                'method':       pr.get('method') or '—',
-                'reference':    pr.get('reference') or '—',
+                'method':       pr.get('method') or '-',
+                'reference':    pr.get('reference') or '-',
             })
 
         paid_rows    = [p for p in payments if p['status'] == 'Paid']
@@ -258,7 +259,7 @@ def rent_collection():
             conn.close()
 
     return render_template('rent_collection.html',
-        user=session, payments=payments, tenants=tenants,
+        user=session, payments=payments, tenant=tenant,
         properties=properties, stats=stats,
         available_months=available_months, selected_month=selected_month,
     )
@@ -290,7 +291,7 @@ def record_payment():
         cur.execute("""
             SELECT t.id, t.name, t.phone, t.unit_id, t.property_id,
                    u.unit_number
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE t.id = %s AND p.landlord_id = %s
@@ -340,7 +341,7 @@ def _landlord_tenant_for_doc(landlord_id: int, tenant_id: int):
             SELECT t.id, t.name, t.email, t.phone, t.amount,
                    u.unit_number,
                    p.name AS property_name, p.id AS property_id
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE t.id = %s AND p.landlord_id = %s
@@ -353,7 +354,7 @@ def _landlord_tenant_for_doc(landlord_id: int, tenant_id: int):
             conn.close()
 
 
-@landlord_bp.route('/landlord/tenants/<int:tenant_id>/receipt')
+@landlord_bp.route('/landlord/tenant/<int:tenant_id>/receipt')
 @login_required
 def landlord_tenant_receipt(tenant_id):
     if session.get('role') != 'landlord':
@@ -418,7 +419,7 @@ def landlord_create_bill():
     conn, cur, should_close = _get_conn_cur()
     try:
         cur.execute("""
-            SELECT t.id, t.unit_id FROM tenants t
+            SELECT t.id, t.unit_id FROM tenant t
             JOIN properties p ON p.id = t.property_id
             WHERE t.id = %s AND p.landlord_id = %s LIMIT 1
         """, (tenant_id_int, landlord_id))
@@ -466,9 +467,9 @@ def update_payment_status(payment_id):
             conn.close()
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # UNITS
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/units')
 @login_required
@@ -493,13 +494,13 @@ def units():
         properties_data = [dict(r) for r in cur.fetchall()]
 
         cur.execute("""
-            SELECT t.id, t.name, u.unit_number AS unit, t.phone
-            FROM tenants t
+            SELECT t.id, t.name, u.unit_number AS unit, t.phone, t.property_id
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE p.landlord_id = %s ORDER BY t.name
         """, (landlord_id,))
-        tenants = [dict(r) for r in cur.fetchall()]
+        tenant = [dict(r) for r in cur.fetchall()]
 
         cur.execute("""
             SELECT id, name FROM properties WHERE landlord_id = %s ORDER BY name
@@ -517,7 +518,7 @@ def units():
 
     return render_template('units.html',
         user=session, properties_data=properties_data,
-        properties=properties, tenants=tenants, stats=stats,
+        properties=properties, tenant=tenant, stats=stats,
     )
 
 
@@ -546,7 +547,7 @@ def get_units(property_id):
                t.name  AS tenant_name,
                t.phone AS tenant_phone
         FROM units u
-        LEFT JOIN tenants t ON t.id = u.tenant_id
+        LEFT JOIN tenant t ON t.id = u.tenant_id
         WHERE u.property_id = %s
         ORDER BY u.unit_number
     """, (property_id,))
@@ -601,9 +602,10 @@ def add_unit():
 
         status = 'Vacant'
         if tenant_id:
-            cur.execute("SELECT id FROM tenants WHERE id=%s", (tenant_id,))
+            # Tenant must exist and belong to the selected property
+            cur.execute("SELECT id FROM tenant WHERE id=%s AND property_id=%s", (tenant_id, property_id))
             if not cur.fetchone():
-                flash('Selected tenant not found.', 'error')
+                flash('Selected tenant not found for this property.', 'error')
                 return redirect(url_for('landlord.units'))
             status = 'Occupied'
 
@@ -614,7 +616,7 @@ def add_unit():
         new_unit_id = cur.lastrowid
 
         if tenant_id:
-            cur.execute("UPDATE tenants SET unit_id=%s WHERE id=%s", (new_unit_id, tenant_id))
+            cur.execute("UPDATE tenant SET unit_id=%s WHERE id=%s", (new_unit_id, tenant_id))
 
         conn.commit()
         sync_unit_count(property_id)
@@ -622,6 +624,121 @@ def add_unit():
     except Exception as e:
         conn.rollback()
         flash(f'Error adding unit: {str(e)}', 'error')
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+
+    return redirect(url_for('landlord.units'))
+
+
+@landlord_bp.route('/units/edit/<int:unit_id>', methods=['POST'])
+@login_required
+def edit_unit(unit_id):
+    if session.get('role') != 'landlord':
+        flash('Unauthorized', 'error')
+        return redirect(url_for('landlord.units'))
+
+    landlord_id = session['user_id']
+
+    unit_number   = (request.form.get('unit_number') or '').strip()
+    floor_raw     = (request.form.get('floor') or '').strip()
+    unit_type     = request.form.get('type', '') or ''
+    status        = request.form.get('status', 'Vacant') or 'Vacant'
+    rent_raw      = (request.form.get('rent') or '').strip()
+    tenant_id_raw = (request.form.get('tenant_id') or '').strip()
+
+    try:
+        floor = int(floor_raw) if floor_raw else None
+    except ValueError:
+        floor = None
+    try:
+        rent = float(rent_raw) if rent_raw else 0.0
+    except ValueError:
+        rent = 0.0
+    try:
+        tenant_id = int(tenant_id_raw) if tenant_id_raw else None
+    except ValueError:
+        tenant_id = None
+
+    if not unit_number:
+        flash('Unit number is required.', 'error')
+        return redirect(url_for('landlord.units'))
+
+    conn, cur, should_close = _get_conn_cur()
+    try:
+        # Verify unit belongs to this landlord and capture current tenant/property
+        cur.execute("""
+            SELECT u.id, u.property_id, u.tenant_id
+            FROM units u
+            JOIN properties p ON p.id = u.property_id
+            WHERE u.id = %s AND p.landlord_id = %s
+        """, (unit_id, landlord_id))
+        unit_row = cur.fetchone()
+        if not unit_row:
+            flash('Unit not found.', 'error')
+            return redirect(url_for('landlord.units'))
+
+        property_id = unit_row.get('property_id')
+        previous_tenant_id = unit_row.get('tenant_id')
+
+        # Unlink previous tenant if changed
+        if previous_tenant_id and previous_tenant_id != tenant_id:
+            cur.execute(
+                "UPDATE tenant SET unit_id = NULL WHERE id = %s AND unit_id = %s",
+                (previous_tenant_id, unit_id),
+            )
+
+        if tenant_id:
+            # Tenant must belong to the same property and to this landlord
+            cur.execute("""
+                SELECT t.id
+                FROM tenant t
+                JOIN properties p ON p.id = t.property_id
+                WHERE t.id = %s AND t.property_id = %s AND p.landlord_id = %s
+            """, (tenant_id, property_id, landlord_id))
+            if not cur.fetchone():
+                flash('Selected tenant not found for this property.', 'error')
+                return redirect(url_for('landlord.units'))
+
+            # If tenant is already linked to another unit, vacate that unit first
+            cur.execute("""
+                UPDATE units
+                SET tenant_id = NULL,
+                    status = CASE WHEN status = 'Occupied' THEN 'Vacant' ELSE status END
+                WHERE tenant_id = %s AND id <> %s
+            """, (tenant_id, unit_id))
+
+            # Keep tenant record aligned with this unit
+            cur.execute("""
+                UPDATE tenant
+                SET unit_id = %s
+                WHERE id = %s
+            """, (unit_id, tenant_id))
+
+            # Avoid inconsistent "Vacant" while tenant is assigned
+            if status != 'Maintenance':
+                status = 'Occupied'
+        else:
+            # Avoid "Occupied" without a tenant
+            if status == 'Occupied':
+                status = 'Vacant'
+
+        cur.execute("""
+            UPDATE units
+            SET unit_number = %s,
+                floor = %s,
+                type = %s,
+                status = %s,
+                rent = %s,
+                tenant_id = %s
+            WHERE id = %s
+        """, (unit_number, floor, unit_type, status, rent, tenant_id, unit_id))
+        conn.commit()
+        flash('Unit updated successfully!', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error updating unit: {str(e)}', 'error')
     finally:
         cur.close()
         if should_close:
@@ -652,7 +769,7 @@ def delete_unit(unit_id):
             return redirect(url_for('landlord.units'))
 
         property_id = unit['property_id']
-        cur.execute("UPDATE tenants SET unit_id=NULL WHERE unit_id=%s", (unit_id,))
+        cur.execute("UPDATE tenant SET unit_id=NULL WHERE unit_id=%s", (unit_id,))
         cur.execute("DELETE FROM units WHERE id=%s", (unit_id,))
         conn.commit()
         sync_unit_count(property_id)
@@ -668,9 +785,9 @@ def delete_unit(unit_id):
     return redirect(url_for('landlord.units'))
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # TENANTS
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/tenant')
 @login_required
@@ -683,19 +800,16 @@ def tenant():
     conn, cur, should_close = _get_conn_cur()
 
     try:
-        # tenants has no lease_start/lease_end — get from leases table
+        # Tenant list
         cur.execute("""
             SELECT t.id, t.name,
                    t.email, t.phone, t.amount, t.status,
-                   t.property_id, t.created_at,
+                   t.property_id, t.unit_id, t.created_at,
                    u.unit_number,
-                   p.name AS property_name,
-                   l.start_date AS lease_start,
-                   l.end_date   AS lease_end
-            FROM tenants t
+                   p.name AS property_name
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
-            LEFT JOIN leases l ON l.tenant_id = t.id AND LOWER(l.status) = 'active'
             WHERE p.landlord_id = %s
             ORDER BY t.created_at DESC
         """, (landlord_id,))
@@ -706,10 +820,10 @@ def tenant():
                 continue
             t['id']           = int(t['id'])
             t['rent']         = float(t.get('amount') or 0)
-            t['unit_number']  = t.get('unit_number') or '—'
-            t['property_name'] = t.get('property_name') or '—'
-            t['lease_start']  = str(t['lease_start'])[:10] if t.get('lease_start') else '—'
-            t['lease_end']    = str(t['lease_end'])[:10]   if t.get('lease_end')   else '—'
+            t['unit_number']  = t.get('unit_number') or '-'
+            t['property_name'] = t.get('property_name') or '-'
+            t['unit_id']      = int(t.get('unit_id') or 0) if t.get('unit_id') else None
+            t['property_id']  = int(t.get('property_id') or 0) if t.get('property_id') else None
             t['status']       = t.get('status') or 'Active'
             t['status_color'] = ('active' if t['status'] == 'Active' else
                                  'expiring' if t['status'] == 'Expiring' else 'inactive')
@@ -718,34 +832,16 @@ def tenant():
         cur.execute("SELECT id, name FROM properties WHERE landlord_id=%s ORDER BY name", (landlord_id,))
         properties = [dict(r) for r in cur.fetchall()]
 
-        cur.execute("""
-            SELECT u.id, u.unit_number, p.name AS property_name, u.rent
-            FROM units u
-            JOIN properties p ON p.id = u.property_id
-            WHERE u.status='Vacant' AND p.landlord_id=%s
-            ORDER BY p.name, u.unit_number LIMIT 20
-        """, (landlord_id,))
-        vacant_units = [dict(r) for r in cur.fetchall()]
-
         today       = date.today()
         month_start = today.replace(day=1)
-        next_60     = today + timedelta(days=60)
 
         cur.execute("""
-            SELECT COUNT(*) AS cnt FROM tenants t
+            SELECT COUNT(*) AS cnt FROM tenant t
             JOIN properties p ON p.id = t.property_id
             WHERE p.landlord_id=%s AND t.created_at >= %s
         """, (landlord_id, month_start))
         new_this_month = (cur.fetchone() or {}).get('cnt', 0)
-
-        cur.execute("""
-            SELECT COUNT(*) AS cnt FROM leases l
-            JOIN properties p ON p.id = l.property_id
-            WHERE p.landlord_id=%s
-              AND l.end_date BETWEEN %s AND %s
-              AND LOWER(l.status)='active'
-        """, (landlord_id, today, next_60))
-        expiring = (cur.fetchone() or {}).get('cnt', 0)
+        expiring = 0
 
         cur.execute("""
             SELECT COUNT(*) AS cnt FROM units u
@@ -762,75 +858,78 @@ def tenant():
     stats = {'new_this_month': new_this_month, 'expiring_leases': expiring, 'vacant': vacant_count}
     return render_template('tenant.html',
         user=session, tenant=tenant_list, properties=properties,
-        vacant_units=vacant_units, stats=stats,
+        vacant_units=[], stats=stats,
     )
 
 
-@landlord_bp.route('/tenants/add', methods=['POST'])
+@landlord_bp.route('/tenant/add', methods=['POST'])
 @login_required
 def add_tenant():
-    name        = request.form.get('name', '').strip()
-    first_name  = request.form.get('first_name', '').strip()
-    last_name   = request.form.get('last_name', '').strip()
-    phone       = request.form.get('phone', '').strip()
-    email       = request.form.get('email', '').strip()
-    unit_label  = request.form.get('unit', '').strip()
-    unit_id_raw = request.form.get('unit_id', '').strip()
-    amount      = request.form.get('amount', '0').strip()
-    property_id = request.form.get('property_id', '').strip()
+    name        = (request.form.get('name') or '').strip()
+    phone       = (request.form.get('phone') or '').strip()
+    email       = (request.form.get('email') or '').strip().lower()
+    property_id = (request.form.get('property_id') or '').strip()
+    unit_id_raw = (request.form.get('unit_id') or '').strip()
 
-    if not name and first_name:
-        name = f"{first_name} {last_name}".strip()
-
-    if not name or not phone:
-        flash('Name and phone are required.', 'error')
+    if not name or not phone or not email or not property_id or not unit_id_raw:
+        flash('Name, phone, email, property, and unit are required.', 'error')
         return redirect(url_for('landlord.tenant'))
 
     try:
-        property_id = int(property_id) if property_id else None
-        unit_id     = int(unit_id_raw) if unit_id_raw else None
-        amount_f    = float(amount)
+        property_id = int(property_id)
+        unit_id     = int(unit_id_raw)
     except ValueError:
-        flash('Invalid property, unit, or rent amount.', 'error')
+        flash('Invalid property or unit.', 'error')
         return redirect(url_for('landlord.tenant'))
 
     conn, cur, should_close = _get_conn_cur()
     try:
-        # UI submits a unit *label* (unit_number). Resolve it into unit_id and canonical unit_number.
-        if property_id and (unit_label or unit_id):
-            if unit_id:
-                cur.execute("""
-                    SELECT u.id, u.unit_number, u.tenant_id
-                    FROM units u
-                    JOIN properties p ON p.id = u.property_id
-                    WHERE u.id=%s AND p.id=%s AND p.landlord_id=%s
-                    LIMIT 1
-                """, (unit_id, property_id, session['user_id']))
-            else:
-                cur.execute("""
-                    SELECT u.id, u.unit_number, u.tenant_id
-                    FROM units u
-                    JOIN properties p ON p.id = u.property_id
-                    WHERE u.unit_number=%s AND p.id=%s AND p.landlord_id=%s
-                    LIMIT 1
-                """, (unit_label, property_id, session['user_id']))
-            unit_row = cur.fetchone()
-            if not unit_row:
-                flash('Unit not found for that property.', 'error')
-                return redirect(url_for('landlord.tenant'))
-            if unit_row.get('tenant_id'):
-                flash('That unit is already assigned to another tenant.', 'error')
-                return redirect(url_for('landlord.tenant'))
-            unit_id = int(unit_row['id'])
-            unit_label = unit_row.get('unit_number') or unit_label
+        # Verify property belongs to landlord and get base rent
+        cur.execute(
+            "SELECT id, base_rent FROM properties WHERE id=%s AND landlord_id=%s LIMIT 1",
+            (property_id, session['user_id']),
+        )
+        prop = cur.fetchone()
+        if not prop:
+            flash('Property not found.', 'error')
+            return redirect(url_for('landlord.tenant'))
+
+        # Validate unit is in the property and available, and get unit_number + rent
+        cur.execute("""
+            SELECT u.id, u.unit_number, u.tenant_id, u.status, u.rent
+            FROM units u
+            JOIN properties p ON p.id = u.property_id
+            WHERE u.id=%s AND p.id=%s AND p.landlord_id=%s
+            LIMIT 1
+        """, (unit_id, property_id, session['user_id']))
+        unit_row = cur.fetchone()
+        if not unit_row:
+            flash('Unit not found for that property.', 'error')
+            return redirect(url_for('landlord.tenant'))
+        if (unit_row.get('tenant_id') or None) is not None:
+            flash('That unit is already assigned to another tenant.', 'error')
+            return redirect(url_for('landlord.tenant'))
+        if (unit_row.get('status') or '') != 'Vacant':
+            flash('That unit is not available (must be Vacant).', 'error')
+            return redirect(url_for('landlord.tenant'))
+
+        unit_label = unit_row.get('unit_number')
+        rent_amount = float(unit_row.get('rent') or 0) or float((prop or {}).get('base_rent') or 0) or 0.0
+
+        # Generate a temporary password for tenant login
+        temp_password = secrets.token_urlsafe(8)
+        hashed_password = generate_password_hash(temp_password)
 
         cur.execute("""
-            INSERT INTO tenants
+            INSERT INTO tenant
                 (name, phone, email, unit, amount, status,
                  property_id, unit_id, created_at)
             VALUES (%s, %s, %s, %s, %s, 'Active', %s, %s, NOW())
-        """, (name, phone, email, unit_label or None, amount_f, property_id, unit_id))
+        """, (name, phone, email, unit_label or None, rent_amount, property_id, unit_id))
         new_id = cur.lastrowid
+
+        # Store password hash (tenant login uses tenant.password)
+        cur.execute("UPDATE tenant SET password=%s, role='tenant' WHERE id=%s", (hashed_password, new_id))
 
         if unit_id:
             cur.execute(
@@ -843,7 +942,7 @@ def add_tenant():
                 (new_id, unit_id),
             )
         conn.commit()
-        flash(f'{name} added successfully!', 'success')
+        flash(f'{name} added. Tenant login email: {email} | Temporary password: {temp_password}', 'success')
     except Exception as e:
         conn.rollback()
         flash(f'Error adding tenant: {str(e)}', 'error')
@@ -855,35 +954,31 @@ def add_tenant():
     return redirect(url_for('landlord.tenant'))
 
 
-@landlord_bp.route('/tenants/edit/<int:tenant_id>', methods=['POST'])
+@landlord_bp.route('/tenant/edit/<int:tenant_id>', methods=['POST'])
 @login_required
 def edit_tenant(tenant_id):
-    name        = request.form.get('name', '').strip()
-    first_name  = request.form.get('first_name', '').strip()
-    last_name   = request.form.get('last_name', '').strip()
-    phone       = request.form.get('phone', '').strip()
-    email       = request.form.get('email', '').strip()
-    unit_label  = request.form.get('unit', '').strip()
-    unit_id_raw = request.form.get('unit_id', '').strip()
-    amount      = request.form.get('amount', '0')
-    property_id = request.form.get('property_id', '').strip()
+    name        = (request.form.get('name') or '').strip()
+    phone       = (request.form.get('phone') or '').strip()
+    email       = (request.form.get('email') or '').strip().lower()
+    property_id = (request.form.get('property_id') or '').strip()
+    unit_id_raw = (request.form.get('unit_id') or '').strip()
+
+    if not name or not phone or not email or not property_id or not unit_id_raw:
+        flash('Name, phone, email, property, and unit are required.', 'error')
+        return redirect(url_for('landlord.tenant'))
 
     try:
-        amount_f    = float(amount) if amount else 0.0
-        property_id = int(property_id) if property_id else None
-        unit_id     = int(unit_id_raw) if unit_id_raw else None
+        property_id = int(property_id)
+        unit_id     = int(unit_id_raw)
     except ValueError:
-        flash('Invalid values.', 'error')
+        flash('Invalid property or unit.', 'error')
         return redirect(url_for('landlord.tenant'))
 
     conn, cur, should_close = _get_conn_cur()
     try:
-        if not name and first_name:
-            name = f"{first_name} {last_name}".strip()
-
         cur.execute("""
             SELECT t.unit_id
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             WHERE t.id=%s AND p.landlord_id=%s
             LIMIT 1
@@ -894,43 +989,48 @@ def edit_tenant(tenant_id):
             return redirect(url_for('landlord.tenant'))
         previous_unit_id = existing.get('unit_id')
 
-        if property_id and (unit_label or unit_id):
-            if unit_id:
-                cur.execute("""
-                    SELECT u.id, u.unit_number, u.tenant_id
-                    FROM units u
-                    JOIN properties p ON p.id = u.property_id
-                    WHERE u.id=%s AND p.id=%s AND p.landlord_id=%s
-                    LIMIT 1
-                """, (unit_id, property_id, session['user_id']))
-            else:
-                cur.execute("""
-                    SELECT u.id, u.unit_number, u.tenant_id
-                    FROM units u
-                    JOIN properties p ON p.id = u.property_id
-                    WHERE u.unit_number=%s AND p.id=%s AND p.landlord_id=%s
-                    LIMIT 1
-                """, (unit_label, property_id, session['user_id']))
-            unit_row = cur.fetchone()
-            if not unit_row:
-                flash('Unit not found for that property.', 'error')
-                return redirect(url_for('landlord.tenant'))
-            occupied_by = unit_row.get('tenant_id')
-            if occupied_by and int(occupied_by) != int(tenant_id):
-                flash('That unit is already assigned to another tenant.', 'error')
-                return redirect(url_for('landlord.tenant'))
-            unit_id = int(unit_row['id'])
-            unit_label = unit_row.get('unit_number') or unit_label
+        # Verify property belongs to landlord and get base rent
+        cur.execute(
+            "SELECT id, base_rent FROM properties WHERE id=%s AND landlord_id=%s LIMIT 1",
+            (property_id, session['user_id']),
+        )
+        prop = cur.fetchone()
+        if not prop:
+            flash('Property not found.', 'error')
+            return redirect(url_for('landlord.tenant'))
+
+        # Validate unit belongs to property + landlord, allow current tenant's unit, and get rent
+        cur.execute("""
+            SELECT u.id, u.unit_number, u.tenant_id, u.status, u.rent
+            FROM units u
+            JOIN properties p ON p.id = u.property_id
+            WHERE u.id=%s AND p.id=%s AND p.landlord_id=%s
+            LIMIT 1
+        """, (unit_id, property_id, session['user_id']))
+        unit_row = cur.fetchone()
+        if not unit_row:
+            flash('Unit not found for that property.', 'error')
+            return redirect(url_for('landlord.tenant'))
+        occupied_by = unit_row.get('tenant_id')
+        if occupied_by and int(occupied_by) != int(tenant_id):
+            flash('That unit is already assigned to another tenant.', 'error')
+            return redirect(url_for('landlord.tenant'))
+        if not occupied_by and (unit_row.get('status') or '') != 'Vacant':
+            flash('That unit is not available (must be Vacant).', 'error')
+            return redirect(url_for('landlord.tenant'))
+
+        unit_label = unit_row.get('unit_number')
+        rent_amount = float(unit_row.get('rent') or 0) or float((prop or {}).get('base_rent') or 0) or 0.0
 
         cur.execute("""
-            UPDATE tenants
+            UPDATE tenant
             SET name=%s, phone=%s, email=%s,
                 amount=%s, property_id=%s, unit_id=%s
             WHERE id=%s
-        """, (name, phone, email, amount_f, property_id, unit_id, tenant_id))
+        """, (name, phone, email, rent_amount, property_id, unit_id, tenant_id))
 
-        # Keep unit label in tenants in sync (some templates show this text)
-        cur.execute("UPDATE tenants SET unit=%s WHERE id=%s", (unit_label or None, tenant_id))
+        # Keep unit label in tenant in sync (some templates show this text)
+        cur.execute("UPDATE tenant SET unit=%s WHERE id=%s", (unit_label or None, tenant_id))
 
         if previous_unit_id and (not unit_id or int(previous_unit_id) != int(unit_id)):
             cur.execute(
@@ -966,12 +1066,12 @@ def edit_tenant(tenant_id):
     return redirect(url_for('landlord.tenant'))
 
 
-@landlord_bp.route('/tenants/<int:tenant_id>/delete', methods=['POST'])
+@landlord_bp.route('/tenant/<int:tenant_id>/delete', methods=['POST'])
 @login_required
 def delete_tenant(tenant_id):
     conn, cur, should_close = _get_conn_cur()
     try:
-        cur.execute("SELECT id, name, unit_id FROM tenants WHERE id=%s", (tenant_id,))
+        cur.execute("SELECT id, name, unit_id FROM tenant WHERE id=%s", (tenant_id,))
         t = cur.fetchone()
         if not t:
             flash('Tenant not found.', 'error')
@@ -982,7 +1082,7 @@ def delete_tenant(tenant_id):
                 "UPDATE units SET status='Vacant', tenant_id=NULL WHERE id=%s AND tenant_id=%s",
                 (t['unit_id'], tenant_id)
             )
-        cur.execute("DELETE FROM tenants WHERE id=%s", (tenant_id,))
+        cur.execute("DELETE FROM tenant WHERE id=%s", (tenant_id,))
         conn.commit()
         flash(f'{t["name"]} removed successfully.', 'success')
     except Exception as e:
@@ -996,9 +1096,9 @@ def delete_tenant(tenant_id):
     return redirect(url_for('landlord.tenant'))
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # MAINTENANCE
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/maintenance')
 @login_required
@@ -1013,15 +1113,15 @@ def maintenance():
         # Use maintenance_requests.property_id directly (it exists in schema)
         cur.execute("""
             SELECT m.id, m.title, m.description, m.priority, m.status,
-                   m.unit_id, m.unit AS unit_label,
+                   m.unit_id, m.unit_id AS unit_label,
                    p.name AS property_name,
                    u.unit_number,
-                   COALESCE(t.name, '—') AS tenant_name,
+                   COALESCE(t.name, '-') AS tenant_name,
                    m.created_at, m.updated_at
             FROM maintenance_requests m
             LEFT JOIN properties p ON p.id = m.property_id
             LEFT JOIN units u      ON u.id = m.unit_id
-            LEFT JOIN tenants t    ON t.unit_id = m.unit_id
+            LEFT JOIN tenant t    ON t.unit_id = m.unit_id
             WHERE p.landlord_id = %s
             ORDER BY FIELD(m.priority,'High','Medium','Low'), m.created_at DESC
         """, (landlord_id,))
@@ -1059,7 +1159,7 @@ def landlord_update_maintenance_ticket(ticket_id):
         return redirect(url_for('landing'))
 
     new_status = request.form.get('status', '').strip()
-    if new_status not in {'Open', 'In Progress', 'Resolved', 'Closed'}:
+    if new_status not in {'Open', 'Seen', 'In Progress', 'Resolved', 'Closed'}:
         flash('Invalid status.', 'error')
         return redirect(url_for('landlord.maintenance'))
 
@@ -1086,9 +1186,9 @@ def landlord_update_maintenance_ticket(ticket_id):
     return redirect(url_for('landlord.maintenance'))
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # REPORTS
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/reports')
 @login_required
@@ -1096,12 +1196,66 @@ def reports():
     if session.get('role') != 'landlord':
         flash('Unauthorized', 'error')
         return redirect(url_for('landing'))
-    return render_template('reports.html', user=session)
+
+    from datetime import date as _date
+    import blueprints.reports as reports_mod
+
+    today = _date.today()
+    year = today.year
+    month = today.month
+
+    # Last 6 months (same year fallback if early months)
+    months = list(range(max(1, month - 5), month + 1))
+
+    monthly_rows = reports_mod._get_income_expense_monthly(year, months)
+    property_rows = reports_mod._get_occupancy_by_property(year, month)
+
+    income_m = (monthly_rows[-1]["income"] if monthly_rows else 0)  # current month
+    expenses_m = (monthly_rows[-1]["expenses"] if monthly_rows else 0)
+    net_m = (monthly_rows[-1]["net"] if monthly_rows else 0)
+
+    # YTD income
+    conn, cur, should_close = _get_conn_cur()
+    try:
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(CASE WHEN LOWER(pay.status)='paid' THEN pay.Amount ELSE 0 END),0) AS ytd_income
+            FROM payments pay
+            JOIN properties p ON p.id = pay.property_id
+            WHERE p.landlord_id = %s
+              AND pay.paid_on >= %s
+              AND pay.paid_on < %s
+            """,
+            (session["user_id"], _date(year, 1, 1), _date(year + 1, 1, 1)),
+        )
+        ytd_income = float((cur.fetchone() or {}).get("ytd_income") or 0)
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+
+    kpis = {
+        "month_label": today.strftime("%b"),
+        "income_month": income_m,
+        "expenses_month": expenses_m,
+        "net_month": net_m,
+        "ytd_income": ytd_income,
+    }
+
+    return render_template(
+        'reports.html',
+        user=session,
+        kpis=kpis,
+        monthly_rows=monthly_rows,
+        property_rows=property_rows,
+        year=year,
+        month=month,
+    )
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # SEND NOTICES
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/send-notices')
 @login_required
@@ -1120,13 +1274,13 @@ def send_notices():
             SELECT t.id, t.name, t.email, t.phone, t.property_id,
                    u.unit_number,
                    p.name AS property_name
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE p.landlord_id=%s
             ORDER BY p.name, u.unit_number, t.name
         """, (landlord_id,))
-        tenants = [dict(r) for r in cur.fetchall()]
+        tenant = [dict(r) for r in cur.fetchall()]
 
         # notices has title + message
         cur.execute("""
@@ -1150,9 +1304,9 @@ def send_notices():
             conn.close()
 
     return render_template('send_notices.html',
-        user=session, tenants=tenants, properties=properties,
+        user=session, tenant=tenant, properties=properties,
         notices=notices, sent_this_month=sent_this_month,
-        recipients_total=len(tenants), last_sent=last_sent,
+        recipients_total=len(tenant), last_sent=last_sent,
     )
 
 
@@ -1185,7 +1339,7 @@ def landlord_send_notice():
         placeholders = ",".join(["%s"] * len(tenant_ids))
         cur.execute(f"""
             SELECT DISTINCT t.property_id
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             WHERE t.id IN ({placeholders}) AND p.landlord_id=%s
         """, (*tenant_ids, landlord_id))
@@ -1217,9 +1371,9 @@ def landlord_send_notice():
     return redirect(url_for('landlord.send_notices'))
 
 
-# ─────────────────────────────────────────────
+# ----------------------
 # LEASE AGREEMENTS
-# ─────────────────────────────────────────────
+# ----------------------
 
 @landlord_bp.route('/lease-agreements')
 @login_required
@@ -1239,7 +1393,7 @@ def lease_agreements():
             FROM leases l
             LEFT JOIN properties p ON p.id = l.property_id
             LEFT JOIN units u      ON u.id = l.unit_id
-            LEFT JOIN tenants t    ON t.id = l.tenant_id
+            LEFT JOIN tenant t    ON t.id = l.tenant_id
             WHERE l.landlord_id=%s
             ORDER BY l.created_at DESC
         """, (landlord_id,))
@@ -1249,13 +1403,13 @@ def lease_agreements():
             SELECT t.id, t.name, t.email, t.phone, t.property_id,
                    u.unit_number,
                    p.name AS property_name
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             LEFT JOIN units u ON u.id = t.unit_id
             WHERE p.landlord_id=%s
             ORDER BY p.name, u.unit_number, t.name
         """, (landlord_id,))
-        tenants = [dict(r) for r in cur.fetchall()]
+        tenant = [dict(r) for r in cur.fetchall()]
 
         cur.execute("""
             SELECT u.id, u.unit_number, u.rent, u.property_id,
@@ -1294,7 +1448,7 @@ def lease_agreements():
 
     stats = {'active': active, 'expiring_90': expiring_90, 'expired': expired, 'pending': pending}
     return render_template('lease_agreements.html',
-        user=session, leases=leases, tenants=tenants, units=unit_list, stats=stats,
+        user=session, leases=leases, tenant=tenant, units=unit_list, stats=stats,
     )
 
 
@@ -1331,7 +1485,7 @@ def create_lease_agreement():
     try:
         cur.execute("""
             SELECT t.id, t.name, t.email, t.phone, t.property_id
-            FROM tenants t
+            FROM tenant t
             JOIN properties p ON p.id = t.property_id
             WHERE t.id=%s AND p.landlord_id=%s
         """, (tenant_id_int, landlord_id))
@@ -1431,7 +1585,7 @@ def sign_lease_agreement(token):
 
                 if lease.get('tenant_id'):
                     cur.execute("""
-                        UPDATE tenants
+                        UPDATE tenant
                         SET amount=%s, status='Active'
                         WHERE id=%s
                     """, (lease.get('rent_amount') or 0, lease.get('tenant_id')))

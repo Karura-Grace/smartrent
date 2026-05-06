@@ -1,6 +1,6 @@
-{% extends "base_dashboard.html" %}
+﻿{% extends "base_dashboard.html" %}
 
-{% block title %}Tenants · SmartRent{% endblock %}
+{% block title %}Tenants - SmartRent{% endblock %}
 {% block role_name %}Landlord{% endblock %}
 {% block page_title %}Tenants{% endblock %}
 {% block page_sub %}Manage Tenants{% endblock %}
@@ -8,7 +8,7 @@
 {% block extra_styles %}
 .hero { background: var(--purple-dark); }
 
-/* ── Filter Bar ─────────────────────────────────── */
+/* Filter Bar */
 .filter-bar {
   display: flex; align-items: center;
   gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
@@ -47,7 +47,7 @@
 }
 .btn-outline:hover { border-color: #0f766e; color: #0f766e; }
 
-/* ── Tenant Table ────────────────────────────────── */
+/* Tenant Table */
 .tenant-table-container {
   background: white; border: 1px solid var(--border);
   border-radius: 20px; overflow: hidden;
@@ -103,7 +103,7 @@
 .action-btn:hover { background: #f0fdfa; border-color: #99f6e4; color: #0f766e; }
 .action-btn.danger:hover { background: #fef2f2; border-color: #fecaca; color: #ef4444; }
 
-/* ── Modals ──────────────────────────────────────── */
+/* Modals */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
@@ -133,7 +133,7 @@
   display: flex; gap: 12px; justify-content: flex-end;
 }
 
-/* ── Form elements ───────────────────────────────── */
+/* Form elements */
 .form-group  { margin-bottom: 18px; }
 .form-label  { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
 .form-input  {
@@ -145,7 +145,7 @@
 .form-input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,0.1); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-/* ── Detail view ─────────────────────────────────── */
+/* Detail view */
 .detail-section { margin-bottom: 24px; }
 .detail-section-title {
   font-size: 13px; font-weight: 700; color: var(--text);
@@ -157,7 +157,7 @@
 .detail-value { font-size: 14px; font-weight: 500; color: var(--text); }
 .detail-value.mono { font-family: var(--mono); font-weight: 600; color: #0f766e; }
 
-/* ── Responsive ──────────────────────────────────── */
+/* Responsive */
 @media (max-width: 900px) {
   .tenant-table th:nth-child(3), .tenant-table td:nth-child(3) { display: none; }
 }
@@ -173,7 +173,7 @@
 <div class="hero">
   <div class="hero-eye">Tenants</div>
   <h1>Manage Tenants</h1>
-  <p>View, add, edit and remove tenants across all your properties.</p>
+  <p>View, add, edit and remove tenant across all your properties.</p>
   <div class="hero-kpis">
     <div class="hero-kpi">
       <span class="hero-kpi-label">Total Tenants</span>
@@ -182,10 +182,6 @@
     <div class="hero-kpi">
       <span class="hero-kpi-label">New This Month</span>
       <span class="hero-kpi-value">{{ stats.new_this_month | default(0) }}</span>
-    </div>
-    <div class="hero-kpi">
-      <span class="hero-kpi-label">Expiring Leases</span>
-      <span class="hero-kpi-value">{{ stats.expiring_leases | default(0) }}</span>
     </div>
     <div class="hero-kpi">
       <span class="hero-kpi-label">Vacancies</span>
@@ -197,7 +193,7 @@
 
 {% block content %}
 
-{# ── Flash messages ───────────────────────────────── #}
+{# Flash messages #}
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}
@@ -210,7 +206,7 @@
   {% endif %}
 {% endwith %}
 
-{# ── Filter bar ───────────────────────────────────── #}
+{# Filter bar #}
 <div class="filter-bar">
   <div class="search-wrap">
     <i data-lucide="search" width="14" height="14"></i>
@@ -227,7 +223,7 @@
   </button>
 </div>
 
-{# ── Tenant table ─────────────────────────────────── #}
+{# Tenant table #}
 <div class="tenant-table-container">
   <table class="tenant-table">
     <thead>
@@ -236,7 +232,6 @@
         <th>Unit / Property</th>
         <th>Contact</th>
         <th>Rent</th>
-        <th>Lease</th>
         <th>Status</th>
         <th style="text-align:right;">Actions</th>
       </tr>
@@ -250,20 +245,16 @@
               <div class="tenant-avatar">{{ t.name[:2].upper() if t.name else 'N/A' }}</div>
               <div class="tenant-info">
                 <div class="tenant-name">{{ t.name or 'Unnamed' }}</div>
-                <div class="tenant-email">{{ t.email or '—' }}</div>
+                <div class="tenant-email">{{ t.email or '-' }}</div>
               </div>
             </div>
           </td>
           <td>
-            <div>{{ t.unit_number or '—' }}</div>
-            <div style="font-size:11px; color:var(--text-3);">{{ t.property_name or '—' }}</div>
+            <div>{{ t.unit_number or '-' }}</div>
+            <div style="font-size:11px; color:var(--text-3);">{{ t.property_name or '-' }}</div>
           </td>
-          <td>{{ t.phone or '—' }}</td>
+          <td>{{ t.phone or '-' }}</td>
           <td class="rent-mono">KES {{ "{:,.0f}".format(t.rent or 0) }}</td>
-          <td style="font-size:12px;">
-            {{ t.lease_start or '—' }}<br>
-            <small style="color:var(--text-3);">{{ t.lease_end or '—' }}</small>
-          </td>
           <td>
             <div class="status-badge">
               <span class="status-dot {{ t.status_color or 'active' }}"></span>
@@ -290,8 +281,8 @@
         {% endfor %}
       {% else %}
         <tr>
-          <td colspan="7" style="text-align:center; padding:40px; color:var(--text-3);">
-            No tenants found.
+          <td colspan="6" style="text-align:center; padding:40px; color:var(--text-3);">
+            No tenant found.
             <button class="btn-primary" onclick="openModal('addTenantModal')" style="margin-left:8px;">
               Add first tenant
             </button>
@@ -303,11 +294,11 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════ #}
+{# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• #}
 {#   MODALS                                           #}
-{# ══════════════════════════════════════════════════ #}
+{# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• #}
 
-{# ── Add Tenant Modal ─────────────────────────────── #}
+{# Add Tenant Modal #}
 <div class="modal-overlay" id="addTenantModal">
   <div class="modal">
     <div class="modal-header">
@@ -330,13 +321,13 @@
         </div>
         <div class="form-group">
           <label class="form-label">Email</label>
-          <input type="email" name="email" class="form-input" placeholder="optional">
+          <input type="email" name="email" class="form-input" required placeholder="e.g. tenant@email.com">
         </div>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Property *</label>
-            <select name="property_id" class="form-input" required>
-              <option value="">— Select Property —</option>
+            <select name="property_id" id="addProperty" class="form-input" required onchange="loadUnitsForProperty(this.value, 'addUnitId', 'addRentPreview')">
+              <option value="">- Select Property -</option>
               {% for p in properties %}
                 <option value="{{ p.id }}">{{ p.name }}</option>
               {% endfor %}
@@ -344,22 +335,14 @@
           </div>
           <div class="form-group">
             <label class="form-label">Unit *</label>
-            <input type="text" name="unit" class="form-input" required placeholder="e.g. A-101">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Lease Start</label>
-            <input type="date" name="lease_start" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Lease End</label>
-            <input type="date" name="lease_end" class="form-input">
+            <select name="unit_id" id="addUnitId" class="form-input" required onchange="syncRentPreview(this, 'addRentPreview')">
+              <option value="">- Select Unit -</option>
+            </select>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Monthly Rent (KES) *</label>
-          <input type="number" name="amount" class="form-input" required min="0" placeholder="e.g. 18000">
+          <label class="form-label">Monthly Rent (Auto)</label>
+          <input type="text" id="addRentPreview" class="form-input" value="KES -" readonly>
         </div>
       </div>
       <div class="modal-footer">
@@ -373,7 +356,7 @@
 </div>
 
 
-{# ── View Tenant Modal ────────────────────────────── #}
+{# View Tenant Modal #}
 <div class="modal-overlay" id="viewTenantModal">
   <div class="modal">
     <div class="modal-header">
@@ -390,7 +373,7 @@
 </div>
 
 
-{# ── Edit Tenant Modal ────────────────────────────── #}
+{# Edit Tenant Modal #}
 <div class="modal-overlay" id="editTenantModal">
   <div class="modal">
     <div class="modal-header">
@@ -418,8 +401,8 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Property</label>
-            <select name="property_id" id="editProperty" class="form-input">
-              <option value="">— Select Property —</option>
+            <select name="property_id" id="editProperty" class="form-input" onchange="loadUnitsForProperty(this.value, 'editUnitId', 'editRentPreview', window.__editTenantCurrentUnitId)">
+              <option value="">- Select Property -</option>
               {% for p in properties %}
                 <option value="{{ p.id }}">{{ p.name }}</option>
               {% endfor %}
@@ -427,22 +410,14 @@
           </div>
           <div class="form-group">
             <label class="form-label">Unit</label>
-            <input type="text" name="unit" id="editUnit" class="form-input">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Lease Start</label>
-            <input type="date" name="lease_start" id="editLeaseStart" class="form-input">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Lease End</label>
-            <input type="date" name="lease_end" id="editLeaseEnd" class="form-input">
+            <select name="unit_id" id="editUnitId" class="form-input" onchange="syncRentPreview(this, 'editRentPreview')">
+              <option value="">- Select Unit -</option>
+            </select>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Monthly Rent (KES)</label>
-          <input type="number" name="amount" id="editRent" class="form-input" min="0">
+          <label class="form-label">Monthly Rent (Auto)</label>
+          <input type="text" id="editRentPreview" class="form-input" value="KES -" readonly>
         </div>
       </div>
       <div class="modal-footer">
@@ -456,15 +431,15 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════ #}
+{# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• #}
 {#   JAVASCRIPT                                       #}
-{# ══════════════════════════════════════════════════ #}
+{# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• #}
 <script>
-// ── Tenant data from backend (real DB data only) ─
+// + Tenant data from backend (real DB data only) 
 const tenantData = {{ tenant | tojson | safe }};
-// Sanity check — no hardcoded fallbacks, all data is live from DB
+// Sanity check - no hardcoded fallbacks, all data is live from DB
 
-// ── Modal helpers ────────────────────────────────
+// Modal helpers
 function openModal(id) {
   document.getElementById(id).classList.add('show');
   if (window.lucide) lucide.createIcons();
@@ -486,16 +461,10 @@ try {
   if (params.get('open') === 'add') openModal('addTenantModal');
 } catch (e) {}
 
-// ── View tenant details ──────────────────────────
+// View tenant details
 function viewTenantDetails(tenantId) {
   const t = tenantData.find(x => x.id == tenantId);
   if (!t) return;
-
-  const fmtDate = val => {
-    if (!val || val === '—') return '—';
-    const d = new Date(val);
-    return isNaN(d) ? val : d.toLocaleDateString('en-KE', { year:'numeric', month:'long', day:'numeric' });
-  };
 
   document.getElementById('viewTenantContent').innerHTML = `
     <div class="detail-section">
@@ -503,15 +472,15 @@ function viewTenantDetails(tenantId) {
       <div class="detail-grid">
         <div class="detail-item">
           <span class="detail-label">Full Name</span>
-          <span class="detail-value">${t.name || '—'}</span>
+          <span class="detail-value">${t.name || '-'}</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">Phone</span>
-          <span class="detail-value">${t.phone || '—'}</span>
+          <span class="detail-value">${t.phone || '-'}</span>
         </div>
         <div class="detail-item" style="grid-column:1/-1;">
           <span class="detail-label">Email</span>
-          <span class="detail-value">${t.email || '—'}</span>
+          <span class="detail-value">${t.email || '-'}</span>
         </div>
       </div>
     </div>
@@ -520,25 +489,17 @@ function viewTenantDetails(tenantId) {
       <div class="detail-grid">
         <div class="detail-item">
           <span class="detail-label">Property</span>
-          <span class="detail-value">${t.property_name || '—'}</span>
+          <span class="detail-value">${t.property_name || '-'}</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">Unit Number</span>
-          <span class="detail-value">${t.unit_number || '—'}</span>
+          <span class="detail-value">${t.unit_number || '-'}</span>
         </div>
       </div>
     </div>
     <div class="detail-section">
-      <div class="detail-section-title">Lease &amp; Payment</div>
+      <div class="detail-section-title">Payment</div>
       <div class="detail-grid">
-        <div class="detail-item">
-          <span class="detail-label">Lease Start</span>
-          <span class="detail-value">${fmtDate(t.lease_start)}</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Lease End</span>
-          <span class="detail-value">${fmtDate(t.lease_end)}</span>
-        </div>
         <div class="detail-item">
           <span class="detail-label">Monthly Rent</span>
           <span class="detail-value mono">KES ${Number(t.rent || 0).toLocaleString()}</span>
@@ -557,30 +518,73 @@ function viewTenantDetails(tenantId) {
   openModal('viewTenantModal');
 }
 
-// ── Open edit modal and populate ─────────────────
+// Open edit modal and populate
 function openEditModal(tenantId) {
   const t = tenantData.find(x => x.id == tenantId);
   if (!t) return;
 
   // Point the form to the correct edit URL
-  document.getElementById('editTenantForm').action = `{{ '/agent/tenants/edit' if user.role == 'agent' else '/tenants/edit' }}/${t.id}`;
+  document.getElementById('editTenantForm').action = `{{ '/agent/tenant/edit' if user.role == 'agent' else '/tenant/edit' }}/${t.id}`;
 
   document.getElementById('editName').value       = t.name        || '';
   document.getElementById('editPhone').value      = t.phone       || '';
   document.getElementById('editEmail').value      = t.email       || '';
-  document.getElementById('editUnit').value       = t.unit_number || '';
-  document.getElementById('editLeaseStart').value = t.lease_start !== '—' ? t.lease_start : '';
-  document.getElementById('editLeaseEnd').value   = t.lease_end   !== '—' ? t.lease_end   : '';
-  document.getElementById('editRent').value       = t.rent        || 0;
 
-  // Select the correct property option
+  // Keep current unit id so loadUnitsForProperty can include it even if occupied
+  window.__editTenantCurrentUnitId = t.unit_id || null;
+
+  // Select property by id and load units dropdown
   const sel = document.getElementById('editProperty');
-  [...sel.options].forEach(o => { o.selected = (o.text === t.property_name); });
+  [...sel.options].forEach(o => { o.selected = (String(o.value) === String(t.property_id)); });
+  loadUnitsForProperty(t.property_id, 'editUnitId', 'editRentPreview', t.unit_id);
 
   openModal('editTenantModal');
 }
 
-// ── Search & filter ──────────────────────────────
+function syncRentPreview(unitSelect, previewId) {
+  const preview = document.getElementById(previewId);
+  const opt = unitSelect?.options?.[unitSelect.selectedIndex];
+  const rent = opt && opt.dataset && opt.dataset.rent ? Number(opt.dataset.rent) : 0;
+  preview.value = rent ? `KES ${rent.toLocaleString('en-KE', { maximumFractionDigits: 0 })}` : 'KES -';
+}
+
+function loadUnitsForProperty(propertyId, unitSelectId, rentPreviewId, selectedUnitId) {
+  const unitSel = document.getElementById(unitSelectId);
+  const rentPreview = document.getElementById(rentPreviewId);
+  if (!unitSel) return;
+
+  unitSel.innerHTML = '<option value=\"\">- Select Unit -</option>';
+  if (rentPreview) rentPreview.value = 'KES -';
+  if (!propertyId) return;
+
+  const roleIsAgent = {{ 'true' if user.role == 'agent' else 'false' }};
+  const url = roleIsAgent ? `/agent/properties/${propertyId}/units` : `/properties/${propertyId}/units`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      const units = data.units || [];
+      units.forEach(u => {
+        const isCurrent = selectedUnitId && String(u.id) === String(selectedUnitId);
+        const isVacant = (u.status === 'Vacant') && (!u.tenant_id);
+        if (!isVacant && !isCurrent) return;
+
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.unit_number;
+        opt.dataset.rent = u.rent || 0;
+        unitSel.appendChild(opt);
+      });
+
+      if (selectedUnitId) {
+        unitSel.value = String(selectedUnitId);
+        syncRentPreview(unitSel, rentPreviewId);
+      }
+    })
+    .catch(() => {});
+}
+
+// Search & filter
 document.getElementById('searchInput').addEventListener('input', filterTenants);
 document.getElementById('propertyFilter').addEventListener('change', filterTenants);
 
@@ -602,7 +606,7 @@ function filterTenants() {
   });
 }
 
-// ── Init Lucide icons on load ────────────────────
+// Init Lucide icons on load
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();
 });

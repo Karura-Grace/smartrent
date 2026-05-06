@@ -41,9 +41,9 @@
         </div>
 
         <div class="rows">
-          <div class="row"><div class="k">Tenant</div><div class="v">{{ tenant.name if tenant else '—' }}</div></div>
-          <div class="row"><div class="k">Property</div><div class="v">{{ tenant.property_name if tenant else '—' }}</div></div>
-          <div class="row"><div class="k">Unit</div><div class="v">{{ tenant.unit_number if tenant and tenant.unit_number else '—' }}</div></div>
+          <div class="row"><div class="k">Tenant</div><div class="v">{{ tenant.name if tenant else '-' }}</div></div>
+          <div class="row"><div class="k">Property</div><div class="v">{{ tenant.property_name if tenant else '-' }}</div></div>
+          <div class="row"><div class="k">Unit</div><div class="v">{{ tenant.unit_number if tenant and tenant.unit_number else '-' }}</div></div>
           <div class="row"><div class="k">Status</div><div class="v">{{ status or 'Unpaid' }}</div></div>
           {% if paid_on %}<div class="row"><div class="k">Paid On</div><div class="v">{{ paid_on }}</div></div>{% endif %}
           {% if method %}<div class="row"><div class="k">Method</div><div class="v">{{ method }}</div></div>{% endif %}

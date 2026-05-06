@@ -1,6 +1,6 @@
 {% extends "base_dashboard.html" %}
 
-{% block title %}Payments · SmartRent{% endblock %}
+{% block title %}Payments - SmartRent{% endblock %}
 {% block role_name %}Tenant{% endblock %}
 {% block page_title %}Payments{% endblock %}
 {% block page_sub %}Pay{% endblock %}
@@ -273,10 +273,10 @@
             <ul class="bill-list" id="billList">
                 {% for bill in active_bills %}
                 <li class="bill-item{% if bill.selected %} selected{% endif %}" data-amount="{{ bill.amount }}" data-name="{{ bill.data_name }}" onclick="toggleBill(this)">
-                    <div class="bill-check">{% if bill.selected %}✓{% endif %}</div>
+                    <div class="bill-check">{% if bill.selected %}OK{% endif %}</div>
                     <div class="bill-info">
                         <div class="bill-name">{{ bill.name }}</div>
-                        <div class="bill-due">{{ bill.period }} · Due {{ bill.due }}</div>
+                        <div class="bill-due">{{ bill.period }} - Due {{ bill.due }}</div>
                     </div>
                     <span class="badge {{ bill.status_class }}" style="margin-right:8px">{{ bill.status }}</span>
                     <div class="bill-amount">{{ bill.amount_display }}</div>
@@ -340,12 +340,12 @@
                 <div class="instructions">
                     <div class="instr-title">
                         <i data-lucide="smartphone" width="13" height="13"></i>
-                        M-Pesa STK Push — Instant prompt on your phone
+                        M-Pesa STK Push - Instant prompt on your phone
                     </div>
                     <ul class="steps">
                         <li><div class="step-num">1</div>Enter your M-Pesa registered phone number below</li>
                         <li><div class="step-num">2</div>Click "Send Payment Request"</li>
-                        <li><div class="step-num">3</div>A payment prompt appears on your phone — enter your M-Pesa PIN</li>
+                        <li><div class="step-num">3</div>A payment prompt appears on your phone - enter your M-Pesa PIN</li>
                         <li><div class="step-num">4</div>You'll receive an SMS confirmation from Safaricom</li>
                     </ul>
                 </div>
@@ -369,7 +369,7 @@
                 </div>
                 <div class="stk-waiting" id="stk-waiting">
                     <div class="stk-spinner"></div>
-                    <div class="stk-txt">Waiting for M-Pesa confirmation…</div>
+                    <div class="stk-txt">Waiting for M-Pesa confirmation...</div>
                     <div class="stk-sub" id="stk-status-sub">Check your phone and enter your M-Pesa PIN to complete</div>
                     <button class="btn-outline" style="margin-top:14px;" onclick="cancelSTK()">Cancel</button>
                 </div>
@@ -427,7 +427,7 @@
                 <div class="instructions">
                     <div class="instr-title">
                         <i data-lucide="building-2" width="13" height="13"></i>
-                        M-Pesa Paybill — Step by step
+                        M-Pesa Paybill - Step by step
                     </div>
                     <ul class="steps">
                         <li><div class="step-num">1</div>Open M-Pesa menu → <strong>Lipa na M-Pesa</strong></li>
@@ -460,7 +460,7 @@
                 <div class="instructions">
                     <div class="instr-title">
                         <i data-lucide="store" width="13" height="13"></i>
-                        M-Pesa Till Number — Buy Goods
+                        M-Pesa Till Number - Buy Goods
                     </div>
                     <ul class="steps">
                         <li><div class="step-num">1</div>Open M-Pesa → <strong>Lipa na M-Pesa</strong></li>
@@ -488,7 +488,7 @@
                 <div class="instructions">
                     <div class="instr-title">
                         <i data-lucide="phone-call" width="13" height="13"></i>
-                        M-Pesa Send Money — Direct to landlord
+                        M-Pesa Send Money - Direct to landlord
                     </div>
                     <ul class="steps">
                         <li><div class="step-num">1</div>Open M-Pesa → <strong>Send Money</strong></li>
@@ -609,7 +609,7 @@
     <div class="modal" onclick="event.stopPropagation()">
         <div class="modal-head">
             <span class="modal-title">Payment Receipt</span>
-            <button class="modal-close" onclick="closeModal('receiptModal')">✕</button>
+            <button class="modal-close" onclick="closeModal('receiptModal')">x</button>
         </div>
         <div class="receipt-logo">
             <div class="receipt-brand">SmartRent</div>
@@ -629,7 +629,7 @@
 <div class="modal-overlay" id="successModal" onclick="closeModal('successModal')">
     <div class="modal" onclick="event.stopPropagation()">
         <div class="success-wrap">
-            <div class="success-circle">✓</div>
+            <div class="success-circle">OK</div>
             <div class="success-title">Payment Submitted!</div>
             <div class="success-sub" id="success-msg">Your payment has been submitted successfully.</div>
             <button class="btn-primary" style="margin:0 auto;" onclick="closeModal('successModal')">
@@ -640,7 +640,7 @@
 </div>
 
 <script>
-// ── Helpers ──────────────────────────────────
+// -- Helpers ----------------------------------
 function fmt(n){ return 'KES ' + n.toLocaleString(); }
 
 function getTotalAmount(){
@@ -674,22 +674,22 @@ function updateSummary(){
     document.getElementById('summary-total').textContent = fmt(total);
 }
 
-// ── Toggle bill ───────────────────────────────
+// -- Toggle bill -------------------------------
 function toggleBill(el){
     el.classList.toggle('selected');
-    el.querySelector('.bill-check').textContent = el.classList.contains('selected') ? '✓' : '';
+    el.querySelector('.bill-check').textContent = el.classList.contains('selected') ? 'OK' : '';
     updateAmounts();
 }
 
 function selectAll(){
     document.querySelectorAll('.bill-item').forEach(el => {
         el.classList.add('selected');
-        el.querySelector('.bill-check').textContent = '✓';
+        el.querySelector('.bill-check').textContent = 'OK';
     });
     updateAmounts();
 }
 
-// ── Method switching ──────────────────────────
+// -- Method switching --------------------------
 const methodLabels = {
     stk: '<i data-lucide="smartphone" width="13" height="13" style="color:var(--blue-600)"></i> M-Pesa STK Push',
     bank: '<i data-lucide="landmark" width="13" height="13" style="color:var(--blue-600)"></i> Bank Account',
@@ -707,7 +707,7 @@ function switchMethod(id, tab){
     lucide.createIcons();
 }
 
-// ── STK Push ──────────────────────────────────
+// -- STK Push ----------------------------------
 const fallbackBanks = [
     { name: 'Co-operative Bank', paybill: '' },
     { name: 'Equity Bank', paybill: '' },
@@ -949,7 +949,7 @@ function cancelSTK(){
     }
 }
 
-// ── Manual payment ────────────────────────────
+// -- Manual payment ----------------------------
 function markManualPaid(method){
     const total = getTotalAmount();
     if(total === 0){ alert('Please select at least one item to pay'); return; }
@@ -959,7 +959,7 @@ function markManualPaid(method){
     lucide.createIcons();
 }
 
-// ── Copy ──────────────────────────────────────
+// -- Copy --------------------------------------
 function copyText(text, btn){
     navigator.clipboard.writeText(text).then(() => {
         btn.textContent = 'Copied!';
@@ -968,7 +968,7 @@ function copyText(text, btn){
     });
 }
 
-// ── Receipt modal ─────────────────────────────
+// -- Receipt modal -----------------------------
 function showReceipt(ref, date, desc, amount, method){
     document.getElementById('receipt-body').innerHTML = `
         <div class="receipt-total">
@@ -980,8 +980,8 @@ function showReceipt(ref, date, desc, amount, method){
         <div class="receipt-row"><span class="r-label">Description</span><span class="r-value">${desc}</span></div>
         <div class="receipt-row"><span class="r-label">Method</span><span class="r-value">${method}</span></div>
         <div class="receipt-row"><span class="r-label">Tenant</span><span class="r-value">{{ user.user_name }}</span></div>
-        <div class="receipt-row"><span class="r-label">Unit</span><span class="r-value">{{ tenant_unit }} · {{ property_name }}</span></div>
-        <div class="receipt-row"><span class="r-label">Status</span><span class="r-value" style="color:var(--green)">✓ Confirmed</span></div>
+        <div class="receipt-row"><span class="r-label">Unit</span><span class="r-value">{{ tenant_unit }} - {{ property_name }}</span></div>
+        <div class="receipt-row"><span class="r-label">Status</span><span class="r-value" style="color:var(--green)">OK Confirmed</span></div>
     `;
     document.getElementById('receiptModal').classList.add('show');
 }
@@ -990,7 +990,7 @@ function closeModal(id){
     document.getElementById(id).classList.remove('show');
 }
 
-// ── Init ──────────────────────────────────────
+// -- Init --------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     updateAmounts();
     loadBankOptions();

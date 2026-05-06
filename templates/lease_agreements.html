@@ -1,5 +1,5 @@
-{% extends "base_dashboard.html" %}
-{% block title %}Lease Agreements · SmartRent{% endblock %}
+﻿{% extends "base_dashboard.html" %}
+{% block title %}Lease Agreements - SmartRent{% endblock %}
 {% block role_name %}Landlord{% endblock %}
 {% block page_title %}Lease Agreements{% endblock %}
 {% block page_sub %}Manage Leases{% endblock %}
@@ -84,15 +84,15 @@
         {% for l in leases %}
           <tr>
             <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">
-              <strong>{{ l.tenant_name_live or l.tenant_name or '—' }}</strong>
-              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ l.tenant_email or '—' }}</div>
+              <strong>{{ l.tenant_name_live or l.tenant_name or '-' }}</strong>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ l.tenant_email or '-' }}</div>
             </td>
             <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">
-              <div><strong>{{ l.unit_number_live or l.unit_number or '—' }}</strong></div>
-              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ l.property_name or '—' }}</div>
+              <div><strong>{{ l.unit_number_live or l.unit_number or '-' }}</strong></div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ l.property_name or '-' }}</div>
             </td>
-            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">{{ l.start_date or '—' }}</td>
-            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">{{ l.end_date or '—' }}</td>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">{{ l.start_date or '-' }}</td>
+            <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">{{ l.end_date or '-' }}</td>
             <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);font-family:var(--mono);font-weight:700;">KES {{ (l.rent_amount or 0) | round | int }}</td>
             <td style="padding:14px 18px;border-bottom:1px solid var(--border-lt);">
               {% set st = (l.status or '') %}
@@ -116,7 +116,7 @@
                     <i data-lucide="copy" width="11" height="11"></i> Copy
                   </button>
                 {% else %}
-                  <span style="font-size:12px;color:var(--text-3);">—</span>
+                  <span style="font-size:12px;color:var(--text-3);">-</span>
                 {% endif %}
               </div>
             </td>
@@ -141,9 +141,9 @@
       <div class="form-group">
         <label class="form-label">Tenant *</label>
         <select class="form-input" name="tenant_id" required>
-          <option value="">Select tenant…</option>
-          {% for t in tenants %}
-            <option value="{{ t.id }}">{{ t.property_name }} · {{ t.unit }} · {{ t.name }}</option>
+          <option value="">Select tenant...</option>
+          {% for t in tenant %}
+            <option value="{{ t.id }}">{{ t.property_name }} - {{ t.unit }} - {{ t.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -151,10 +151,10 @@
       <div class="form-group">
         <label class="form-label">Unit *</label>
         <select class="form-input" name="unit_id" required>
-          <option value="">Select unit…</option>
+          <option value="">Select unit...</option>
           {% for u in units %}
             {% if (u.status or '') == 'Vacant' %}
-              <option value="{{ u.id }}">{{ u.property_name }} · {{ u.unit_number }} (Vacant)</option>
+              <option value="{{ u.id }}">{{ u.property_name }} - {{ u.unit_number }} (Vacant)</option>
             {% endif %}
           {% endfor %}
         </select>
@@ -184,7 +184,7 @@
 
       <div class="form-group">
         <label class="form-label">Terms</label>
-        <textarea class="form-input" name="terms" rows="3" placeholder="Optional: any terms or notes…"></textarea>
+        <textarea class="form-input" name="terms" rows="3" placeholder="Optional: any terms or notes..."></textarea>
       </div>
 
       <div class="modal-footer">
@@ -215,4 +215,5 @@ document.getElementById('searchInput')?.addEventListener('input', () => {
 });
 </script>
 {% endblock %}
+
 

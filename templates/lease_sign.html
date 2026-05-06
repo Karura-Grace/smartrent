@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sign Lease · SmartRent</title>
+  <title>Sign Lease - SmartRent</title>
   <style>
     :root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#475569;--green:#10b981;--amber:#f59e0b;--red:#ef4444}
     *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
@@ -53,15 +53,15 @@
         <div class="grid">
           <div class="item">
             <div class="lbl">Tenant</div>
-            <div class="val">{{ lease.tenant_name or '—' }}</div>
+            <div class="val">{{ lease.tenant_name or '-' }}</div>
           </div>
           <div class="item">
             <div class="lbl">Unit</div>
-            <div class="val">{{ lease.unit_number_live or lease.unit_number or '—' }}</div>
+            <div class="val">{{ lease.unit_number_live or lease.unit_number or '-' }}</div>
           </div>
           <div class="item">
             <div class="lbl">Property</div>
-            <div class="val">{{ lease.property_name or '—' }}</div>
+            <div class="val">{{ lease.property_name or '-' }}</div>
           </div>
           <div class="item">
             <div class="lbl">Rent</div>
@@ -69,17 +69,17 @@
           </div>
           <div class="item">
             <div class="lbl">Start Date</div>
-            <div class="val">{{ lease.start_date or '—' }}</div>
+            <div class="val">{{ lease.start_date or '-' }}</div>
           </div>
           <div class="item">
             <div class="lbl">End Date</div>
-            <div class="val">{{ lease.end_date or '—' }}</div>
+            <div class="val">{{ lease.end_date or '-' }}</div>
           </div>
         </div>
 
         <div class="terms">
           <div class="lbl" style="margin-bottom:8px;">Terms</div>
-          <pre>{{ lease.terms or '—' }}</pre>
+          <pre>{{ lease.terms or '-' }}</pre>
         </div>
 
         {% if signed %}

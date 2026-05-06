@@ -1,6 +1,6 @@
-{% extends "base_dashboard.html" %}
+﻿{% extends "base_dashboard.html" %}
 
-{% block title %}Dashboard · SmartRent{% endblock %}
+{% block title %}Dashboard - SmartRent{% endblock %}
 {% block role_name %}Service Provider{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 {% block page_sub %}Service Provider Overview{% endblock %}
@@ -16,7 +16,7 @@
 .card-action { color: #c2410c; background: #fff7ed; }
 .card-action:hover { background: #fed7aa; }
 
-/* ── Job status action buttons ── */
+/* -- Job status action buttons -- */
 .job-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .job-btn {
     display: inline-flex; align-items: center; gap: 5px;
@@ -29,7 +29,7 @@
 .job-btn-msg    { background: #fff7ed; color: #9a3412; }
 .job-btn-nav    { background: #f3f4f6; color: #374151; }
 
-/* ── Photo upload card ── */
+/* -- Photo upload card -- */
 .photo-upload-zone {
     border: 2px dashed var(--border);
     border-radius: var(--r);
@@ -43,7 +43,7 @@
 .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 12px; }
 .photo-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
 
-/* ── Earnings mini-chart ── */
+/* -- Earnings mini-chart -- */
 .earn-bar-wrap { display: flex; align-items: flex-end; gap: 5px; height: 60px; margin: 12px 0 4px; }
 .earn-bar { flex: 1; border-radius: 3px 3px 0 0; background: #fed7aa; transition: background 0.2s; cursor: default; position: relative; }
 .earn-bar.current { background: #c2410c; }
@@ -51,15 +51,15 @@
 .earn-labels { display: flex; gap: 5px; }
 .earn-lbl { flex: 1; text-align: center; font-size: 9px; color: var(--text-3); }
 
-/* ── Rating stars ── */
+/* -- Rating stars -- */
 .stars { display: flex; gap: 2px; }
 .star-filled { color: #f59e0b; }
 .star-empty  { color: var(--border); }
 
-/* ── Status pill colours ── */
+/* -- Status pill colours -- */
 .b-orange { background: #ffedd5; color: #9a3412; }
 
-/* ── Portfolio toggle ── */
+/* -- Portfolio toggle -- */
 .toggle-wrap { display: flex; align-items: center; gap: 8px; }
 .toggle { position: relative; width: 36px; height: 20px; }
 .toggle input { opacity: 0; width: 0; height: 0; }
@@ -80,6 +80,13 @@
     <div class="nav-ico"><i data-lucide="clipboard-list" width="16" height="16"></i></div>
     <span class="nav-txt">My Jobs</span>
     <span class="nav-pill">5</span>
+</a>
+<a href="{{ url_for('service.provider_requests') }}" class="nav-item {% if request.path == '/provider/requests' %}active{% endif %}">
+    <div class="nav-ico"><i data-lucide="wrench" width="16" height="16"></i></div>
+    <span class="nav-txt">Service Requests</span>
+    {% if open_count %}
+      <span class="nav-pill">{{ open_count }}</span>
+    {% endif %}
 </a>
 <a href="/provider/jobs/completed" class="nav-item {% if request.path == '/provider/jobs/completed' %}active{% endif %}">
     <div class="nav-ico"><i data-lucide="check-circle" width="16" height="16"></i></div>
@@ -116,7 +123,7 @@
 {% block hero %}
 <div class="hero">
     <div class="hero-eye">Service Provider Portal</div>
-    <h1>Ready to work, {{ user.user_name }} 🔧</h1>
+    <h1>Ready to work, {{ user.user_name }} ðŸ"§</h1>
     <p>Your job queue and earnings overview for March 2025.</p>
     <div class="hero-kpis">
         <div class="hero-kpi">
@@ -129,11 +136,11 @@
         </div>
         <div class="hero-kpi">
             <span class="hero-kpi-label">Rating</span>
-            <span class="hero-kpi-value">⭐ 4.8 / 5.0</span>
+            <span class="hero-kpi-value">â­ 4.8 / 5.0</span>
         </div>
         <div class="hero-kpi">
             <span class="hero-kpi-label">Status</span>
-            <span class="hero-kpi-value">✓ Available</span>
+            <span class="hero-kpi-value">Available</span>
         </div>
     </div>
 </div>
@@ -141,7 +148,7 @@
 
 {% block content %}
 
-<!-- ── KPI stat cards ── -->
+<!--  KPI stat cards  -->
 <div class="stats-grid">
 
     <div class="stat-card">
@@ -149,11 +156,11 @@
             <div class="stat-ico ico-green">
                 <i data-lucide="banknote" width="18" height="18" style="color:#15803d"></i>
             </div>
-            <span class="stat-trend up">↑ 8 jobs</span>
+            <span class="stat-trend up">â†' 8 jobs</span>
         </div>
         <div class="stat-val">KES 38,500</div>
         <div class="stat-name">Earnings This Month</div>
-        <div class="stat-hint">March 2025 · 8 completed jobs</div>
+        <div class="stat-hint">March 2025 - 8 completed jobs</div>
     </div>
 
     <div class="stat-card">
@@ -185,7 +192,7 @@
             <div class="stat-ico ico-blue">
                 <i data-lucide="check-circle" width="18" height="18" style="color:#2563eb"></i>
             </div>
-            <span class="stat-trend up">↑ 100% rate</span>
+            <span class="stat-trend up">â†' 100% rate</span>
         </div>
         <div class="stat-val">8</div>
         <div class="stat-name">Jobs Completed</div>
@@ -194,10 +201,10 @@
 
 </div>
 
-<!-- ── Main content grid ── -->
+<!--  Main content grid  -->
 <div class="content-grid">
 
-    <!-- ── Assigned Jobs table ── -->
+    <!--  Assigned Jobs table  -->
     <div class="card">
         <div class="card-head">
             <span class="card-title">Assigned Jobs</span>
@@ -326,7 +333,7 @@
         </table>
     </div>
 
-    <!-- ── Right column ── -->
+    <!--  Right column  -->
     <div style="display:flex;flex-direction:column;gap:16px;">
 
         <!-- Quick Actions -->
@@ -364,7 +371,7 @@
         <!-- Earnings mini summary -->
         <div class="card">
             <div class="card-head">
-                <span class="card-title">Earnings — 2025</span>
+                <span class="card-title">Earnings - 2025</span>
                 <a href="/provider/earnings" class="card-action" style="display:inline-flex;align-items:center;gap:4px;">
                     <i data-lucide="arrow-right" width="12" height="12"></i> Full Report
                 </a>
@@ -414,7 +421,7 @@
                         </div>
                     </div>
                     <p style="font-size:11.5px;color:var(--text-3);line-height:1.5">"Fixed the leaking tap quickly and left the place clean. Very professional."</p>
-                    <span style="font-size:10px;color:var(--text-3)">Tenant · 2 days ago</span>
+                    <span style="font-size:10px;color:var(--text-3)">Tenant - 2 days ago</span>
                 </div>
 
                 <div>
@@ -429,7 +436,7 @@
                         </div>
                     </div>
                     <p style="font-size:11.5px;color:var(--text-3);line-height:1.5">"Good work on the wiring. Arrived on time and explained everything clearly."</p>
-                    <span style="font-size:10px;color:var(--text-3)">Tenant · 5 days ago</span>
+                    <span style="font-size:10px;color:var(--text-3)">Tenant - 5 days ago</span>
                 </div>
 
             </div>
@@ -438,7 +445,7 @@
     </div>
 </div>
 
-<!-- ── Work Portfolio upload section ── -->
+<!--  Work Portfolio upload section  -->
 <div class="card" style="margin-top:0">
     <div class="card-head">
         <span class="card-title">
@@ -450,7 +457,7 @@
         </a>
     </div>
     <p style="font-size:12px;color:var(--text-3);margin-bottom:14px">
-        Photos you mark as <strong>public</strong> appear on your portfolio page — tenants can view your work before a job is assigned.
+        Photos you mark as <strong>public</strong> appear on your portfolio page - tenant can view your work before a job is assigned.
     </p>
 
     <!-- Upload form -->
@@ -473,7 +480,7 @@
                         <input type="checkbox" name="is_public" value="1" checked>
                         <span class="toggle-slider"></span>
                     </label>
-                    <span style="font-size:12px;color:var(--text-3)">Public (visible to tenants)</span>
+                    <span style="font-size:12px;color:var(--text-3)">Public (visible to tenant)</span>
                 </div>
             </div>
         </div>

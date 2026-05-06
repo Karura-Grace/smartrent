@@ -21,13 +21,13 @@ SmartRent is a Flask + MySQL web app for rental property management with role-ba
 
 ## Project layout
 
-- `app.py` — Flask app factory and blueprint registration
-- `config.py` — configuration loaded from environment variables
-- `extensions.py` — MySQL helpers + best-effort DB bootstrap for some tables/columns
-- `helpers.py` — decorators and shared utilities (auth guard, uploads, stats helpers)
-- `blueprints/` — route modules for each area (auth, landlord, tenant, agent, properties, reports, service)
-- `templates/` — HTML templates for dashboards and pages
-- `static/` — CSS/JS/images and runtime uploads (`static/uploads/`)
+- `app.py` - Flask app factory and blueprint registration
+- `config.py` - configuration loaded from environment variables
+- `extensions.py` - MySQL helpers + best-effort DB bootstrap for some tables/columns
+- `helpers.py` - decorators and shared utilities (auth guard, uploads, stats helpers)
+- `blueprints/` - route modules for each area (auth, landlord, tenant, agent, properties, reports, service)
+- `templates/` - HTML templates for dashboards and pages
+- `static/` - CSS/JS/images and runtime uploads (`static/uploads/`)
 
 ## Getting started (local dev)
 
@@ -73,7 +73,7 @@ On startup, the app also attempts (best-effort) to create/adjust a few tables/co
 - `units.tenant_id` column + foreign key fixups
 - `payments.due_date` and `payments.penalty_amount` columns
 
-If you’re starting from a fresh database, you may need to create the remaining tables manually (or add a schema/migrations workflow).
+If you're starting from a fresh database, you may need to create the remaining tables manually (or add a schema/migrations workflow).
 
 ### 5) Run the app
 

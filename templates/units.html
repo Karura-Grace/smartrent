@@ -1,744 +1,776 @@
-{% extends "base_dashboard.html" %}
-{% block title %}Units · SmartRent{% endblock %}
+﻿{% extends "base_dashboard.html" %}
+{% block title %}Units - SmartRent{% endblock %}
 {% block role_name %}{{ 'Agent' if user.role == 'agent' else 'Landlord' }}{% endblock %}
 {% block page_title %}Units{% endblock %}
-{% block page_sub %}Manage Your Units{% endblock %}
+{% block page_sub %}All Units{% endblock %}
 
 {% block extra_styles %}
-/* ── Accent overrides ─────────────────────────────── */
-.hero { background: linear-gradient(135deg, #6e2d8f 0%, #8c0b9f 100%); }
-.nav-item.active  { background: #f0fdfa; color: #0f766e; }
-.nav-item.active::before { background: #0f766e; }
-.nav-item:hover   { background: #f0fdfa; color: #0f766e; }
-.btn-primary      { background: #610f76; }
-.btn-primary:hover{ background: #065f46; }
-
-/* ── Toolbar ────────────────────────────────────────── */
-.toolbar {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
-}
-.toolbar-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.search-box {
-    display: flex; align-items: center; gap: 8px;
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 7px 12px; background: var(--surface);
-    font-size: 13px; color: var(--text-2);
-}
-.search-box input {
-    border: none; outline: none; background: transparent;
-    font-family: inherit; font-size: 13px; color: var(--text); width: 180px;
-}
-.filter-select {
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 7px 12px; background: var(--surface);
-    font-family: inherit; font-size: 13px; color: var(--text-2);
-    outline: none; cursor: pointer;
+/* ── Reset & vars ─────────────────────────────────── */
+:root {
+  --u-border: var(--border, #e5e7eb);
+  --u-bg: var(--bg, #f9fafb);
+  --u-surface: var(--surface, #ffffff);
+  --u-text: var(--text, #111827);
+  --u-text2: var(--text-2, #6b7280);
+  --u-accent: #2563eb;
+  --u-accent-lt: #eff6ff;
+  --u-green: #16a34a;
+  --u-green-lt: #f0fdf4;
+  --u-red: #dc2626;
+  --u-red-lt: #fef2f2;
+  --u-yellow: #d97706;
+  --u-yellow-lt: #fffbeb;
 }
 
-/* ── Property section headers ─────────────────────── */
-.property-section {
-    margin-bottom: 28px;
+/* ── Hero – compact bar ───────────────────────────── */
+.u-hero {
+  background: #1e293b;
+  padding: 20px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #334155;
 }
-.property-section-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px; padding-bottom: 10px;
-    border-bottom: 2px solid var(--border);
+.u-hero-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.02em;
 }
-.property-section-left {
-    display: flex; align-items: center; gap: 12px;
+.u-hero-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
 }
-.property-section-icon {
-    width: 40px; height: 40px; border-radius: 10px;
-    background: linear-gradient(135deg, #6e2d8f, #8c0b9f);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
+.u-kpis {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
 }
-.property-section-name {
-    font-size: 16px; font-weight: 700; color: var(--text);
+.u-kpi {
+  text-align: right;
 }
-.property-section-meta {
-    font-size: 12px; color: var(--text-3); margin-top: 2px;
-    display: flex; gap: 12px;
+.u-kpi-val {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1;
 }
-.property-section-meta span {
-    display: flex; align-items: center; gap: 4px;
+.u-kpi-lbl {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
-.meta-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-}
-.meta-dot-green { background: #10b981; }
-.meta-dot-amber { background: #f59e0b; }
+.u-kpi-val.green { color: #4ade80; }
+.u-kpi-val.red   { color: #f87171; }
 
-/* ── Units table inside each property ─────────────── */
-.units-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
+/* ── Toolbar ──────────────────────────────────────── */
+.u-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0 12px;
+  flex-wrap: wrap;
 }
+.u-toolbar-left { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
 
-.units-table thead {
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
+.u-select, .u-input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--u-border);
+  border-radius: 6px;
+  background: var(--u-surface);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--u-text);
+  outline: none;
 }
+.u-select:focus, .u-input:focus { border-color: var(--u-accent); }
+.u-input { width: 200px; }
+.u-select { min-width: 170px; }
 
-.units-table th {
-    padding: 12px 14px;
-    text-align: left;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-2);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
+.u-btn-add {
+  height: 34px;
+  padding: 0 16px;
+  background: var(--u-accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
 }
+.u-btn-add:hover { background: #1d4ed8; }
 
-.units-table tbody tr {
-    border-bottom: 1px solid var(--border-lt);
-    transition: background 0.13s;
+/* ── Search box with icon button ────────────────── */
+.u-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
-
-.units-table tbody tr:hover {
-    background: var(--bg);
+.u-search-wrap .u-input {
+  padding-right: 36px;
+  width: 220px;
 }
-
-.units-table tbody tr:last-child {
-    border-bottom: none;
+.u-search-btn {
+  position: absolute;
+  right: 0;
+  top: 0; bottom: 0;
+  width: 34px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--u-text2);
+  border-radius: 0 6px 6px 0;
+  transition: background 0.12s, color 0.12s;
 }
+.u-search-btn:hover { background: var(--u-accent-lt); color: var(--u-accent); }
+.u-search-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-.units-table td {
-    padding: 12px 14px;
-    font-size: 13px;
-    color: var(--text);
-    vertical-align: middle;
-}
-
-.unit-number-cell {
-    font-weight: 700;
-    color: var(--text);
-}
-
-.unit-type-cell {
-    font-size: 12px;
-    background: var(--bg);
-    padding: 3px 8px;
-    border-radius: 4px;
-    display: inline-block;
-    color: var(--text-2);
-}
-
-.unit-tenant-cell {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 200px;
-}
-
-.unit-tenant-avatar-small {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #6e2d8f, #10b981);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: white;
-    flex-shrink: 0;
-}
-
-.unit-tenant-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.unit-tenant-name {
-    font-weight: 500;
-    color: var(--text);
+/* ── Tenant option note ──────────────────────────── */
+.tenant-occupied-note {
+  font-size: 11px;
+  color: var(--u-text2);
+  margin-top: 4px;
 }
 
-.unit-tenant-phone {
-    font-size: 11px;
-    color: var(--text-3);
+/* ── Flash messages ──────────────────────────────── */
+.u-flash {
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.u-flash.success { background: var(--u-green-lt); color: var(--u-green); border: 1px solid #bbf7d0; }
+.u-flash.error   { background: var(--u-red-lt);   color: var(--u-red);   border: 1px solid #fecaca; }
+
+/* ── Table wrapper ───────────────────────────────── */
+.u-table-wrap {
+  background: var(--u-surface);
+  border: 1px solid var(--u-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.u-table-scroll { overflow-x: auto; }
+
+/* ── Table ───────────────────────────────────────── */
+table.u-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.u-table th {
+  background: var(--u-bg);
+  padding: 9px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--u-text2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--u-border);
+  white-space: nowrap;
+}
+table.u-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--u-border);
+  color: var(--u-text);
+  vertical-align: middle;
+}
+table.u-table tr:last-child td { border-bottom: none; }
+table.u-table tbody tr:hover { background: #fafafa; }
+
+.u-unit-num {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--u-text);
+}
+.u-prop-name {
+  font-size: 12px;
+  color: var(--u-text2);
+  margin-top: 1px;
 }
 
-.unit-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 8px;
-    border-radius: 4px;
+/* Status pills */
+.u-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill-occupied { background: var(--u-green-lt); color: var(--u-green); }
+.pill-vacant   { background: var(--u-yellow-lt); color: var(--u-yellow); }
+.pill-paid     { background: var(--u-green-lt); color: var(--u-green); }
+.pill-unpaid   { background: var(--u-red-lt);   color: var(--u-red); }
+.pill-na       { background: var(--u-bg); color: var(--u-text2); }
+
+/* Action buttons */
+.u-act-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--u-border);
+  background: var(--u-surface);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--u-text2);
+  cursor: pointer;
+  margin-right: 4px;
+}
+.u-act-btn:hover { background: var(--u-bg); }
+.u-act-btn.del:hover { background: var(--u-red-lt); color: var(--u-red); border-color: #fecaca; }
+
+/* Empty state */
+.u-empty {
+  padding: 48px;
+  text-align: center;
+  color: var(--u-text2);
+  font-size: 13px;
 }
 
-.status-occupied   { background: #d1fae5; color: #065f46; }
-.status-vacant     { background: #fef3c7; color: #92400e; }
-.status-maintenance{ background: #fee2e2; color: #991b1b; }
+/* ── Modal ───────────────────────────────────────── */
+.u-modal-ov {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 900;
+  align-items: center; justify-content: center;
+}
+.u-modal-ov.open { display: flex; }
+.u-modal {
+  background: var(--u-surface);
+  border-radius: 12px;
+  padding: 24px 26px;
+  width: 100%; max-width: 480px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+  max-height: 90vh; overflow-y: auto;
+}
+.u-modal-title { font-size: 15px; font-weight: 700; color: var(--u-text); margin-bottom: 18px; }
+.u-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
 
-.unit-rent-cell {
-    font-weight: 600;
-    color: #0f766e;
-    text-align: right;
+.u-fg { margin-bottom: 12px; }
+.u-fl { display: block; font-size: 11px; font-weight: 700; color: var(--u-text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.u-fi {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--u-border);
+  border-radius: 6px; font-family: inherit; font-size: 13px;
+  color: var(--u-text); background: var(--u-surface); outline: none;
+  box-sizing: border-box;
 }
+.u-fi:focus { border-color: var(--u-accent); }
+.u-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-.unit-actions-cell {
-    display: flex;
-    gap: 6px;
-    justify-content: flex-end;
-    min-width: 110px;
+.u-btn-cancel {
+  padding: 8px 14px; border-radius: 6px; border: 1px solid var(--u-border);
+  background: var(--u-surface); font-family: inherit; font-size: 13px;
+  font-weight: 600; color: var(--u-text2); cursor: pointer;
 }
-
-.unit-btn {
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text-2);
-    cursor: pointer;
-    transition: all 0.13s;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    white-space: nowrap;
+.u-btn-save {
+  padding: 8px 18px; border-radius: 6px; border: none;
+  background: var(--u-accent); color: #fff; font-family: inherit;
+  font-size: 13px; font-weight: 600; cursor: pointer;
 }
-
-.unit-btn:hover {
-    background: #f0fdfa;
-    color: #610f76;
-    border-color: #c084fc;
-}
-
-.unit-btn.danger {
-    color: #dc2626;
-}
-
-.unit-btn.danger:hover {
-    background: #fef2f2;
-    border-color: #fecaca;
-}
-
-/* ── Empty state ─────────────────────────────────── */
-.no-units-msg {
-    padding: 20px;
-    text-align: center;
-    color: var(--text-3);
-    font-size: 13px;
-}
-
-/* ── Empty state ─────────────────────────────────── */
-.empty-state {
-    text-align: center; padding: 48px 0; color: var(--text-3); font-size: 14px;
-    grid-column: 1/-1;
-}
-
-/* ── Modal ────────────────────────────────────────── */
-.modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45); z-index: 999;
-    align-items: center; justify-content: center;
-}
-.modal-overlay.open { display: flex; }
-.modal {
-    background: var(--surface); border-radius: 16px;
-    padding: 28px 30px; width: 100%; max-width: 480px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.18);
-    max-height: 90vh; overflow-y: auto;
-    animation: slideUp 0.22s ease both;
-}
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
-
-.modal-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.modal-sub   { font-size: 13px; color: var(--text-3); margin-bottom: 22px; }
-.modal-footer { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
-
-.form-group  { margin-bottom: 14px; }
-.form-row    { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.form-label  { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
-.form-input  {
-    width: 100%; padding: 9px 12px; border: 1.5px solid var(--border);
-    border-radius: 8px; font-family: inherit; font-size: 13.5px;
-    color: var(--text); background: var(--surface); outline: none;
-    transition: border-color 0.13s; box-sizing: border-box;
-}
-.form-input:focus { border-color: #8c0b9f; box-shadow: 0 0 0 3px rgba(140,11,159,0.1); }
-textarea.form-input { resize: vertical; min-height: 72px; }
-
-/* ── Summary bar ────────────────────────────────── */
-.summary-bar {
-    display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
-}
-.summary-pill {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 16px; font-size: 13px;
-}
-.summary-pill-val { font-size: 18px; font-weight: 800; color: var(--text); }
-.summary-pill-lbl { font-size: 11px; color: var(--text-3); }
+.u-btn-save:hover { background: #1d4ed8; }
 {% endblock %}
 
 {% block hero %}
-<div class="hero">
-    <div class="hero-eye">Units</div>
-    <h1>All Units</h1>
-    <p>View, add, and manage every unit across your portfolio.</p>
-    <div class="hero-kpis">
-        <div class="hero-kpi">
-            <span class="hero-kpi-label">Properties</span>
-            <span class="hero-kpi-value">{{ properties|length }}</span>
-        </div>
-        <div class="hero-kpi">
-            <span class="hero-kpi-label">Total Units</span>
-            <span class="hero-kpi-value">{{ stats.total_units or 0 }}</span>
-        </div>
-        <div class="hero-kpi">
-            <span class="hero-kpi-label">Occupied</span>
-            <span class="hero-kpi-value">{{ stats.occupied or 0 }}</span>
-        </div>
-        <div class="hero-kpi">
-            <span class="hero-kpi-label">Vacant</span>
-            <span class="hero-kpi-value">{{ stats.vacant or 0 }}</span>
-        </div>
+<div class="u-hero">
+  <div>
+    <div class="u-hero-title">Units</div>
+    <div class="u-hero-sub">All units across your properties</div>
+  </div>
+  <div class="u-kpis">
+    <div class="u-kpi">
+      <div class="u-kpi-val">{{ stats.total_units or 0 }}</div>
+      <div class="u-kpi-lbl">Total</div>
     </div>
+    <div class="u-kpi">
+      <div class="u-kpi-val green">{{ stats.occupied or 0 }}</div>
+      <div class="u-kpi-lbl">Occupied</div>
+    </div>
+    <div class="u-kpi">
+      <div class="u-kpi-val red">{{ stats.vacant or 0 }}</div>
+      <div class="u-kpi-lbl">Vacant</div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block content %}
 
-{# ── Flash messages ─────────────────────────────── #}
+{# Flash messages #}
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}
-      <div class="alert alert-{{ category }}" style="margin-bottom:16px; padding:12px 16px; border-radius:10px; font-size:13px;
-           background:{% if category=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
-           color:{% if category=='success' %}#065f46{% else %}#991b1b{% endif %};">
-        {{ message }}
-      </div>
+      <div class="u-flash {{ category }}">{{ message }}</div>
     {% endfor %}
   {% endif %}
 {% endwith %}
 
-{# ── Toolbar ──────────────────────────────────────── #}
-<div class="toolbar">
-    <div class="toolbar-left">
-        <div class="search-box">
-            <i data-lucide="search" width="14" height="14"></i>
-            <input type="text" id="searchInput" placeholder="Search units or tenants…" oninput="filterUnits()">
-        </div>
-        <select class="filter-select" id="filterProperty" onchange="filterUnits()">
-            <option value="">All Properties</option>
-            {% for p in properties %}
-            <option value="{{ p.id }}">{{ p.name }}</option>
-            {% endfor %}
-        </select>
-        <select class="filter-select" id="filterStatus" onchange="filterUnits()">
-            <option value="">All Statuses</option>
-            <option value="Occupied">Occupied</option>
-            <option value="Vacant">Vacant</option>
-            <option value="Maintenance">Maintenance</option>
-        </select>
+{# Toolbar #}
+<div class="u-toolbar">
+  <div class="u-toolbar-left">
+    <div class="u-search-wrap">
+      <input class="u-input" type="text" id="unitSearch" placeholder="Search unit, tenant…"
+             oninput="filterUnits()" onkeydown="if(event.key==='Enter')filterUnits()">
+      <button class="u-search-btn" type="button" onclick="filterUnits()" title="Search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-        <a href="{{ url_for('agent.agent_properties') if user.role == 'agent' else url_for('properties.properties') }}"
-           class="btn-outline" style="text-decoration:none;display:flex;align-items:center;gap:6px;font-size:13px;">
-            <i data-lucide="arrow-left" width="14" height="14"></i> Properties
-        </a>
-        <button class="btn-primary" onclick="openModal('addUnitModal')">
-            <i data-lucide="plus" width="14" height="14"></i> Add Unit
-        </button>
-    </div>
+    <select class="u-select" id="propFilter" onchange="filterUnits()">
+      <option value="">All Properties</option>
+      {% for p in properties %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+      {% endfor %}
+    </select>
+    <select class="u-select" id="statusFilter" onchange="filterUnits()">
+      <option value="">All Statuses</option>
+      <option value="Occupied">Occupied</option>
+      <option value="Vacant">Vacant</option>
+    </select>
+  </div>
+  <button class="u-btn-add" onclick="document.getElementById('addUnitModal').classList.add('open')">
+    + Add Unit
+  </button>
 </div>
 
-{# ── Per-property sections ─────────────────────────── #}
-{% for p in properties %}
-<div class="property-section" data-property-id="{{ p.id }}" id="prop-section-{{ p.id }}">
+{# Table #}
+<div class="u-table-wrap">
+  <div class="u-table-scroll">
+    <table class="u-table" id="unitsTable">
+      <thead>
+        <tr>
+          <th>Unit</th>
+          <th>Property</th>
+          <th>Type</th>
+          <th>Floor</th>
+          <th>Rent (KES)</th>
+          <th>Tenant</th>
+          <th>Status</th>
+          <th>Rent Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="unitsTbody">
+        {% set ns = namespace(found=false) %}
+        {% for p in properties %}
+          {% for unit in p.units if p.units is defined %}
+            {# This block handles if units are pre-loaded per property #}
+          {% endfor %}
+        {% endfor %}
 
-    <div class="property-section-header">
-        <div class="property-section-left">
-            <div class="property-section-icon">
-                {% if p.type == 'Apartments' %}🏢
-                {% elif p.type == 'Townhouse' %}🏘️
-                {% elif p.type == 'Commercial' %}🏬
-                {% else %}🏠{% endif %}
-            </div>
-            <div>
-                <div class="property-section-name">{{ p.name }}</div>
-                <div class="property-section-meta">
-                    <span><i data-lucide="map-pin" width="11" height="11"></i> {{ p.address }}{% if p.city %}, {{ p.city }}{% endif %}</span>
-                    <span>
-                        <span class="meta-dot meta-dot-green"></span>
-                        {{ p.occupied_count or 0 }} occupied
-                    </span>
-                    <span>
-                        <span class="meta-dot meta-dot-amber"></span>
-                        {{ p.vacant_count or 0 }} vacant
-                    </span>
-                </div>
-            </div>
-        </div>
-        <button class="btn-outline" style="font-size:12px;"
-                onclick="openAddUnitForProperty({{ p.id }}, '{{ p.name|e }}')">
-            <i data-lucide="plus" width="13" height="13"></i> Add Unit
-        </button>
-    </div>
-
-    <div class="units-grid" id="units-grid-{{ p.id }}">
-        {# Units will be loaded by JS on page load #}
-        <div style="padding: 20px; text-align: center; color: var(--text-3);">
-            <i data-lucide="loader" width="20" height="20" style="animation:spin 1s linear infinite;"></i>
-            <div style="margin-top:8px;">Loading units…</div>
-        </div>
-    </div>
-
+        {# Flat unit list - rendered via JS from API call below #}
+        {# Fallback: if units passed directly as flat list #}
+        {% if units is defined %}
+          {% for u in units %}
+            {% set ns.found = true %}
+            <tr
+              data-prop="{{ u.property_id }}"
+              data-status="{{ u.status }}"
+              data-search="{{ u.unit_number|lower }} {{ (u.tenant_name or '')|lower }} {{ (u.property_name or '')|lower }}"
+            >
+              <td>
+                <div class="u-unit-num">{{ u.unit_number }}</div>
+              </td>
+              <td>
+                <div style="font-size:13px;">{{ u.property_name or '-' }}</div>
+              </td>
+              <td>{{ u.type or '-' }}</td>
+              <td>{{ u.floor or '-' }}</td>
+              <td style="font-weight:600;">{{ '{:,.0f}'.format(u.rent|float) if u.rent else '-' }}</td>
+              <td>{{ u.tenant_name if u.tenant_name and u.tenant_name != 'None' else '<span style="color:var(--u-text2);">—</span>'|safe }}</td>
+              <td>
+                {% if u.status == 'Occupied' %}
+                  <span class="u-pill pill-occupied">Occupied</span>
+                {% else %}
+                  <span class="u-pill pill-vacant">Vacant</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if u.status == 'Occupied' %}
+                  {% if u.rent_paid %}
+                    <span class="u-pill pill-paid">Paid</span>
+                  {% else %}
+                    <span class="u-pill pill-unpaid">Unpaid</span>
+                  {% endif %}
+                {% else %}
+                  <span class="u-pill pill-na">N/A</span>
+                {% endif %}
+              </td>
+              <td>
+                <button class="u-act-btn" onclick="openEditUnit(
+                  {{ u.id }},
+                  '{{ u.unit_number|e }}',
+                  {{ u.floor or 1 }},
+                  '{{ u.type|e }}',
+                  {{ u.rent|float if u.rent else 0 }},
+                  '{{ u.status }}',
+                  {{ u.tenant_id or 'null' }},
+                  {{ u.property_id }}
+                )">Edit</button>
+                <form method="POST"
+                  action="{{ url_for('agent.agent_delete_unit', unit_id=u.id) if user.role == 'agent' else url_for('landlord.delete_unit', unit_id=u.id) }}"
+                  style="display:inline"
+                  onsubmit="return confirm('Delete unit {{ u.unit_number }}?')">
+                  <button class="u-act-btn del" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          {% if not ns.found %}
+            <tr id="emptyRow"><td colspan="9" class="u-empty">No units found. Add one to get started.</td></tr>
+          {% endif %}
+        {% else %}
+          {# Units loaded dynamically per property via JS #}
+          <tr id="loadingRow"><td colspan="9" class="u-empty">Loading units…</td></tr>
+        {% endif %}
+        <tr id="noResultsRow" style="display:none;">
+          <td colspan="9" class="u-empty">No units match your filters.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
-{% else %}
-<div style="text-align:center;padding:64px 0;color:var(--text-3);">
-    <div style="font-size:48px;margin-bottom:12px;">🏠</div>
-    <div style="font-size:16px;font-weight:700;margin-bottom:6px;">No properties yet</div>
-    <div style="font-size:13px;">
-        <a href="{{ url_for('agent.agent_properties') if user.role == 'agent' else url_for('properties.properties') }}" style="color:#8c0b9f;">Add a property first</a>
-        to start managing units.
-    </div>
-</div>
-{% endfor %}
 
-
-{# ══════════════════════════════════════════════════ #}
-{#   MODALS                                           #}
-{# ══════════════════════════════════════════════════ #}
-
-{# ── Add Unit modal ────────────────────────────────── #}
-<div class="modal-overlay" id="addUnitModal">
-  <div class="modal">
-    <div class="modal-title">Add New Unit</div>
-    <div class="modal-sub">Add a unit to one of your properties.</div>
+{# ── Add Unit Modal ────────────────────────────────── #}
+<div class="u-modal-ov" id="addUnitModal">
+  <div class="u-modal">
+    <div class="u-modal-title">Add New Unit</div>
     <form method="POST" action="{{ url_for('agent.agent_add_unit') if user.role == 'agent' else url_for('landlord.add_unit') }}">
-      <div class="form-group">
-        <label class="form-label">Property *</label>
-        <select name="property_id" class="form-input" id="addUnitPropertySelect" required>
+      <div class="u-fg">
+        <label class="u-fl">Property *</label>
+        <select name="property_id" class="u-fi" required id="addPropSelect" onchange="loadTenantsForProperty(this.value)">
+          <option value="">— Select property —</option>
           {% for p in properties %}
             <option value="{{ p.id }}">{{ p.name }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Unit Number *</label>
-          <input type="text" name="unit_number" class="form-input" placeholder="e.g. A-12" required>
+      <div class="u-row2">
+        <div class="u-fg">
+          <label class="u-fl">Unit Number *</label>
+          <input type="text" name="unit_number" class="u-fi" placeholder="e.g. A1, 101" required>
         </div>
-        <div class="form-group">
-          <label class="form-label">Floor</label>
-          <input type="number" name="floor" class="form-input" min="0" placeholder="e.g. 2">
+        <div class="u-fg">
+          <label class="u-fl">Floor</label>
+          <input type="number" name="floor" class="u-fi" value="1" min="0">
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Unit Type</label>
-          <select name="type" class="form-input">
-            <option>Studio</option>
+      <div class="u-row2">
+        <div class="u-fg">
+          <label class="u-fl">Type</label>
+          <select name="type" class="u-fi">
+            <option>Bedsitter</option>
             <option>1 Bedroom</option>
             <option>2 Bedroom</option>
             <option>3 Bedroom</option>
-            <option>4 Bedroom</option>
-            <option>Penthouse</option>
-            <option>Bedsitter</option>
+            <option>Studio</option>
+            <option>Shop</option>
+            <option>Office</option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">Status</label>
-          <select name="status" class="form-input">
-            <option>Vacant</option>
-            <option>Occupied</option>
-            <option>Maintenance</option>
-          </select>
+        <div class="u-fg">
+          <label class="u-fl">Rent (KES)</label>
+          <input type="number" name="rent" class="u-fi" min="0" placeholder="e.g. 15000">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Rent (KES)</label>
-        <input type="number" name="rent" class="form-input" min="0" placeholder="e.g. 18000">
+      <div class="u-row2">
+        <div class="u-fg">
+          <label class="u-fl">Status</label>
+          <select name="status" class="u-fi" id="addStatusSelect">
+            <option value="Vacant">Vacant</option>
+            <option value="Occupied">Occupied</option>
+          </select>
+        </div>
+        <div class="u-fg">
+          <label class="u-fl">Assign Tenant</label>
+          <select name="tenant_id" class="u-fi" id="addTenantSelect" onchange="onTenantChange(this,'addOccupiedNote')">
+            <option value="">— None (Vacant) —</option>
+            {% for t in tenant %}
+              <option value="{{ t.id }}"
+                data-prop="{{ t.property_id }}"
+                data-occupied="{{ 'yes' if t.unit else 'no' }}">
+                {{ t.name }}
+                {%- if t.unit %} · Unit {{ t.unit }} ✓ Occupied{% else %} · Unassigned{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="tenant-occupied-note" id="addOccupiedNote" style="display:none;">
+            ⚠ This tenant is already in a unit — assigning here will move them.
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Tenant (Optional)</label>
-        <select name="tenant_id" class="form-input">
-          <option value="">No tenant assigned</option>
-          {% for tenant in tenants %}
-          <option value="{{ tenant.id }}">{{ tenant.name }} - {{ tenant.unit }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-outline" onclick="closeModal('addUnitModal')">Cancel</button>
-        <button type="submit" class="btn-primary">
-          <i data-lucide="check" width="14" height="14"></i> Add Unit
-        </button>
+      <div class="u-modal-footer">
+        <button type="button" class="u-btn-cancel" onclick="document.getElementById('addUnitModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="u-btn-save">Save Unit</button>
       </div>
     </form>
   </div>
 </div>
 
-{# ── Edit Unit modal ────────────────────────────────── #}
-<div class="modal-overlay" id="editUnitModal">
-  <div class="modal">
-    <div class="modal-title">Edit Unit</div>
-    <div class="modal-sub">Update this unit's details.</div>
+{# ── Edit Unit Modal ───────────────────────────────── #}
+<div class="u-modal-ov" id="editUnitModal">
+  <div class="u-modal">
+    <div class="u-modal-title">Edit Unit</div>
     <form method="POST" id="editUnitForm">
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Unit Number *</label>
-          <input type="text" name="unit_number" id="editUnitNumber" class="form-input" required>
+      <input type="hidden" name="_method" value="POST">
+      <div class="u-row2">
+        <div class="u-fg">
+          <label class="u-fl">Unit Number *</label>
+          <input type="text" name="unit_number" id="eu_num" class="u-fi" required>
         </div>
-        <div class="form-group">
-          <label class="form-label">Floor</label>
-          <input type="number" name="floor" id="editUnitFloor" class="form-input" min="0">
+        <div class="u-fg">
+          <label class="u-fl">Floor</label>
+          <input type="number" name="floor" id="eu_floor" class="u-fi" min="0">
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Unit Type</label>
-          <select name="type" id="editUnitType" class="form-input">
-            <option>Studio</option>
+      <div class="u-row2">
+        <div class="u-fg">
+          <label class="u-fl">Type</label>
+          <select name="type" id="eu_type" class="u-fi">
+            <option>Bedsitter</option>
             <option>1 Bedroom</option>
             <option>2 Bedroom</option>
             <option>3 Bedroom</option>
-            <option>4 Bedroom</option>
-            <option>Penthouse</option>
-            <option>Bedsitter</option>
+            <option>Studio</option>
+            <option>Shop</option>
+            <option>Office</option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">Status</label>
-          <select name="status" id="editUnitStatus" class="form-input">
-            <option>Vacant</option>
-            <option>Occupied</option>
-            <option>Maintenance</option>
-          </select>
+        <div class="u-fg">
+          <label class="u-fl">Rent (KES)</label>
+          <input type="number" name="rent" id="eu_rent" class="u-fi" min="0">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Rent (KES)</label>
-        <input type="number" name="rent" id="editUnitRent" class="form-input" min="0">
+      <div class="u-row2">
+        <div class="u-fg">
+          <label class="u-fl">Status</label>
+          <select name="status" id="eu_status" class="u-fi">
+            <option value="Vacant">Vacant</option>
+            <option value="Occupied">Occupied</option>
+          </select>
+        </div>
+        <div class="u-fg">
+          <label class="u-fl">Tenant</label>
+          <select name="tenant_id" id="eu_tenant" class="u-fi" onchange="onTenantChange(this,'editOccupiedNote')">
+            <option value="">— None (Vacant) —</option>
+            {% for t in tenant %}
+              <option value="{{ t.id }}"
+                data-prop="{{ t.property_id }}"
+                data-occupied="{{ 'yes' if t.unit else 'no' }}">
+                {{ t.name }}
+                {%- if t.unit %} · Unit {{ t.unit }} ✓ Occupied{% else %} · Unassigned{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="tenant-occupied-note" id="editOccupiedNote" style="display:none;">
+            ⚠ This tenant is already in a unit — assigning here will move them.
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Tenant</label>
-        <select name="tenant_id" id="editUnitTenant" class="form-input">
-          <option value="">No tenant assigned</option>
-          {% for tenant in tenants %}
-          <option value="{{ tenant.id }}">{{ tenant.name }}{% if tenant.unit %} - {{ tenant.unit }}{% endif %}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-outline" onclick="closeModal('editUnitModal')">Cancel</button>
-        <button type="submit" class="btn-primary">
-          <i data-lucide="check" width="14" height="14"></i> Save Changes
-        </button>
+      <div class="u-modal-footer">
+        <button type="button" class="u-btn-cancel" onclick="document.getElementById('editUnitModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="u-btn-save">Save Changes</button>
       </div>
     </form>
   </div>
 </div>
 
-
-{# ══════════════════════════════════════════════════ #}
-{#   JAVASCRIPT                                       #}
-{# ══════════════════════════════════════════════════ #}
 <script>
-const UNITS_BASE        = "{{ '/agent/properties' if user.role == 'agent' else '/properties' }}";
-const UNITS_DELETE_BASE = "{{ '/agent/units/delete' if user.role == 'agent' else '/units/delete' }}";
-const UNITS_EDIT_BASE   = "{{ '/agent/units/edit' if user.role == 'agent' else '/units/edit' }}";
-
-/* ── Modal helpers ──────────────────────────────── */
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(ov => {
-    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
-});
-
-/* ── Pre-select property in add unit modal ────────── */
-function openAddUnitForProperty(propId, propName) {
-    const sel = document.getElementById('addUnitPropertySelect');
-    if (sel) sel.value = propId;
-    openModal('addUnitModal');
-}
-
-/* ── Edit unit modal ─────────────────────────────── */
-function openEditUnit(unitId, unitNumber, floor, type, status, rent, tenantId) {
-    document.getElementById('editUnitForm').action = `${UNITS_EDIT_BASE}/${unitId}`;
-    document.getElementById('editUnitNumber').value = unitNumber;
-    document.getElementById('editUnitFloor').value  = floor || '';
-    document.getElementById('editUnitRent').value   = rent || '';
-    const typeEl   = document.getElementById('editUnitType');
-    const statusEl = document.getElementById('editUnitStatus');
-    [...typeEl.options].forEach(o => o.selected = (o.value === type));
-    [...statusEl.options].forEach(o => o.selected = (o.value === status));
-    const tenantEl = document.getElementById('editUnitTenant');
-    if (tenantEl) {
-        const hasTenant = !(tenantId === null || tenantId === undefined || tenantId === 'null' || tenantId === '');
-        tenantEl.value = hasTenant ? String(tenantId) : '';
-    }
-    openModal('editUnitModal');
-}
-
-/* ── Render unit cards ───────────────────────────── */
-function renderUnits(units, gridEl, propId) {
-    if (!units || units.length === 0) {
-        gridEl.innerHTML = `
-            <div class="no-units-msg">
-                No units added yet. 
-                <button class="btn-primary" style="margin-left: 12px; padding: 4px 12px; font-size: 12px;" 
-                        onclick="openAddUnitForProperty(${propId}, '')">
-                    <i data-lucide="plus" width="14" height="14"></i> Add Unit
-                </button>
-            </div>`;
-        if (window.lucide) lucide.createIcons();
-        return;
-    }
-
-    const statusBadge = { 'Occupied': 'status-occupied', 'Vacant': 'status-vacant', 'Maintenance': 'status-maintenance' };
-
-    const rows = units.map(u => {
-        const bdg = statusBadge[u.status] || 'status-vacant';
-        const initials = u.tenant_name && u.tenant_name !== '—'
-            ? u.tenant_name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()
-            : '—';
-        
-        const tenantCell = (u.tenant_name && u.tenant_name !== '—')
-            ? `<div class="unit-tenant-cell">
-                <div class="unit-tenant-avatar-small">${initials}</div>
-                <div class="unit-tenant-info">
-                    <div class="unit-tenant-name">${u.tenant_name}</div>
-                    ${u.tenant_phone && u.tenant_phone !== '—' ? `<div class="unit-tenant-phone">${u.tenant_phone}</div>` : ''}
-                </div>
-               </div>`
-            : '<span style="color: var(--text-3); font-style: italic;">Vacant</span>';
-
-        return `
-        <tr data-unit-number="${u.unit_number.toLowerCase()}"
-            data-tenant="${(u.tenant_name || '').toLowerCase()}"
-            data-status="${u.status}"
-            data-property-id="${propId}">
-            <td class="unit-number-cell">${u.unit_number}</td>
-            <td><span class="unit-type-cell">${u.type}</span></td>
-            <td>${u.floor ?? '—'}</td>
-            <td>${tenantCell}</td>
-            <td class="unit-rent-cell">KES ${Number(u.rent).toLocaleString()}</td>
-            <td><span class="unit-status-badge ${bdg}">${u.status}</span></td>
-            <td class="unit-actions-cell">
-                <button class="unit-btn"
-                    onclick="openEditUnit(${u.id}, '${u.unit_number}', ${u.floor ?? 0}, '${u.type}', '${u.status}', ${u.rent}, ${u.tenant_id ?? 'null'})">
-                    <i data-lucide="pencil" width="13" height="13"></i>
-                </button>
-                <form method="POST" action="${UNITS_DELETE_BASE}/${u.id}"
-                      onsubmit="return confirm('Delete unit ${u.unit_number}? This cannot be undone.');"
-                      style="display:contents;">
-                    <button class="unit-btn danger" type="submit">
-                        <i data-lucide="trash-2" width="13" height="13"></i>
-                    </button>
-                </form>
-            </td>
-        </tr>`;
-    }).join('');
-
-    const html = `
-        <table class="units-table">
-            <thead>
-                <tr>
-                    <th>Unit</th>
-                    <th>Type</th>
-                    <th>Floor</th>
-                    <th>Tenant</th>
-                    <th style="text-align: right;">Rent/Month</th>
-                    <th>Status</th>
-                    <th style="text-align: right;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${rows}
-            </tbody>
-        </table>`;
-
-    gridEl.innerHTML = html;
-    if (window.lucide) lucide.createIcons();
-}
-
-/* ── Load units for each property on page load ────── */
-const propertyIds = [{% for p in properties %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}];
-
-propertyIds.forEach(propId => {
-    const grid    = document.getElementById(`units-grid-${propId}`);
-    const loading = document.getElementById(`units-loading-${propId}`);
-
-    fetch(`${UNITS_BASE}/${propId}/units`)
-        .then(r => r.json())
-        .then(data => {
-            if (loading) loading.remove();
-            renderUnits(data.units || [], grid, propId);
-        })
-        .catch(() => {
-            if (grid) grid.innerHTML = `
-                <div class="empty-state">
-                    <i data-lucide="alert-circle" width="20" height="20" style="color:#dc2626;"></i>
-                    <div style="margin-top:8px;color:#dc2626;">Failed to load units for this property.</div>
-                </div>`;
-            if (window.lucide) lucide.createIcons();
-        });
-});
-
-/* ── Filter / search ─────────────────────────────── */
+/* ── Filter ──────────────────────────────────────── */
 function filterUnits() {
-    const q          = document.getElementById('searchInput').value.toLowerCase();
-    const propFilter = document.getElementById('filterProperty').value;
-    const stsFilter  = document.getElementById('filterStatus').value;
+  const q     = document.getElementById('unitSearch').value.toLowerCase();
+  const prop  = document.getElementById('propFilter').value;
+  const stat  = document.getElementById('statusFilter').value;
+  const rows  = document.querySelectorAll('#unitsTbody tr[data-prop]');
+  let visible = 0;
 
-    // Show/hide property sections
-    document.querySelectorAll('.property-section').forEach(section => {
-        const pid = section.dataset.propertyId;
-        if (propFilter && pid !== propFilter) {
-            section.style.display = 'none';
-            return;
-        }
-        section.style.display = '';
+  rows.forEach(row => {
+    const matchSearch = !q      || (row.dataset.search || '').includes(q);
+    const matchProp   = !prop   || row.dataset.prop === prop;
+    const matchStat   = !stat   || row.dataset.status === stat;
+    const show = matchSearch && matchProp && matchStat;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
 
-        // Show/hide individual unit rows in table
-        section.querySelectorAll('tbody tr').forEach(row => {
-            const unitNum = row.dataset.unitNumber || '';
-            const tenant  = row.dataset.tenant     || '';
-            const status  = row.dataset.status     || '';
-
-            const matchQ   = !q || unitNum.includes(q) || tenant.includes(q);
-            const matchSts = !stsFilter || status === stsFilter;
-
-            row.style.display = (matchQ && matchSts) ? '' : 'none';
-        });
-    });
+  const noRes = document.getElementById('noResultsRow');
+  if (noRes) noRes.style.display = (visible === 0 && rows.length > 0) ? '' : 'none';
 }
 
-/* ── Auto-scroll to a specific property via ?prop=ID ── */
-(function() {
-    const params = new URLSearchParams(window.location.search);
-    const targetProp = params.get('prop');
-    if (targetProp) {
-        // Wait for units to render (a short delay)
-        setTimeout(() => {
-            const section = document.getElementById(`prop-section-${targetProp}`);
-            if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            const sel = document.getElementById('filterProperty');
-            if (sel) { sel.value = targetProp; filterUnits(); }
-        }, 600);
-    }
-})();
+/* ── Tenant occupied warning ─────────────────────── */
+function onTenantChange(sel, noteId) {
+  const opt  = sel.options[sel.selectedIndex];
+  const note = document.getElementById(noteId);
+  if (note) note.style.display = (opt && opt.dataset.occupied === 'yes') ? '' : 'none';
+}
 
-/* ── Spinning loader CSS ─────────────────────────── */
-const style = document.createElement('style');
-style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
-document.head.appendChild(style);
+/* ── Tenant filter by property in Add modal ──────── */
+function loadTenantsForProperty(propId) {
+  const sel  = document.getElementById('addTenantSelect');
+  const note = document.getElementById('addOccupiedNote');
+  Array.from(sel.options).forEach(opt => {
+    if (!opt.value) return;
+    opt.style.display = (!propId || opt.dataset.prop === propId) ? '' : 'none';
+  });
+  sel.value = '';
+  if (note) note.style.display = 'none';
+}
+
+/* ── Open Edit modal ─────────────────────────────── */
+function openEditUnit(id, num, floor, type, rent, status, tenantId, propId) {
+  const roleIsAgent = {{ 'true' if user.role == 'agent' else 'false' }};
+  const base = roleIsAgent ? '/agent/units/edit/' : '/units/edit/';
+  document.getElementById('editUnitForm').action = base + id;
+  document.getElementById('eu_num').value   = num;
+  document.getElementById('eu_floor').value = floor;
+  document.getElementById('eu_rent').value  = rent;
+
+  const typeEl = document.getElementById('eu_type');
+  Array.from(typeEl.options).forEach(o => o.selected = (o.value === type));
+
+  const statEl = document.getElementById('eu_status');
+  Array.from(statEl.options).forEach(o => o.selected = (o.value === status));
+
+  // Filter tenants to this property
+  const tenSel = document.getElementById('eu_tenant');
+  Array.from(tenSel.options).forEach(opt => {
+    if (!opt.value) return;
+    opt.style.display = (!propId || opt.dataset.prop == propId) ? '' : 'none';
+  });
+  tenSel.value = tenantId || '';
+
+  // Show/hide occupied warning for currently assigned tenant
+  const note = document.getElementById('editOccupiedNote');
+  if (note) {
+    const selOpt = tenSel.options[tenSel.selectedIndex];
+    note.style.display = (selOpt && selOpt.dataset.occupied === 'yes' && tenSel.value) ? '' : 'none';
+  }
+
+  document.getElementById('editUnitModal').classList.add('open');
+}
+
+/* ── Close modals on backdrop click ─────────────── */
+document.querySelectorAll('.u-modal-ov').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+/* ── Load units dynamically if no flat list ──────── */
+(function() {
+  const tbody = document.getElementById('unitsTbody');
+  const hasRows = tbody.querySelectorAll('tr[data-prop]').length > 0;
+  if (hasRows) return; // already rendered via Jinja
+
+  const loading = document.getElementById('loadingRow');
+  const roleIsAgent = {{ 'true' if user.role == 'agent' else 'false' }};
+
+  // Build list of property IDs from dropdown
+  const propSel = document.getElementById('propFilter');
+  const propIds = Array.from(propSel.options)
+    .filter(o => o.value)
+    .map(o => ({ id: o.value, name: o.text }));
+
+  if (!propIds.length) {
+    if (loading) loading.querySelector('td').textContent = 'No properties found.';
+    return;
+  }
+
+  const allUnits = [];
+  let done = 0;
+
+  propIds.forEach(prop => {
+    const url = roleIsAgent
+      ? `/agent/properties/${prop.id}/units`
+      : `/properties/${prop.id}/units`;
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        (data.units || []).forEach(u => {
+          u._prop_id   = prop.id;
+          u._prop_name = prop.name;
+          allUnits.push(u);
+        });
+      })
+      .catch(() => {})
+      .finally(() => {
+        done++;
+        if (done === propIds.length) renderUnits(allUnits);
+      });
+  });
+
+  function renderUnits(units) {
+    if (loading) loading.remove();
+    if (!units.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="u-empty">No units yet. Add one to get started.</td></tr>';
+      return;
+    }
+
+    units.forEach(u => {
+      const status    = u.status || 'Vacant';
+      const occupied  = status === 'Occupied';
+      const tenantStr = (u.tenant_name && u.tenant_name !== '"' && u.tenant_name !== 'None')
+                      ? u.tenant_name : '—';
+      const rentDisp  = u.rent ? Number(u.rent).toLocaleString('en-KE', {maximumFractionDigits:0}) : '—';
+      const rentStatus = occupied
+        ? (u.rent_paid
+            ? '<span class="u-pill pill-paid">Paid</span>'
+            : '<span class="u-pill pill-unpaid">Unpaid</span>')
+        : '<span class="u-pill pill-na">N/A</span>';
+      const statusPill = occupied
+        ? '<span class="u-pill pill-occupied">Occupied</span>'
+        : '<span class="u-pill pill-vacant">Vacant</span>';
+
+      const delUrl = roleIsAgent
+        ? `/agent/units/delete/${u.id}`
+        : `/units/delete/${u.id}`;
+
+      const searchStr = [u.unit_number, tenantStr, u._prop_name].join(' ').toLowerCase();
+
+      const tr = document.createElement('tr');
+      tr.dataset.prop   = u._prop_id;
+      tr.dataset.status = status;
+      tr.dataset.search = searchStr;
+      tr.innerHTML = `
+        <td><div class="u-unit-num">${u.unit_number}</div></td>
+        <td>${u._prop_name}</td>
+        <td>${u.type || '—'}</td>
+        <td>${u.floor ?? '—'}</td>
+        <td style="font-weight:600;">${rentDisp}</td>
+        <td>${tenantStr}</td>
+        <td>${statusPill}</td>
+        <td>${rentStatus}</td>
+        <td>
+          <button class="u-act-btn" onclick="openEditUnit(
+            ${u.id}, '${(u.unit_number||'').replace(/'/g,"\\'")}',
+            ${u.floor||1}, '${(u.type||'').replace(/'/g,"\\'")}',
+            ${u.rent||0}, '${status}', ${u.tenant_id||'null'}, ${u._prop_id}
+          )">Edit</button>
+          <form method="POST" action="${delUrl}" style="display:inline"
+                onsubmit="return confirm('Delete unit ${u.unit_number}?')">
+            <button class="u-act-btn del" type="submit">Delete</button>
+          </form>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    // Add noResults row back
+    const nr = document.createElement('tr');
+    nr.id = 'noResultsRow';
+    nr.style.display = 'none';
+    nr.innerHTML = '<td colspan="9" class="u-empty">No units match your filters.</td>';
+    tbody.appendChild(nr);
+
+    filterUnits();
+  }
+})();
 </script>
 {% endblock %}

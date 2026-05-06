@@ -1,6 +1,6 @@
 {% extends "base_dashboard.html" %}
 
-{% block title %}Tenant Dashboard · SmartRent{% endblock %}
+{% block title %}Tenant Dashboard - SmartRent{% endblock %}
 {% block role_name %}Tenant{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 {% block page_sub %}Tenant Overview{% endblock %}
@@ -28,11 +28,11 @@
             </div>
             <div class="hero-kpi">
                 <span class="hero-kpi-label">Unit</span>
-                <span class="hero-kpi-value">{{ tenant_unit }} · {{ property_name }}</span>
+                <span class="hero-kpi-value">{{ tenant_unit }} - {{ property_name }}</span>
             </div>
             <div class="hero-kpi">
                 <span class="hero-kpi-label">Lease Status</span>
-                <span class="hero-kpi-value">✓ {{ lease_status }}</span>
+                <span class="hero-kpi-value">OK {{ lease_status }}</span>
             </div>
             <div class="hero-kpi">
                 <span class="hero-kpi-label">Next Due</span>
@@ -52,7 +52,7 @@
         </div>
         <div class="stat-val">{{ stats.rent_amount}}</div>
         <div class="stat-name">Monthly Rent</div>
-        <div class="stat-hint">{{ property_name }} · Unit {{ tenant_unit }}</div>
+        <div class="stat-hint">{{ property_name }} - Unit {{ tenant_unit }}</div>
     </div>
 
     <div class="stat-card">
@@ -101,7 +101,7 @@
                     <div class="act-icon-wrap ico-green"><i data-lucide="check-circle" width="16" height="16"></i></div>
                     <div class="act-body">
                         <div class="act-title">{{ item.title }}</div>
-                        <div class="act-sub">{{ item.amount }} · <span class="badge {{ item.badge_class }}" style="margin-left:6px">{{ item.status }}</span></div>
+                        <div class="act-sub">{{ item.amount }} - <span class="badge {{ item.badge_class }}" style="margin-left:6px">{{ item.status }}</span></div>
                     </div>
                     <span class="act-time">{{ item.date }}</span>
                 </li>
@@ -113,7 +113,7 @@
                         <div class="act-title">No recent activity found</div>
                         <div class="act-sub">Your transaction history appears empty.</div>
                     </div>
-                    <span class="act-time">—</span>
+                    <span class="act-time">-</span>
                 </li>
             {% endif %}
         </ul>
@@ -150,7 +150,7 @@
 
         <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-lt);">
             <button class="btn-primary" ... onclick="window.location='{{ url_for('tenant.payments') }}'">
-    <i data-lucide="credit-card" width="14" height="14"></i> Pay Rent Now — {{ monthly_rent_due }}
+    <i data-lucide="credit-card" width="14" height="14"></i> Pay Rent Now - {{ monthly_rent_due }}
             </button>
         </div>
     </div>

@@ -1,8 +1,8 @@
 {% extends "base_dashboard.html" %}
-{% block title %}Wallet · SmartRent{% endblock %}
+{% block title %}Wallet - SmartRent{% endblock %}
 {% block role_name %}Agent{% endblock %}
 {% block page_title %}Wallet{% endblock %}
-{% block page_sub %}Your earnings & what’s owed{% endblock %}
+{% block page_sub %}Your earnings & what's owed{% endblock %}
 
 {% block extra_styles %}
 .hero { background: linear-gradient(135deg, #0f766e 0%, #2563eb 100%); }
@@ -113,7 +113,7 @@ tr:hover td { background: #f0fdfa; }
           <div class="mono">KES {{ "{:,.0f}".format(penalty_summary.agent_penalty_owed or 0) }}</div>
         </div>
         <div class="kpi-sub" style="margin-top: 10px;">
-          This page shows what you’re owed based on recorded overdue payments. Settlement (when landlord pays agent) isn’t tracked yet.
+          This page shows what you're owed based on recorded overdue payments. Settlement (when landlord pays agent) isn't tracked yet.
         </div>
       </div>
     </div>
