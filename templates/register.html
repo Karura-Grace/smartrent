@@ -334,6 +334,27 @@
 </div>{# end .wrap #}
 
 <script>
+// Tab isolation
+(function() {
+  var TAB_KEY = 'smartrent_tab_id';
+  var tabId = sessionStorage.getItem(TAB_KEY);
+  if (!tabId) {
+    tabId = 'tab_' + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+    sessionStorage.setItem(TAB_KEY, tabId);
+  }
+  window.__tabId = tabId;
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('form').forEach(function(form) {
+      if (!form.querySelector('input[name="tab_id"]')) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'tab_id'; inp.value = tabId;
+        form.appendChild(inp);
+      }
+    });
+  });
+})();
+</script>
+<script>
   let role = '{{ request.form.get("role", "") }}';
 
   /* Re-highlight role card on page reload after validation error */

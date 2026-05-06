@@ -179,10 +179,22 @@
 
 <script>
 const templates = {
-    rent: {subject:'Rent Reminder', body:'Dear Tenant,\\n\\nThis is a friendly reminder that rent is due soon.\\n\\nThank you,\\n{{ user.user_name }}'},
-    maintenance: {subject:'Maintenance Notice', body:'Dear Tenant,\\n\\nPlease be informed that maintenance will be carried out on [DATE] from [TIME].\\n\\nThank you,\\n{{ user.user_name }}'},
-    water: {subject:'Water Outage Notice', body:'Dear Tenant,\\n\\nThere will be a water outage on [DATE] from [START] to [END] due to maintenance works.\\n\\nThank you,\\n{{ user.user_name }}'},
-    general: {subject:'General Notice', body:'Dear Tenant,\\n\\n[Your message here]\\n\\nThank you,\\n{{ user.user_name }}'}
+    rent: {
+        subject: 'Rent Reminder',
+        body: 'Dear Tenant,This is a friendly reminder that your rent is due soon. Please ensure payment is made on time to avoid any late fees.\n\nThank you,\n{{ user.user_name }}'
+    },
+    maintenance: {
+        subject: 'Maintenance Notice',
+        body: 'Dear Tenant,Please be informed that maintenance will be carried out on [DATE] from [START TIME] to [END TIME]. We apologise for any inconvenience caused.\n\nThank you,\n{{ user.user_name }}'
+    },
+    water: {
+        subject: 'Water Outage Notice',
+        body: 'Dear Tenant,There will be a water outage on [DATE] from [START TIME] to [END TIME] due to scheduled maintenance works. Please store water in advance.\n\nThank you,\n{{ user.user_name }}'
+    },
+    general: {
+        subject: 'General Notice',
+        body: 'Dear Tenant,We would like to bring to your attention the following:[Write your message here] Thank you, {{ user.user_name }}'
+    }
 };
 
 function useTemplate(key){

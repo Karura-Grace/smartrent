@@ -1,0 +1,106 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Messages - SmartRent{% endblock %}
+{% block role_name %}Tenant{% endblock %}
+{% block page_title %}Messages{% endblock %}
+{% block page_sub %}From your landlord{% endblock %}
+
+{% block extra_styles %}
+.hero { background: linear-gradient(135deg, #1d4ed8 0%, #4c1d95 100%); }
+.notice-list { display: flex; flex-direction: column; gap: 12px; }
+.notice-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--sh-sm);
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    transition: box-shadow 0.15s;
+}
+.notice-card:hover { box-shadow: var(--sh); }
+.notice-dot-wrap {
+    margin-top: 4px;
+    flex-shrink: 0;
+}
+.notice-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: block;
+}
+.dot-urgent { background: var(--red); box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+.dot-info   { background: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+.dot-normal { background: var(--blue-600); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+.notice-body { flex: 1; min-width: 0; }
+.notice-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.notice-msg   { font-size: 13px; color: var(--text-2); line-height: 1.6; white-space: pre-wrap; }
+.notice-meta  { margin-top: 8px; font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }
+.notice-type-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 20px; text-transform: capitalize;
+}
+.type-urgent { background: #fee2e2; color: #991b1b; }
+.type-info   { background: #fffbeb; color: #92400e; }
+.type-normal { background: var(--blue-50); color: var(--blue-600); }
+.empty-state {
+    text-align: center; padding: 60px 24px;
+    color: var(--text-3);
+}
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+    <div class="hero-eye">Messages</div>
+    <h1>Messages from Landlord</h1>
+    <p>Notices, announcements and alerts sent to your property.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Total Messages</span>
+            <span class="hero-kpi-value">{{ notices | length }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Urgent</span>
+            <span class="hero-kpi-value">{{ notices | selectattr('type', 'equalto', 'urgent') | list | length }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat, msg in messages %}
+    <div style="margin-bottom:14px;padding:11px 16px;border-radius:9px;font-size:13px;
+         background:{% if cat=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
+         color:{% if cat=='success' %}#065f46{% else %}#991b1b{% endif %};">{{ msg }}</div>
+  {% endfor %}{% endif %}
+{% endwith %}
+
+{% if notices %}
+<div class="notice-list">
+    {% for n in notices %}
+    {% set ntype = (n.type or 'normal') | lower %}
+    <div class="notice-card">
+        <div class="notice-dot-wrap">
+            <span class="notice-dot dot-{{ ntype }}"></span>
+        </div>
+        <div class="notice-body">
+            <div class="notice-title">{{ n.title or 'Notice' }}</div>
+            <div class="notice-msg">{{ n.message or '' }}</div>
+            <div class="notice-meta">
+                <span class="notice-type-badge type-{{ ntype }}">{{ ntype }}</span>
+                <span>{{ (n.sent_at | string)[:16] if n.sent_at else '-' }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <i data-lucide="message-circle" width="48" height="48" style="display:block;margin:0 auto 14px;opacity:0.25;"></i>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px;">No messages yet</div>
+    <div style="font-size:13px;">Your landlord hasn't sent any notices to your property yet.</div>
+</div>
+{% endif %}
+
+{% endblock %}

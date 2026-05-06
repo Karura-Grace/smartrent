@@ -90,10 +90,11 @@ def _get_income_expense_monthly(year: int, months: list[int]):
 
             cur.execute(
                 f"""
-                SELECT COALESCE(SUM(CASE WHEN LOWER(pay.status)='paid' THEN pay.Amount ELSE 0 END),0) AS income
+                SELECT COALESCE(SUM(pay.Amount),0) AS income
                 FROM payments pay
                 JOIN properties p ON p.id = pay.property_id
                 WHERE {where_sql}
+                  AND LOWER(pay.status)='paid'
                   AND pay.paid_on >= %s AND pay.paid_on < %s
                 """,
                 (*where_params, start, end),
@@ -102,11 +103,12 @@ def _get_income_expense_monthly(year: int, months: list[int]):
 
             cur.execute(
                 f"""
-                SELECT COALESCE(SUM(CASE WHEN LOWER(b.status)='paid' AND LOWER(b.bill_type)!='rent' THEN b.amount ELSE 0 END),0) AS expenses
+                SELECT COALESCE(SUM(b.amount),0) AS expenses
                 FROM bills b
                 JOIN tenant t     ON t.id = b.tenant_id
                 JOIN properties p ON p.id = t.property_id
                 WHERE {where_sql}
+                  AND LOWER(b.bill_type) != 'rent'
                   AND b.created_at >= %s AND b.created_at < %s
                 """,
                 (*where_params, start, end),
@@ -142,17 +144,20 @@ def _get_occupancy_by_property(year: int, month: int):
             SELECT
                 p.name AS property_name,
                 COUNT(u.id) AS total_units,
-                SUM(CASE WHEN u.status='Occupied' THEN 1 ELSE 0 END) AS occupied,
-                SUM(CASE WHEN u.status='Vacant' THEN 1 ELSE 0 END) AS vacant,
-                ROUND(
+                COALESCE(SUM(CASE WHEN u.status='Occupied' THEN 1 ELSE 0 END),0) AS occupied,
+                COALESCE(SUM(CASE WHEN u.status='Vacant' THEN 1 ELSE 0 END),0) AS vacant,
+                COALESCE(ROUND(
                     (SUM(CASE WHEN u.status='Occupied' THEN 1 ELSE 0 END) / NULLIF(COUNT(u.id),0)) * 100
-                ) AS occupancy_pct,
-                COALESCE(SUM(CASE WHEN LOWER(pay.status)='paid' THEN pay.Amount ELSE 0 END),0) AS collected
+                ),0) AS occupancy_pct,
+                COALESCE((
+                    SELECT SUM(pay.Amount)
+                    FROM payments pay
+                    WHERE pay.property_id = p.id
+                      AND LOWER(pay.status)='paid'
+                      AND pay.paid_on >= %s AND pay.paid_on < %s
+                ),0) AS collected
             FROM properties p
             LEFT JOIN units u ON u.property_id = p.id
-            LEFT JOIN payments pay
-                   ON pay.property_id = p.id
-                  AND pay.paid_on >= %s AND pay.paid_on < %s
             WHERE {where_sql}
             GROUP BY p.id, p.name
             ORDER BY p.name
@@ -209,31 +214,31 @@ def _get_arrears(year: int, month: int):
 @reports_bp.route("/reports/income/pdf")
 @login_required
 def income_report_pdf():
-    year = int(request.args.get("year") or date.today().year)
-    months = [int(m) for m in (request.args.get("months") or "1,2,3").split(",") if m.strip().isdigit()]
-    months = [m for m in months if 1 <= m <= 12] or [date.today().month]
+    today = date.today()
+    year = int(request.args.get("year") or today.year)
+    raw_months = request.args.get("months") or ""
+    months = [int(m) for m in raw_months.split(",") if m.strip().isdigit()]
+    months = [m for m in months if 1 <= m <= 12] or list(range(1, today.month + 1))
 
     buffer = io.BytesIO()
     subtitle = f"Period: {date(year, months[0], 1).strftime('%B')} - {date(year, months[-1], 1).strftime('%B %Y')}"
     doc, story = base_doc(buffer, "Income Report - SmartRent", subtitle)
 
     monthly = _get_income_expense_monthly(year, months)
-    occ_rows = _get_occupancy_by_property(year, months[-1])
-    occ_pct = 0
-    if occ_rows:
-        total_units = sum(int(r.get("total_units") or 0) for r in occ_rows)
-        occupied = sum(int(r.get("occupied") or 0) for r in occ_rows)
-        occ_pct = round((occupied / total_units) * 100) if total_units else 0
 
-    data = [["Month", "Income", "Expenses", "Net", "Occupancy"]]
+    total_income   = sum(r["income"]   for r in monthly)
+    total_expenses = sum(r["expenses"] for r in monthly)
+    total_net      = sum(r["net"]      for r in monthly)
+
+    data = [["Month", "Income (KES)", "Expenses (KES)", "Net (KES)"]]
     for r in monthly:
         data.append([
             r["label"],
-            f"KES {r['income']:,.0f}",
-            f"KES {r['expenses']:,.0f}",
-            f"KES {r['net']:,.0f}",
-            f"{occ_pct}%",
+            f"{r['income']:,.0f}",
+            f"{r['expenses']:,.0f}",
+            f"{r['net']:,.0f}",
         ])
+    data.append(["TOTAL", f"{total_income:,.0f}", f"{total_expenses:,.0f}", f"{total_net:,.0f}"])
     story.append(styled_table(data))
     doc.build(story)
     buffer.seek(0)
@@ -246,13 +251,13 @@ def income_report_pdf():
 @reports_bp.route("/reports/expenses/pdf")
 @login_required
 def expense_report_pdf():
-    year = int(request.args.get("year") or date.today().year)
-    month = int(request.args.get("month") or date.today().month)
+    today = date.today()
+    year  = int(request.args.get("year")  or today.year)
+    month = int(request.args.get("month") or today.month)
     buffer = io.BytesIO()
     subtitle = f"Month: {date(year, month, 1).strftime('%B %Y')}"
     doc, story = base_doc(buffer, "Expense Report - SmartRent", subtitle)
 
-    # Treat non-rent paid bills as expenses ledger entries (DB-backed).
     where_sql, where_params = _scope_clause_and_params()
     start, end = _month_window(year, month)
     conn, cur, should_close = get_conn_and_cursor()
@@ -260,18 +265,18 @@ def expense_report_pdf():
         cur.execute(
             f"""
             SELECT
-                DATE_FORMAT(b.created_at, '%%Y-%%m') AS ym,
+                t.name AS tenant_name,
+                p.name AS property_name,
                 b.bill_type AS category,
-                CONCAT('Bill #', b.id) AS description,
-                b.amount AS amount
+                b.amount AS amount,
+                b.status AS status
             FROM bills b
             JOIN tenant t     ON t.id = b.tenant_id
             JOIN properties p ON p.id = t.property_id
             WHERE {where_sql}
+              AND LOWER(b.bill_type) != 'rent'
               AND b.created_at >= %s AND b.created_at < %s
-              AND LOWER(b.status)='paid'
-              AND LOWER(b.bill_type)!='rent'
-            ORDER BY b.created_at DESC, b.id DESC
+            ORDER BY b.bill_type, b.created_at DESC
             """,
             (*where_params, start, end),
         )
@@ -281,17 +286,20 @@ def expense_report_pdf():
         if should_close:
             conn.close()
 
-    data = [["Month", "Category", "Description", "Amount"]]
+    data = [["Tenant", "Property", "Category", "Amount (KES)", "Status"]]
     if not rows:
-        data.append([date(year, month, 1).strftime("%B"), "-", "No expense records found", "KES 0"])
+        data.append(["-", "-", "No expense records found", "0", "-"])
     else:
         for r in rows[:200]:
             data.append([
-                date(year, month, 1).strftime("%B"),
+                r.get("tenant_name") or "-",
+                r.get("property_name") or "-",
                 r.get("category") or "-",
-                r.get("description") or "-",
-                f"KES {_money(r.get('amount')):,.0f}",
+                f"{_money(r.get('amount')):,.0f}",
+                r.get("status") or "-",
             ])
+        total = sum(_money(r.get("amount")) for r in rows)
+        data.append(["", "", "TOTAL", f"{total:,.0f}", ""])
     story.append(styled_table(data))
     doc.build(story)
     buffer.seek(0)
@@ -311,20 +319,67 @@ def occupancy_report_pdf():
     doc, story = base_doc(buffer, "Occupancy Report - SmartRent", subtitle)
 
     rows = _get_occupancy_by_property(year, month)
-    data = [["Property", "Total Units", "Occupied", "Vacant", "Occupancy Rate", "Collected"]]
+
+    # Column widths (cm) — total fits within A4 minus 4 cm margins = 17 cm usable
+    col_widths = [5.5*cm, 2*cm, 2*cm, 2*cm, 2.5*cm, 3*cm]
+    headers = ["Property", "Total\nUnits", "Occupied", "Vacant", "Occupancy\nRate", "Collected (KES)"]
+
+    data = [headers]
     if not rows:
-        data.append(["-", "0", "0", "0", "0%", "KES 0"])
+        data.append(["-", "0", "0", "0", "0%", "0"])
     else:
+        total_units    = 0
+        total_occupied = 0
+        total_vacant   = 0
+        total_collected = 0.0
         for r in rows:
+            tu  = int(r.get("total_units") or 0)
+            occ = int(r.get("occupied")    or 0)
+            vac = int(r.get("vacant")      or 0)
+            col = _money(r.get("collected"))
+            total_units     += tu
+            total_occupied  += occ
+            total_vacant    += vac
+            total_collected += col
             data.append([
                 r.get("property_name") or "-",
-                str(int(r.get("total_units") or 0)),
-                str(int(r.get("occupied") or 0)),
-                str(int(r.get("vacant") or 0)),
+                str(tu),
+                str(occ),
+                str(vac),
                 f"{int(r.get('occupancy_pct') or 0)}%",
-                f"KES {_money(r.get('collected')):,.0f}",
+                f"{col:,.0f}",
             ])
-    story.append(styled_table(data))
+        overall_pct = round((total_occupied / total_units) * 100) if total_units else 0
+        data.append([
+            "TOTAL",
+            str(total_units),
+            str(total_occupied),
+            str(total_vacant),
+            f"{overall_pct}%",
+            f"{total_collected:,.0f}",
+        ])
+
+    t = Table(data, colWidths=col_widths)
+    last = len(data) - 1
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0),     (-1, 0),    TEAL),
+        ("TEXTCOLOR",     (0, 0),     (-1, 0),    colors.white),
+        ("FONTNAME",      (0, 0),     (-1, 0),    "Helvetica-Bold"),
+        ("FONTSIZE",      (0, 0),     (-1, 0),    9),
+        ("ROWBACKGROUNDS",(0, 1),     (-1, last-1), [colors.white, TEAL_L]),
+        ("FONTSIZE",      (0, 1),     (-1, -1),   9),
+        ("GRID",          (0, 0),     (-1, -1),   0.4, colors.HexColor("#d1d5db")),
+        ("TOPPADDING",    (0, 0),     (-1, -1),   5),
+        ("BOTTOMPADDING", (0, 0),     (-1, -1),   5),
+        ("ALIGN",         (1, 0),     (-1, -1),   "CENTER"),
+        ("ALIGN",         (0, 0),     (0, -1),    "LEFT"),
+        ("VALIGN",        (0, 0),     (-1, -1),   "MIDDLE"),
+        # totals row styling
+        ("BACKGROUND",    (0, last),  (-1, last), colors.HexColor("#134e4a")),
+        ("TEXTCOLOR",     (0, last),  (-1, last), colors.white),
+        ("FONTNAME",      (0, last),  (-1, last), "Helvetica-Bold"),
+    ]))
+    story.append(t)
     doc.build(story)
     buffer.seek(0)
     return send_file(buffer, as_attachment=True,

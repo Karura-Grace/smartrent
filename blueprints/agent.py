@@ -1441,22 +1441,36 @@ def agent_delete_tenant(tenant_id):
 def agent_maintenance():
     agent_id = session['user_id']
     cur = get_cursor()
-    # maintenance_requests.property_id exists - use it directly (faster, no unit join needed)
     cur.execute("""
         SELECT m.id, m.title, m.description, m.priority, m.status,
-               m.unit_id, 
+               m.unit_id, m.assigned_to,
                p.name AS property_name,
                u.unit_number,
                COALESCE(t.name, '-') AS tenant_name,
+               sp.first_name AS sp_first, sp.last_name AS sp_last,
                m.created_at, m.updated_at
         FROM maintenance_requests m
         LEFT JOIN properties p ON p.id = m.property_id
         LEFT JOIN units u      ON u.id = m.unit_id
         LEFT JOIN tenant t    ON t.unit_id = m.unit_id
+        LEFT JOIN service_provider sp ON sp.id = m.assigned_to
         WHERE p.agent_id = %s
         ORDER BY FIELD(m.priority,'High','Medium','Low'), m.created_at DESC
     """, (agent_id,))
     tickets = [dict(r) for r in cur.fetchall()]
+    for t in tickets:
+        fn = (t.get('sp_first') or '').strip()
+        ln = (t.get('sp_last') or '').strip()
+        t['assigned_name'] = f"{fn} {ln}".strip() or None
+
+    cur.execute("""
+        SELECT id, first_name, last_name FROM service_provider
+        WHERE LOWER(status) = 'active' OR status IS NULL
+        ORDER BY first_name, last_name
+    """)
+    service_providers = [dict(r) for r in cur.fetchall()]
+    for sp in service_providers:
+        sp['full_name'] = f"{sp.get('first_name','')} {sp.get('last_name','')}".strip()
 
     open_count  = sum(1 for t in tickets if (t.get('status') or '').lower() in {'open', 'pending'})
     in_progress = sum(1 for t in tickets if (t.get('status') or '').lower() in {'in progress', 'in_progress'})
@@ -1473,6 +1487,7 @@ def agent_maintenance():
     cur.close()
     return render_template('maintenance.html',
         user=session, tickets=tickets,
+        service_providers=service_providers,
         open_count=open_count, urgent_count=urgent,
         in_progress_count=in_progress,
         resolved_this_month=resolved_this_month,
@@ -1501,6 +1516,35 @@ def update_ticket(ticket_id):
         """, (new_status, ticket_id, session['user_id']))
         conn.commit()
         flash('Ticket updated.', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error: {str(e)}', 'error')
+    finally:
+        cur.close()
+    return redirect(url_for('agent.agent_maintenance'))
+
+
+@agent_bp.route('/agent/maintenance/<int:ticket_id>/assign', methods=['POST'])
+@login_required
+@agent_required
+def agent_assign_maintenance_ticket(ticket_id):
+    provider_id_raw = (request.form.get('provider_id') or '').strip()
+    try:
+        provider_id = int(provider_id_raw) if provider_id_raw else None
+    except ValueError:
+        provider_id = None
+
+    conn = get_conn()
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    try:
+        cur.execute("""
+            UPDATE maintenance_requests m
+            JOIN properties p ON p.id = m.property_id
+            SET m.assigned_to=%s, m.status='In Progress', m.updated_at=NOW()
+            WHERE m.id=%s AND p.agent_id=%s
+        """, (provider_id, ticket_id, session['user_id']))
+        conn.commit()
+        flash('Service provider assigned.', 'success')
     except Exception as e:
         conn.rollback()
         flash(f'Error: {str(e)}', 'error')

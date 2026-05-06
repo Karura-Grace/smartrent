@@ -234,6 +234,58 @@
     .summary-card { position: static; }
     .balance-strip { grid-template-columns: repeat(2,1fr); }
 }
+
+/* Flexible payment */
+.flex-pay-card {
+    background: linear-gradient(135deg, #0f766e 0%, #065f46 100%);
+    border-radius: var(--r); padding: 20px 22px;
+    margin-bottom: 22px; color: white;
+}
+.flex-pay-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.flex-pay-sub   { font-size: 12px; opacity: 0.8; margin-bottom: 16px; }
+.flex-progress-wrap {
+    background: rgba(255,255,255,0.2);
+    border-radius: 99px; height: 12px; overflow: hidden; margin-bottom: 8px;
+}
+.flex-progress-bar {
+    height: 100%; border-radius: 99px;
+    background: #fff;
+    transition: width 0.5s ease;
+}
+.flex-progress-labels {
+    display: flex; justify-content: space-between;
+    font-size: 11px; opacity: 0.85; margin-bottom: 16px;
+}
+.flex-input-row {
+    display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end;
+}
+.flex-input {
+    padding: 9px 12px; border-radius: 8px; border: none;
+    font-size: 13px; font-family: inherit; outline: none;
+    background: rgba(255,255,255,0.15); color: white;
+}
+.flex-input::placeholder { color: rgba(255,255,255,0.6); }
+.flex-input:focus { background: rgba(255,255,255,0.25); }
+.flex-select {
+    padding: 9px 12px; border-radius: 8px; border: none;
+    font-size: 13px; font-family: inherit; outline: none;
+    background: rgba(255,255,255,0.15); color: white;
+    cursor: pointer;
+}
+.flex-select option { background: #065f46; color: white; }
+.flex-btn {
+    padding: 9px 18px; border-radius: 8px; border: none;
+    background: white; color: #065f46;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    white-space: nowrap; transition: opacity 0.15s;
+    font-family: inherit;
+}
+.flex-btn:hover { opacity: 0.9; }
+.flex-installments {
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    font-size: 12px; opacity: 0.85;
+}
 {% endblock %}
 
 {% block content %}
@@ -263,6 +315,56 @@
 
     <!-- LEFT COLUMN -->
     <div>
+
+        <!-- FLEXIBLE PAYMENT CARD -->
+        {% if rent_bill %}
+        {% set paid = rent_bill.amount_paid | float %}
+        {% set total = rent_bill.amount | float %}
+        {% set remaining = [total - paid, 0] | max %}
+        {% set pct = ((paid / total * 100) | round | int) if total > 0 else 0 %}
+        <div class="flex-pay-card">
+            <div class="flex-pay-title"><i data-lucide="layers" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:6px;"></i>Flexible Rent Payment — {{ rent_bill.period }}</div>
+            <div class="flex-pay-sub">Pay your rent in instalments. Every payment counts towards your balance.</div>
+            <div class="flex-progress-wrap">
+                <div class="flex-progress-bar" style="width:{{ pct }}%"></div>
+            </div>
+            <div class="flex-progress-labels">
+                <span>Paid: KES {{ "{:,.0f}".format(paid) }}</span>
+                <span>{{ pct }}% complete</span>
+                <span>Remaining: KES {{ "{:,.0f}".format(remaining) }}</span>
+            </div>
+            {% if remaining > 0 %}
+            <form method="POST" action="{{ url_for('tenant.tenant_partial_pay') }}">
+                <input type="hidden" name="bill_id" value="{{ rent_bill.id }}">
+                <input type="hidden" name="month" value="{{ rent_bill.period }}">
+                <div class="flex-input-row">
+                    <div>
+                        <div style="font-size:11px;opacity:0.8;margin-bottom:4px;">Amount (KES)</div>
+                        <input class="flex-input" type="number" name="amount" min="1" max="{{ remaining | int }}"
+                               placeholder="e.g. 5000" required style="width:100%;">
+                    </div>
+                    <div>
+                        <div style="font-size:11px;opacity:0.8;margin-bottom:4px;">Method</div>
+                        <select class="flex-select" name="method" style="width:100%;">
+                            <option value="M-Pesa">M-Pesa</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Bank">Bank</option>
+                        </select>
+                    </div>
+                    <button class="flex-btn" type="submit">Pay Now</button>
+                </div>
+            </form>
+            <div class="flex-installments">
+                <i data-lucide="info" width="12" height="12" style="display:inline;vertical-align:-1px;margin-right:4px;"></i>
+                You can pay any amount. Full rent is KES {{ "{:,.0f}".format(total) }}. Balance clears when remaining reaches KES 0.
+            </div>
+            {% else %}
+            <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;text-align:center;">
+                ✓ Rent fully paid for {{ rent_bill.period }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <!-- STEP 1: Select bills -->
         <div class="card" style="margin-bottom:16px;">

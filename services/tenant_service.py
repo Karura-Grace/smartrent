@@ -22,6 +22,7 @@ def get_dashboard_stats(cur, tenant_info, tenant_id):
     bills = cur.fetchall()
 
     stats["pending_bills"] = len(bills)
+    stats["pending_bills_count"] = len(bills)
 
     next_due_date = None
     for bill in bills:

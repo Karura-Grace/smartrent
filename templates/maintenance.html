@@ -23,6 +23,15 @@
 .pri-high{background:#fee2e2;color:#991b1b;border-color:#fecaca}
 .pri-med{background:#fffbeb;color:#92400e;border-color:#fde68a}
 .pri-low{background:#ecfdf5;color:#065f46;border-color:#bbf7d0}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;padding:24px 26px;width:100%;max-width:480px;box-shadow:0 20px 50px rgba(0,0,0,0.15);max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.form-group{margin-bottom:12px}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:5px}
+.form-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;color:var(--text);background:var(--surface);outline:none;box-sizing:border-box}
+.form-input:focus{border-color:#0f766e}
 {% endblock %}
 
 {% block hero %}
@@ -53,6 +62,11 @@
         <option value="resolved">Resolved</option>
         <option value="closed">Closed</option>
     </select>
+    {% if user.role == 'landlord' %}
+    <a href="{{ url_for('landlord.landlord_bills') }}" class="tbl-btn" style="text-decoration:none;">
+        <i data-lucide="receipt" width="14" height="14"></i> View All Bills
+    </a>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -67,6 +81,7 @@
                 <th>Property / Unit</th>
                 <th>Created</th>
                 <th>Status</th>
+                {% if user.role in ('landlord', 'agent') %}<th>Assigned To</th>{% endif %}
                 <th style="text-align:right">Update</th>
             </tr>
         </thead>
@@ -95,6 +110,22 @@
                 <td>{{ t.property_name or '-' }}{% if t.unit_number %} - {{ t.unit_number }}{% endif %}</td>
                 <td>{{ (t.created_at|string)[:10] if t.created_at else '-' }}</td>
                 <td><span class="badge b-blue">{{ t.status or 'Open' }}</span></td>
+                {% if user.role in ('landlord', 'agent') %}
+                <td>
+                    {% if t.assigned_name %}
+                        <span class="badge b-green" style="margin-bottom:4px;">{{ t.assigned_name }}</span><br>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('landlord.landlord_assign_maintenance_ticket', ticket_id=t.id) if user.role == 'landlord' else url_for('agent.agent_assign_maintenance_ticket', ticket_id=t.id) }}" style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+                        <select class="filter-select" name="provider_id" style="padding:5px 8px;font-size:12px;">
+                            <option value="">-- Assign --</option>
+                            {% for sp in service_providers %}
+                            <option value="{{ sp.id }}" {% if t.assigned_to == sp.id %}selected{% endif %}>{{ sp.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="tbl-btn" type="submit">Assign</button>
+                    </form>
+                </td>
+                {% endif %}
                 <td style="text-align:right">
                     {% set update_url = url_for('agent.update_ticket', ticket_id=t.id) if user.role == 'agent' else url_for('landlord.landlord_update_maintenance_ticket', ticket_id=t.id) %}
                     <form method="POST" action="{{ update_url }}" class="tbl-actions">
@@ -107,6 +138,12 @@
                             <i data-lucide="check" width="14" height="14"></i> Save
                         </button>
                     </form>
+                    {% if user.role == 'landlord' and (t.status or '')|lower in ('resolved', 'closed') %}
+                    <button class="tbl-btn" style="margin-top:6px;color:#0f766e;border-color:#99f6e4;"
+                        onclick="openBillModal('{{ t.id }}','{{ t.tenant_name|e }}','{{ t.title|e }}')">
+                        <i data-lucide="file-plus" width="13" height="13"></i> Bill Tenant
+                    </button>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -116,6 +153,52 @@
         </tbody>
     </table>
 </div>
+
+{% if user.role == 'landlord' %}
+<div class="modal-overlay" id="billModal">
+  <div class="modal">
+    <div class="modal-title">Bill Tenant for Maintenance</div>
+    <form method="POST" action="{{ url_for('landlord.landlord_create_bill') }}">
+      <input type="hidden" name="month" value="">
+      <div class="form-group">
+        <label class="form-label">Tenant</label>
+        <select class="form-input" name="tenant_id" id="billTenantSelect" required>
+          <option value="">-- Select tenant --</option>
+          {% for t in tickets %}
+            {% if t.tenant_name and t.tenant_name != '-' %}
+            <option value="{{ t.tenant_id or '' }}">{{ t.tenant_name }} ({{ t.unit_number or '-' }})</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bill Type</label>
+        <select class="form-input" name="bill_type">
+          <option value="Maintenance">Maintenance</option>
+          <option value="Repair">Repair</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (KES) *</label>
+        <input type="number" class="form-input" name="amount" min="0" placeholder="e.g. 5000" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Due Date</label>
+        <input type="date" class="form-input" name="due_date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description / Reference</label>
+        <input type="text" class="form-input" id="billDesc" name="description" placeholder="e.g. Plumbing repair - ticket #5">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="tbl-btn" onclick="closeBillModal()">Cancel</button>
+        <button type="submit" class="btn-primary" style="padding:8px 16px;border-radius:8px;">Create Bill</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 <script>
 function applyFilters() {
@@ -132,5 +215,21 @@ function applyFilters() {
 document.getElementById('q')?.addEventListener('input', applyFilters);
 document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
 applyFilters();
+
+function openBillModal(ticketId, tenantName, issueTitle) {
+    const modal = document.getElementById('billModal');
+    if (!modal) return;
+    const desc = document.getElementById('billDesc');
+    if (desc) desc.value = issueTitle ? `Maintenance: ${issueTitle}` : '';
+    modal.classList.add('open');
+    if (window.lucide) lucide.createIcons();
+}
+function closeBillModal() {
+    const modal = document.getElementById('billModal');
+    if (modal) modal.classList.remove('open');
+}
+document.getElementById('billModal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('billModal')) closeBillModal();
+});
 </script>
 {% endblock %}

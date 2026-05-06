@@ -118,6 +118,13 @@
                 {% else %}
                   <span style="font-size:12px;color:var(--text-3);">-</span>
                 {% endif %}
+                <form method="POST" action="{{ url_for('landlord.delete_lease', lease_id=l.id) }}"
+                      onsubmit="return confirm('Delete this lease for {{ (l.tenant_name_live or l.tenant_name or 'tenant')|e }}? This cannot be undone.');"
+                      style="display:inline;">
+                  <button class="tbl-btn" type="submit" style="color:#dc2626;border-color:#fecaca;background:#fef2f2;">
+                    <i data-lucide="trash-2" width="11" height="11"></i> Delete
+                  </button>
+                </form>
               </div>
             </td>
           </tr>
@@ -140,22 +147,22 @@
     <form method="POST" action="{{ url_for('landlord.create_lease_agreement') }}">
       <div class="form-group">
         <label class="form-label">Tenant *</label>
-        <select class="form-input" name="tenant_id" required>
+        <select class="form-input" name="tenant_id" id="leaseTenanSelect" required onchange="syncLeaseRent(this)">
           <option value="">Select tenant...</option>
           {% for t in tenant %}
-            <option value="{{ t.id }}">{{ t.property_name }} - {{ t.unit }} - {{ t.name }}</option>
+            <option value="{{ t.id }}" data-unit="{{ t.unit_id or '' }}" data-rent="{{ t.amount or 0 }}">
+              {{ t.property_name }} - {{ t.unit_number or 'No unit' }} - {{ t.name }}
+            </option>
           {% endfor %}
         </select>
       </div>
 
       <div class="form-group">
         <label class="form-label">Unit *</label>
-        <select class="form-input" name="unit_id" required>
+        <select class="form-input" name="unit_id" id="leaseUnitSelect" required>
           <option value="">Select unit...</option>
           {% for u in units %}
-            {% if (u.status or '') == 'Vacant' %}
-              <option value="{{ u.id }}">{{ u.property_name }} - {{ u.unit_number }} (Vacant)</option>
-            {% endif %}
+            <option value="{{ u.id }}">{{ u.property_name }} - {{ u.unit_number }} ({{ u.status or 'Unknown' }})</option>
           {% endfor %}
         </select>
       </div>
@@ -201,6 +208,18 @@
 function openModal(id){document.getElementById(id).classList.add('show'); if(window.lucide) lucide.createIcons();}
 function closeModal(id){document.getElementById(id).classList.remove('show')}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show')}))
+
+function syncLeaseRent(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const unitId = opt ? opt.dataset.unit : '';
+  const rent   = opt ? opt.dataset.rent  : '';
+  // Auto-select the tenant's unit in the unit dropdown
+  const unitSel = document.getElementById('leaseUnitSelect');
+  if (unitSel && unitId) unitSel.value = unitId;
+  // Auto-fill rent
+  const rentInput = document.querySelector('input[name="rent_amount"]');
+  if (rentInput && rent && !rentInput.value) rentInput.value = rent;
+}
 
 function copyText(txt){
   try { navigator.clipboard.writeText(txt); } catch(e) {}

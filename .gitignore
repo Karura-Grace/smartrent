@@ -9,6 +9,9 @@ __pycache__/
 # Flask instance folder
 instance/
 
+# Server-side session files
+flask_sessions/
+
 # User uploads
 uploads/
 

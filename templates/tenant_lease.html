@@ -1,0 +1,142 @@
+{% extends "base_dashboard.html" %}
+{% block title %}My Lease - SmartRent{% endblock %}
+{% block role_name %}Tenant{% endblock %}
+{% block page_title %}My Lease{% endblock %}
+{% block page_sub %}Lease Agreements{% endblock %}
+
+{% block extra_styles %}
+.hero{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%)}
+.lease-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;box-shadow:var(--sh-sm);}
+.lease-head{padding:16px 20px;border-bottom:1px solid var(--border-lt);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.lease-head-title{font-size:15px;font-weight:700;color:var(--text);}
+.lease-body{padding:20px;}
+.lease-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.lease-item{display:flex;flex-direction:column;gap:4px;}
+.lease-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);}
+.lease-val{font-size:14px;font-weight:500;color:var(--text);}
+.lease-val.mono{font-family:ui-monospace,monospace;font-weight:700;color:#0f766e;}
+.terms-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;color:var(--text-2);line-height:1.6;white-space:pre-wrap;margin-bottom:18px;}
+.sign-section{background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:16px;}
+.sign-section h4{font-size:13px;font-weight:700;color:#065f46;margin-bottom:10px;}
+.sign-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.sign-input{flex:1;min-width:200px;padding:9px 12px;border:1.5px solid #99f6e4;border-radius:8px;font-size:13px;outline:none;}
+.sign-input:focus{border-color:#0f766e;}
+.sign-btn{padding:9px 18px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
+.sign-btn:hover{background:#065f46;}
+.signed-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#d1fae5;color:#065f46;border-radius:8px;font-size:12.5px;font-weight:600;}
+.landlord-signed{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#dbeafe;color:#1e40af;border-radius:6px;font-size:11.5px;font-weight:600;}
+@media(max-width:600px){.lease-grid{grid-template-columns:1fr;}}
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+  <div class="hero-eye">Lease</div>
+  <h1>My Lease Agreements</h1>
+  <p>Review and sign your lease agreements sent by your landlord.</p>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat, msg in messages %}
+    <div style="margin-bottom:14px;padding:11px 16px;border-radius:9px;font-size:13px;
+         background:{% if cat=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
+         color:{% if cat=='success' %}#065f46{% else %}#991b1b{% endif %};">{{ msg }}</div>
+  {% endfor %}{% endif %}
+{% endwith %}
+
+{% if leases %}
+  {% for l in leases %}
+  <div class="lease-card">
+    <div class="lease-head">
+      <div>
+        <div class="lease-head-title">
+          {{ l.property_name or '-' }} — {{ l.unit_number_live or l.unit_number or '-' }}
+        </div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:2px;">Created {{ (l.created_at|string)[:10] if l.created_at else '-' }}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        {% set st = (l.status or '')|lower %}
+        {% if st == 'active' %}
+          <span class="badge b-green">Active</span>
+        {% elif st in ('pending signature','pending_signature') %}
+          <span class="badge b-amber">Awaiting Your Signature</span>
+        {% elif st == 'expired' %}
+          <span class="badge b-red">Expired</span>
+        {% else %}
+          <span class="badge b-gray">{{ l.status or 'Draft' }}</span>
+        {% endif %}
+        {% if l.signed_name %}
+          <span class="landlord-signed"><i data-lucide="check" width="12" height="12"></i> Landlord signed</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="lease-body">
+      <div class="lease-grid">
+        <div class="lease-item">
+          <span class="lease-lbl">Property</span>
+          <span class="lease-val">{{ l.property_name or '-' }}</span>
+        </div>
+        <div class="lease-item">
+          <span class="lease-lbl">Unit</span>
+          <span class="lease-val">{{ l.unit_number_live or l.unit_number or '-' }}</span>
+        </div>
+        <div class="lease-item">
+          <span class="lease-lbl">Monthly Rent</span>
+          <span class="lease-val mono">KES {{ "{:,.0f}".format(l.rent_amount or 0) }}</span>
+        </div>
+        <div class="lease-item">
+          <span class="lease-lbl">Deposit</span>
+          <span class="lease-val mono">KES {{ "{:,.0f}".format(l.deposit_amount or 0) }}</span>
+        </div>
+        <div class="lease-item">
+          <span class="lease-lbl">Start Date</span>
+          <span class="lease-val">{{ l.start_date or '-' }}</span>
+        </div>
+        <div class="lease-item">
+          <span class="lease-lbl">End Date</span>
+          <span class="lease-val">{{ l.end_date or '-' }}</span>
+        </div>
+      </div>
+
+      {% if l.terms %}
+      <div style="margin-bottom:10px;font-size:12px;font-weight:700;color:var(--text-2);">Terms & Conditions</div>
+      <div class="terms-box">{{ l.terms }}</div>
+      {% endif %}
+
+      <!-- Signature section -->
+      {% if l.tenant_signed_name %}
+        <div class="signed-badge">
+          <i data-lucide="check-circle" width="14" height="14"></i>
+          You signed as "{{ l.tenant_signed_name }}" on {{ (l.tenant_signed_at|string)[:10] if l.tenant_signed_at else '-' }}
+        </div>
+      {% elif (l.status or '')|lower in ('pending signature','pending_signature','draft') %}
+        <div class="sign-section">
+          <h4><i data-lucide="pen-line" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:6px;"></i>Sign this Lease</h4>
+          <p style="font-size:12px;color:#065f46;margin-bottom:12px;">
+            By typing your full name below you agree to the terms of this lease agreement.
+          </p>
+          <form method="POST" action="{{ url_for('tenant.tenant_sign_lease', lease_id=l.id) }}">
+            <div class="sign-row">
+              <input class="sign-input" type="text" name="signed_name"
+                     placeholder="Type your full legal name to sign" required>
+              <button class="sign-btn" type="submit">
+                <i data-lucide="check" width="14" height="14" style="display:inline;vertical-align:-2px;margin-right:4px;"></i>Sign Lease
+              </button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card" style="text-align:center;padding:48px 24px;color:var(--text-3);">
+    <i data-lucide="file-text" width="40" height="40" style="display:block;margin:0 auto 12px;opacity:0.3;"></i>
+    <div style="font-size:14px;font-weight:600;margin-bottom:6px;">No lease agreements yet</div>
+    <div style="font-size:13px;">Your landlord hasn't sent a lease agreement yet. Contact them if you need one.</div>
+  </div>
+{% endif %}
+{% endblock %}

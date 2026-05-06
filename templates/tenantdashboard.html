@@ -5,44 +5,69 @@
 {% block page_title %}Dashboard{% endblock %}
 {% block page_sub %}Tenant Overview{% endblock %}
 
-
 {% block extra_styles %}
-.stat-ico svg, .act-icon-wrap svg, .qa-ico svg, .nav-ico svg {
-    stroke: currentColor;
+.stat-ico svg, .act-icon-wrap svg, .qa-ico svg, .nav-ico svg { stroke: currentColor; }
+.ico-blue   { color: var(--blue-600); }
+.ico-green  { color: var(--green); }
+.ico-red    { color: var(--red); }
+.ico-orange { color: var(--orange); }
+.notice-feed { display:flex; flex-direction:column; gap:10px; }
+.notice-row {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 12px; background:var(--bg);
+    border-radius:8px; border:1px solid var(--border-lt);
 }
-.ico-blue  { color: var(--blue-600); }
-.ico-green { color: var(--green); }
-.ico-red   { color: var(--red); }
-.ico-orange{ color: var(--orange); }
+.notice-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+.notice-dot.urgent { background:var(--red); }
+.notice-dot.normal { background:var(--blue-600); }
+.notice-dot.info   { background:var(--amber); }
+.notice-body { flex:1; min-width:0; }
+.notice-title { font-size:12.5px; font-weight:600; color:var(--text); }
+.notice-msg   { font-size:11.5px; color:var(--text-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.notice-time  { font-size:10.5px; color:var(--text-3); white-space:nowrap; }
+.lease-alert {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 16px; background:#fffbeb;
+    border:1px solid #fde68a; border-radius:10px;
+    margin-bottom:18px; font-size:13px; color:#92400e;
+}
 {% endblock %}
 
 {% block hero %}
 <div class="hero">
     <div class="hero-eye">Tenant Portal</div>
     <h1>Good day, {{ user.user_name }} 👋</h1>
-        <p>Here's your rental summary for {{ period_label }}.</p>
-        <div class="hero-kpis">
-            <div class="hero-kpi">
-                <span class="hero-kpi-label">Email</span>
-                <span class="hero-kpi-value">{{ user.user_email }}</span>
-            </div>
-            <div class="hero-kpi">
-                <span class="hero-kpi-label">Unit</span>
-                <span class="hero-kpi-value">{{ tenant_unit }} - {{ property_name }}</span>
-            </div>
-            <div class="hero-kpi">
-                <span class="hero-kpi-label">Lease Status</span>
-                <span class="hero-kpi-value">OK {{ lease_status }}</span>
-            </div>
-            <div class="hero-kpi">
-                <span class="hero-kpi-label">Next Due</span>
-                <span class="hero-kpi-value">{{ next_due_date }}</span>
-            </div>
+    <p>Here's your rental summary for {{ period_label }}.</p>
+    <div class="hero-kpis">
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Email</span>
+            <span class="hero-kpi-value">{{ user.user_email }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Unit</span>
+            <span class="hero-kpi-value">{{ tenant_unit }} - {{ property_name }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Lease Status</span>
+            <span class="hero-kpi-value">{{ lease_status }}</span>
+        </div>
+        <div class="hero-kpi">
+            <span class="hero-kpi-label">Next Due</span>
+            <span class="hero-kpi-value">{{ next_due_date }}</span>
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block content %}
+
+{% if pending_lease %}
+<div class="lease-alert">
+    <i data-lucide="file-signature" width="18" height="18" style="flex-shrink:0;"></i>
+    <span>You have a lease agreement waiting for your signature.</span>
+    <a href="{{ url_for('tenant.tenant_lease') }}" style="margin-left:auto;font-weight:700;color:#92400e;text-decoration:underline;">View & Sign →</a>
+</div>
+{% endif %}
 
 <div class="stats-grid">
     <div class="stat-card">
@@ -50,19 +75,21 @@
             <div class="stat-ico ico-blue"><i data-lucide="credit-card" width="18" height="18"></i></div>
             <span class="stat-trend flat">Due {{ next_due_date }}</span>
         </div>
-        <div class="stat-val">{{ stats.rent_amount}}</div>
+        <div class="stat-val">{{ stats.rent_amount }}</div>
         <div class="stat-name">Monthly Rent</div>
         <div class="stat-hint">{{ property_name }} - Unit {{ tenant_unit }}</div>
     </div>
 
-    <div class="stat-card">
+    <div class="stat-card" style="cursor:pointer;" onclick="window.location='{{ url_for('tenant.bills') }}'">
         <div class="stat-top">
             <div class="stat-ico ico-orange"><i data-lucide="file-text" width="18" height="18"></i></div>
-            <span>{{stats.pending_bills_count  }}</span>
+            <span class="stat-trend {% if stats.pending_bills_count > 0 %}down{% else %}up{% endif %}">
+                {{ stats.pending_bills_count }} open
+            </span>
         </div>
         <div class="stat-val">{{ stats.pending_bills_count }}</div>
         <div class="stat-name">Pending Bills</div>
-        <div class="stat-hint">Based on your active billing items.</div>
+        <div class="stat-hint">Click to view and pay your bills.</div>
     </div>
 
     <div class="stat-card">
@@ -75,82 +102,105 @@
         <div class="stat-hint">Total cleared transactions.</div>
     </div>
 
-    <div class="stat-card">
+    <div class="stat-card" style="cursor:pointer;" onclick="window.location='{{ url_for('tenant.services') }}'">
         <div class="stat-top">
             <div class="stat-ico ico-red"><i data-lucide="alert-triangle" width="18" height="18"></i></div>
-            <span class="stat-trend flat">{{ stats.active_requests }} Open</span>
+            <span class="stat-trend {% if stats.active_requests > 0 %}down{% else %}flat{% endif %}">
+                {{ stats.active_requests }} Open
+            </span>
         </div>
         <div class="stat-val">{{ stats.active_requests }}</div>
-        <div class="stat-name">Active Requests</div>
-        <div class="stat-hint">Maintenance requests are not yet tracked in DB.</div>
+        <div class="stat-name">Active Maintenance</div>
+        <div class="stat-hint">Click to view or submit requests.</div>
     </div>
 </div>
 
 <div class="content-grid">
 
-    <!-- Activity -->
+    <!-- Recent Notices -->
     <div class="card">
         <div class="card-head">
-            <span class="card-title">Recent Activity</span>
-            <button class="card-action" onclick="alert('Coming soon!')">View All</button>
+            <span class="card-title">Messages from Landlord</span>
+            <a href="{{ url_for('tenant.notices') }}" class="card-action" style="text-decoration:none;">View All</a>
         </div>
-        <ul class="activity-list">
-            {% if activity_items %}
-                {% for item in activity_items %}
-                <li class="act-item">
-                    <div class="act-icon-wrap ico-green"><i data-lucide="check-circle" width="16" height="16"></i></div>
-                    <div class="act-body">
-                        <div class="act-title">{{ item.title }}</div>
-                        <div class="act-sub">{{ item.amount }} - <span class="badge {{ item.badge_class }}" style="margin-left:6px">{{ item.status }}</span></div>
+        <div class="notice-feed">
+            {% if recent_notices %}
+                {% for n in recent_notices %}
+                <div class="notice-row">
+                    <div class="notice-dot {{ n.type or 'normal' }}"></div>
+                    <div class="notice-body">
+                        <div class="notice-title">{{ n.title or 'Notice' }}</div>
+                        <div class="notice-msg">{{ n.message }}</div>
                     </div>
-                    <span class="act-time">{{ item.date }}</span>
-                </li>
+                    <div class="notice-time">{{ (n.sent_at|string)[:10] if n.sent_at else '-' }}</div>
+                </div>
                 {% endfor %}
             {% else %}
-                <li class="act-item">
-                    <div class="act-icon-wrap ico-blue"><i data-lucide="info" width="16" height="16"></i></div>
-                    <div class="act-body">
-                        <div class="act-title">No recent activity found</div>
-                        <div class="act-sub">Your transaction history appears empty.</div>
-                    </div>
-                    <span class="act-time">-</span>
-                </li>
+                <div style="padding:12px 0;color:var(--text-3);font-size:13px;">No messages from your landlord yet.</div>
             {% endif %}
-        </ul>
+        </div>
+
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border-lt);">
+            <div class="card-head" style="margin-bottom:10px;">
+                <span class="card-title">Recent Activity</span>
+            </div>
+            <ul class="activity-list">
+                {% if activity_items %}
+                    {% for item in activity_items %}
+                    <li class="act-item">
+                        <div class="act-icon-wrap ico-green"><i data-lucide="check-circle" width="16" height="16"></i></div>
+                        <div class="act-body">
+                            <div class="act-title">{{ item.title }}</div>
+                            <div class="act-sub">{{ item.amount }} - <span class="badge {{ item.badge_class }}" style="margin-left:6px">{{ item.status }}</span></div>
+                        </div>
+                        <span class="act-time">{{ item.date }}</span>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="act-item">
+                        <div class="act-icon-wrap ico-blue"><i data-lucide="info" width="16" height="16"></i></div>
+                        <div class="act-body">
+                            <div class="act-title">No recent activity found</div>
+                            <div class="act-sub">Your transaction history appears empty.</div>
+                        </div>
+                        <span class="act-time">-</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
     </div>
 
-    <!-- Quick actions -->
+    <!-- Quick Actions -->
     <div class="card">
         <div class="card-head">
             <span class="card-title">Quick Actions</span>
         </div>
         <div class="qa-grid">
-          <div class="qa-btn" onclick="window.location='{{ url_for('tenant.payments') }}'">
+            <div class="qa-btn" onclick="window.location='{{ url_for('tenant.payments') }}'">
                 <div class="qa-ico"><i data-lucide="credit-card" width="20" height="20"></i></div>
-
                 <div class="qa-name">Pay Rent</div>
                 <div class="qa-desc">{{ monthly_rent_due }} due</div>
             </div>
-            <div class="qa-btn" onclick="alert('Coming soon!')">
-                <div class="qa-ico"><i data-lucide="file-text" width="20" height="20"></i></div>
+            <div class="qa-btn" onclick="window.location='{{ url_for('tenant.services') }}'">
+                <div class="qa-ico"><i data-lucide="wrench" width="20" height="20"></i></div>
                 <div class="qa-name">Maintenance</div>
                 <div class="qa-desc">Submit a request</div>
             </div>
-            <div class="qa-btn" onclick="alert('Coming soon!')">
+            <div class="qa-btn" onclick="window.location='{{ url_for('tenant.notices') }}'">
                 <div class="qa-ico"><i data-lucide="message-circle" width="20" height="20"></i></div>
-                <div class="qa-name">Message</div>
-                <div class="qa-desc">Contact your landlord</div>
+                <div class="qa-name">Messages</div>
+                <div class="qa-desc">From your landlord</div>
             </div>
-            <div class="qa-btn" onclick="alert('Coming soon!')">
+            <div class="qa-btn" onclick="window.location='{{ url_for('tenant.tenant_lease') }}'">
                 <div class="qa-ico"><i data-lucide="file-text" width="20" height="20"></i></div>
-                <div class="qa-name">Documents</div>
-                <div class="qa-desc">Lease & receipts</div>
+                <div class="qa-name">My Lease</div>
+                <div class="qa-desc">View & sign agreement</div>
             </div>
         </div>
 
         <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-lt);">
-            <button class="btn-primary" ... onclick="window.location='{{ url_for('tenant.payments') }}'">
-    <i data-lucide="credit-card" width="14" height="14"></i> Pay Rent Now - {{ monthly_rent_due }}
+            <button class="btn-primary" onclick="window.location='{{ url_for('tenant.payments') }}'">
+                <i data-lucide="credit-card" width="14" height="14"></i> Pay Rent Now - {{ monthly_rent_due }}
             </button>
         </div>
     </div>

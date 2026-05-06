@@ -2,7 +2,7 @@
 import os
 from decimal import Decimal
 from functools import wraps
-from flask import session, redirect, url_for, flash
+from flask import session, redirect, url_for, flash, request
 import MySQLdb
 from extensions import mysql, get_db_connection
 from PIL import Image
@@ -157,8 +157,18 @@ def get_user_stats(user_id, role='landlord'):
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user_id' not in session:
+        from tab_session import tab_session, get_tab_id
+        ts = tab_session()
+        if not ts.get('user_id'):
             flash('Please login first', 'error')
-            return redirect(url_for('auth.login'))
+            tab_id = get_tab_id()
+            login_url = url_for('auth.login', tab_id=tab_id) if tab_id else url_for('auth.login')
+            return redirect(login_url)
+        # Sync tab session values into flask session so all existing code
+        # that reads session['user_id'] etc. continues to work unchanged
+        session['user_id']    = ts.get('user_id')
+        session['user_email'] = ts.get('user_email')
+        session['role']       = ts.get('role')
+        session['user_name']  = ts.get('user_name')
         return f(*args, **kwargs)
     return decorated

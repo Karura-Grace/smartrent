@@ -1,9 +1,11 @@
 import os
+import secrets
 from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    SECRET_KEY = 'smartrent-secret-key-2024'
+    # Load from env or generate a stable random key stored in .env
+    SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_hex(32)
 
     # MySQL Configuration
     MYSQL_HOST     = os.getenv('MYSQL_HOST', 'localhost')

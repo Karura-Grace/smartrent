@@ -214,20 +214,39 @@ def tenant_dashboard():
                 "badge_class": "b-green" if (pay.get("status") or "").lower() == "paid" else "b-orange"
             })
 
+        # Fetch latest notices for dashboard
+        property_id = tenant_info.get("property_id")
+        recent_notices = []
+        if property_id:
+            cur.execute("""
+                SELECT title, message, type, created_at AS sent_at
+                FROM notices WHERE property_id = %s
+                ORDER BY created_at DESC LIMIT 3
+            """, (property_id,))
+            recent_notices = [dict(r) for r in cur.fetchall()]
+
+        # Pending lease
+        cur.execute("""
+            SELECT id, status FROM leases
+            WHERE tenant_id = %s AND LOWER(status) IN ('pending signature','pending_signature')
+            LIMIT 1
+        """, (tenant_id,))
+        pending_lease = cur.fetchone()
+
         return render_template(
             "tenantdashboard.html",
             user=session,
             tenant_info=tenant_info,
-
-            # PASS STATS
             stats=stats,
-
-            # other data
             tenant_unit=tenant_info.get("unit_number"),
             property_name=tenant_info.get("property_name"),
             lease_status=tenant_info.get("status") or "Active",
             period_label=_current_month_label(),
-            activity_items=activity_items
+            activity_items=activity_items,
+            recent_notices=recent_notices,
+            pending_lease=pending_lease,
+            next_due_date=stats.get("next_due_date", "N/A"),
+            monthly_rent_due=stats.get("rent_amount", "KES 0"),
         )
 
     finally:
@@ -257,7 +276,8 @@ def payments():
 
         cur.execute(
             """
-            SELECT id, bill_type, amount, due_date, status, created_at
+            SELECT id, bill_type, amount, amount_due, COALESCE(amount_paid,0) AS amount_paid,
+                   due_date, status, created_at
             FROM bills
             WHERE tenant_id = %s
             ORDER BY due_date ASC, created_at DESC
@@ -304,6 +324,8 @@ def payments():
                     "name": bill.get("bill_type") or "Bill",
                     "data_name": bill.get("bill_type") or "Bill",
                     "amount": int(float(bill.get("amount") or 0)),
+                    "amount_paid": float(bill.get("amount_paid") or 0),
+                    "remaining": max(0, float(bill.get("amount") or 0) - float(bill.get("amount_paid") or 0)),
                     "amount_display": f"KES {int(float(bill.get('amount') or 0)):,.0f}",
                     "due": str(due_date) if due_date else "No due date",
                     "period": bill.get("created_at").strftime("%b %Y") if bill.get("created_at") else "",
@@ -363,6 +385,13 @@ def payments():
         property_name = tenant_info.get("property_name") or "-"
         next_due_date_str = str(next_due_date) if next_due_date else "N/A"
 
+        # Find the current month's rent bill for the flexible payment progress bar
+        rent_bill = next(
+            (b for b in active_bills
+             if b["name"].lower() == "rent" and b["status"].lower() != "paid"),
+            None
+        )
+
         return render_template(
             "payments.html",
             user=session,
@@ -385,6 +414,7 @@ def payments():
             payments_made=payments_made,
             active_requests=active_requests,
             activity_items=payment_history[:5],
+            rent_bill=rent_bill,
         )
     finally:
         cur.close()
@@ -500,6 +530,99 @@ def tenant_pay():
             conn.rollback()
         except Exception:
             pass
+        flash(f"Error recording payment: {str(e)}", "error")
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+
+    return redirect(url_for("tenant.payments"))
+
+
+@tenant_bp.route("/payments/partial", methods=["POST"])
+@login_required
+@tenant_required
+def tenant_partial_pay():
+    """Record a partial/flexible payment against a specific bill."""
+    user_id = session["user_id"]
+    bill_id_raw  = (request.form.get("bill_id") or "").strip()
+    amount_raw   = (request.form.get("amount") or "").strip()
+    method       = (request.form.get("method") or "Cash").strip()
+    reference    = (request.form.get("reference") or "").strip()
+    month        = (request.form.get("month") or _current_month_label()).strip()
+
+    try:
+        bill_id = int(bill_id_raw)
+        amount  = float(amount_raw)
+    except (ValueError, TypeError):
+        flash("Invalid bill or amount.", "error")
+        return redirect(url_for("tenant.payments"))
+
+    if amount <= 0:
+        flash("Amount must be greater than zero.", "error")
+        return redirect(url_for("tenant.payments"))
+
+    conn, cur, should_close = _get_conn_and_cursor()
+    try:
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id   = tenant.get("id")
+        property_id = tenant.get("property_id")
+
+        # Fetch the bill
+        cur.execute("""
+            SELECT id, amount, amount_due, amount_paid, status, bill_type
+            FROM bills WHERE id=%s AND tenant_id=%s LIMIT 1
+        """, (bill_id, tenant_id))
+        bill = cur.fetchone()
+        if not bill:
+            flash("Bill not found.", "error")
+            return redirect(url_for("tenant.payments"))
+
+        if (bill.get("status") or "").lower() == "paid":
+            flash("This bill is already fully paid.", "error")
+            return redirect(url_for("tenant.payments"))
+
+        amount_due  = float(bill.get("amount_due") or bill.get("amount") or 0)
+        amount_paid = float(bill.get("amount_paid") or 0)
+        remaining   = round(amount_due - amount_paid, 2)
+
+        if amount > remaining:
+            amount = remaining  # cap at remaining balance
+
+        new_paid    = round(amount_paid + amount, 2)
+        new_remaining = round(amount_due - new_paid, 2)
+        new_status  = "Paid" if new_remaining <= 0 else "Partial"
+
+        # Update bill
+        cur.execute("""
+            UPDATE bills SET amount_paid=%s, status=%s WHERE id=%s
+        """, (new_paid, new_status, bill_id))
+
+        # Record the payment transaction
+        ref = reference or f"PART-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        cur.execute("""
+            INSERT INTO payments
+                (tenant_id, unit_id, `phone no`, Amount, status,
+                 method, reference, paid_on, property_id, month,
+                 due_date, penalty_amount, recorded_by)
+            VALUES (%s, %s, %s, %s, 'Paid',
+                    %s, %s, NOW(), %s, %s,
+                    NULL, 0, %s)
+        """, (
+            tenant_id, tenant.get("unit_id"), tenant.get("phone"),
+            amount, method, ref, property_id, month, user_id,
+        ))
+        payment_id = cur.lastrowid
+        record_transaction(payment_id, tenant_id, property_id, amount,
+                           "Paid", method, ref, None, date.today(), 0)
+        conn.commit()
+
+        if new_status == "Paid":
+            flash(f"Full payment of KES {amount:,.0f} recorded. Bill fully settled!", "success")
+        else:
+            flash(f"Partial payment of KES {amount:,.0f} recorded. Remaining: KES {new_remaining:,.0f}", "success")
+    except Exception as e:
+        conn.rollback()
         flash(f"Error recording payment: {str(e)}", "error")
     finally:
         cur.close()
@@ -901,7 +1024,7 @@ def notices():
         if property_id:
             cur.execute(
                 """
-                SELECT message, type, created_at AS sent_at
+                SELECT title, message, type, created_at AS sent_at
                 FROM notices
                 WHERE property_id = %s
                 ORDER BY created_at DESC
@@ -915,3 +1038,77 @@ def notices():
         cur.close()
         if should_close:
             conn.close()
+
+
+@tenant_bp.route("/lease")
+@login_required
+@tenant_required
+def tenant_lease():
+    user_id = session["user_id"]
+    conn, cur, should_close = _get_conn_and_cursor()
+    try:
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant.get("id")
+        if not tenant_id:
+            flash("Tenant profile not found.", "error")
+            return redirect(url_for("landing"))
+
+        cur.execute("""
+            SELECT l.*,
+                   p.name AS property_name,
+                   u.unit_number AS unit_number_live
+            FROM leases l
+            LEFT JOIN properties p ON p.id = l.property_id
+            LEFT JOIN units u      ON u.id = l.unit_id
+            WHERE l.tenant_id = %s
+            ORDER BY l.created_at DESC
+        """, (tenant_id,))
+        leases = [dict(r) for r in cur.fetchall()]
+        return render_template("tenant_lease.html", user=session, leases=leases)
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+
+
+@tenant_bp.route("/lease/<int:lease_id>/sign", methods=["POST"])
+@login_required
+@tenant_required
+def tenant_sign_lease(lease_id):
+    user_id = session["user_id"]
+    signed_name = (request.form.get("signed_name") or "").strip()
+    if not signed_name:
+        flash("Enter your full name to sign.", "error")
+        return redirect(url_for("tenant.tenant_lease"))
+
+    conn, cur, should_close = _get_conn_and_cursor()
+    try:
+        tenant = _resolve_tenant_profile(cur, user_id) or {}
+        tenant_id = tenant.get("id")
+
+        cur.execute("SELECT id, status FROM leases WHERE id=%s AND tenant_id=%s LIMIT 1",
+                    (lease_id, tenant_id))
+        lease = cur.fetchone()
+        if not lease:
+            flash("Lease not found.", "error")
+            return redirect(url_for("tenant.tenant_lease"))
+        if (lease.get("status") or "").lower() == "active":
+            flash("This lease is already signed.", "error")
+            return redirect(url_for("tenant.tenant_lease"))
+
+        cur.execute("""
+            UPDATE leases
+            SET tenant_signed_name=%s, tenant_signed_at=NOW(),
+                status='Active', updated_at=NOW()
+            WHERE id=%s AND tenant_id=%s
+        """, (signed_name, lease_id, tenant_id))
+        conn.commit()
+        flash("Lease signed successfully!", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error signing lease: {str(e)}", "error")
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+    return redirect(url_for("tenant.tenant_lease"))

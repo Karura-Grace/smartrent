@@ -917,7 +917,7 @@ def add_tenant():
         rent_amount = float(unit_row.get('rent') or 0) or float((prop or {}).get('base_rent') or 0) or 0.0
 
         # Generate a temporary password for tenant login
-        temp_password = secrets.token_urlsafe(8)
+        temp_password = 'password123'
         hashed_password = generate_password_hash(temp_password)
 
         cur.execute("""
@@ -1113,19 +1113,35 @@ def maintenance():
         # Use maintenance_requests.property_id directly (it exists in schema)
         cur.execute("""
             SELECT m.id, m.title, m.description, m.priority, m.status,
-                   m.unit_id, m.unit_id AS unit_label,
+                   m.unit_id, m.assigned_to,
+                   m.tenant_id,
                    p.name AS property_name,
                    u.unit_number,
                    COALESCE(t.name, '-') AS tenant_name,
+                   sp.first_name AS sp_first, sp.last_name AS sp_last,
                    m.created_at, m.updated_at
             FROM maintenance_requests m
             LEFT JOIN properties p ON p.id = m.property_id
             LEFT JOIN units u      ON u.id = m.unit_id
             LEFT JOIN tenant t    ON t.unit_id = m.unit_id
+            LEFT JOIN service_provider sp ON sp.id = m.assigned_to
             WHERE p.landlord_id = %s
             ORDER BY FIELD(m.priority,'High','Medium','Low'), m.created_at DESC
         """, (landlord_id,))
         tickets = [dict(r) for r in cur.fetchall()]
+        for t in tickets:
+            fn = (t.get('sp_first') or '').strip()
+            ln = (t.get('sp_last') or '').strip()
+            t['assigned_name'] = f"{fn} {ln}".strip() or None
+
+        cur.execute("""
+            SELECT id, first_name, last_name FROM service_provider
+            WHERE LOWER(status) = 'active' OR status IS NULL
+            ORDER BY first_name, last_name
+        """)
+        service_providers = [dict(r) for r in cur.fetchall()]
+        for sp in service_providers:
+            sp['full_name'] = f"{sp.get('first_name','')} {sp.get('last_name','')}".strip()
 
         open_count  = sum(1 for t in tickets if (t.get('status') or '').lower() in {'open', 'pending'})
         in_progress = sum(1 for t in tickets if (t.get('status') or '').lower() in {'in progress', 'in_progress'})
@@ -1146,9 +1162,46 @@ def maintenance():
 
     return render_template('maintenance.html',
         user=session, tickets=tickets,
+        service_providers=service_providers,
         open_count=open_count, urgent_count=urgent,
         in_progress_count=in_progress, resolved_this_month=resolved_this_month,
     )
+
+
+@landlord_bp.route('/maintenance/<int:ticket_id>/assign', methods=['POST'])
+@login_required
+def landlord_assign_maintenance_ticket(ticket_id):
+    if session.get('role') != 'landlord':
+        flash('Unauthorized', 'error')
+        return redirect(url_for('landing'))
+
+    provider_id_raw = (request.form.get('provider_id') or '').strip()
+    try:
+        provider_id = int(provider_id_raw) if provider_id_raw else None
+    except ValueError:
+        provider_id = None
+
+    landlord_id = session['user_id']
+    conn, cur, should_close = _get_conn_cur()
+    try:
+        cur.execute("""
+            UPDATE maintenance_requests m
+            JOIN properties p ON p.id = m.property_id
+            SET m.assigned_to=%s, m.status='In Progress', m.updated_at=NOW()
+            WHERE m.id=%s AND p.landlord_id=%s
+        """, (provider_id, ticket_id, landlord_id))
+        conn.commit()
+        flash('Service provider assigned.', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error: {str(e)}', 'error')
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+
+    return redirect(url_for('landlord.maintenance'))
+
 
 
 @landlord_bp.route('/maintenance/<int:ticket_id>/update', methods=['POST'])
@@ -1184,6 +1237,83 @@ def landlord_update_maintenance_ticket(ticket_id):
             conn.close()
 
     return redirect(url_for('landlord.maintenance'))
+
+
+# ----------------------
+# BILLS OVERVIEW
+# ----------------------
+
+@landlord_bp.route('/landlord/bills')
+@login_required
+def landlord_bills():
+    if session.get('role') != 'landlord':
+        flash('Unauthorized', 'error')
+        return redirect(url_for('landing'))
+
+    landlord_id = session['user_id']
+    status_filter = (request.args.get('status') or '').strip()
+    conn, cur, should_close = _get_conn_cur()
+    try:
+        sql = """
+            SELECT b.id, b.bill_type, b.amount, b.amount_due, b.due_date,
+                   b.status, b.month, b.created_at,
+                   t.id AS tenant_id, t.name AS tenant_name,
+                   u.unit_number, p.name AS property_name
+            FROM bills b
+            JOIN tenant t     ON t.id = b.tenant_id
+            JOIN properties p ON p.id = t.property_id
+            LEFT JOIN units u ON u.id = t.unit_id
+            WHERE p.landlord_id = %s
+        """
+        params = [landlord_id]
+        if status_filter:
+            sql += " AND LOWER(b.status) = %s"
+            params.append(status_filter.lower())
+        sql += " ORDER BY b.created_at DESC"
+        cur.execute(sql, params)
+        bills = [dict(r) for r in cur.fetchall()]
+
+        total_billed = sum(float(b.get('amount') or 0) for b in bills)
+        total_paid   = sum(float(b.get('amount') or 0) for b in bills if (b.get('status') or '').lower() == 'paid')
+        total_pending = sum(float(b.get('amount') or 0) for b in bills if (b.get('status') or '').lower() != 'paid')
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+
+    return render_template('landlord_bills.html',
+        user=session, bills=bills,
+        total_billed=total_billed, total_paid=total_paid, total_pending=total_pending,
+        status_filter=status_filter,
+    )
+
+
+@landlord_bp.route('/landlord/bills/<int:bill_id>/delete', methods=['POST'])
+@login_required
+def landlord_delete_bill(bill_id):
+    if session.get('role') != 'landlord':
+        flash('Unauthorized', 'error')
+        return redirect(url_for('landing'))
+
+    landlord_id = session['user_id']
+    conn, cur, should_close = _get_conn_cur()
+    try:
+        cur.execute("""
+            DELETE b FROM bills b
+            JOIN tenant t ON t.id = b.tenant_id
+            JOIN properties p ON p.id = t.property_id
+            WHERE b.id = %s AND p.landlord_id = %s
+        """, (bill_id, landlord_id))
+        conn.commit()
+        flash('Bill deleted.', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error: {str(e)}', 'error')
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
+    return redirect(url_for('landlord.landlord_bills'))
 
 
 # ----------------------
@@ -1546,6 +1676,32 @@ def create_lease_agreement():
         if should_close:
             conn.close()
 
+    return redirect(url_for('landlord.lease_agreements'))
+
+
+@landlord_bp.route('/lease-agreements/<int:lease_id>/delete', methods=['POST'])
+@login_required
+def delete_lease(lease_id):
+    if (session.get('role') or '').lower() != 'landlord':
+        flash('Unauthorized', 'error')
+        return redirect(url_for('landing'))
+
+    landlord_id = session['user_id']
+    conn, cur, should_close = _get_conn_cur()
+    try:
+        cur.execute(
+            "DELETE FROM leases WHERE id=%s AND landlord_id=%s",
+            (lease_id, landlord_id)
+        )
+        conn.commit()
+        flash('Lease deleted.', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error deleting lease: {str(e)}', 'error')
+    finally:
+        cur.close()
+        if should_close:
+            conn.close()
     return redirect(url_for('landlord.lease_agreements'))
 
 

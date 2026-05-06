@@ -120,11 +120,11 @@
   <div class="hero-kpis">
     <div class="hero-kpi">
       <span class="hero-kpi-label">Collected</span>
-      <span class="hero-kpi-value">KES {{ "{:,.0f}".format(stats.collected) }}</span>
+      <span class="hero-kpi-value">KES {{ "{:,.0f}".format((stats.collected|default(0, true))|float) }}</span>
     </div>
     <div class="hero-kpi">
       <span class="hero-kpi-label">Outstanding</span>
-      <span class="hero-kpi-value">KES {{ "{:,.0f}".format(stats.outstanding) }}</span>
+      <span class="hero-kpi-value">KES {{ "{:,.0f}".format((stats.outstanding|default(0, true))|float) }}</span>
     </div>
     <div class="hero-kpi">
       <span class="hero-kpi-label">Units Paid</span>
@@ -160,7 +160,7 @@
       <div class="stat-ico ico-green"><i data-lucide="check-circle" width="18" height="18" style="color:#15803d"></i></div>
       <span class="stat-trend up">{{ stats.units_paid }} units</span>
     </div>
-    <div class="stat-val">KES {{ "{:,.0f}".format(stats.collected) }}</div>
+    <div class="stat-val">KES {{ "{:,.0f}".format((stats.collected|default(0, true))|float) }}</div>
     <div class="stat-name">Total Collected</div>
     <div class="progress-bar-wrap">
       <div class="progress-bar" style="width:{{ stats.collection_rate }}%"></div>
@@ -172,7 +172,7 @@
       <div class="stat-ico ico-red"><i data-lucide="clock" width="18" height="18" style="color:#dc2626"></i></div>
       <span class="stat-trend down">{{ stats.total_units - stats.units_paid }} units</span>
     </div>
-    <div class="stat-val">KES {{ "{:,.0f}".format(stats.outstanding) }}</div>
+    <div class="stat-val">KES {{ "{:,.0f}".format((stats.outstanding|default(0, true))|float) }}</div>
     <div class="stat-name">Outstanding</div>
     <div class="stat-hint">{{ stats.total_units - stats.units_paid }} unpaid</div>
   </div>
@@ -445,4 +445,3 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 {% endblock %}
-

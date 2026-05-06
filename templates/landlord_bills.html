@@ -1,0 +1,117 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Bills - SmartRent{% endblock %}
+{% block role_name %}Landlord{% endblock %}
+{% block page_title %}Bills{% endblock %}
+{% block page_sub %}All Tenant Bills{% endblock %}
+
+{% block extra_styles %}
+.hero{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%)}
+.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.search-wrap{position:relative;flex:1;min-width:220px}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none}
+.filter-input{width:100%;padding:9px 14px 9px 36px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;color:var(--text);background:var(--surface);outline:none}
+.filter-input:focus{border-color:#0f766e}
+.filter-select{padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;color:var(--text-2);background:var(--surface);cursor:pointer;outline:none}
+.tbl-btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;gap:5px}
+.tbl-btn.danger:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+{% endblock %}
+
+{% block hero %}
+<div class="hero">
+  <div class="hero-eye">Bills</div>
+  <h1>All Tenant Bills</h1>
+  <p>View and manage every bill you have issued across all properties.</p>
+  <div class="hero-kpis">
+    <div class="hero-kpi"><span class="hero-kpi-label">Total Billed</span><span class="hero-kpi-value">KES {{ "{:,.0f}".format(total_billed) }}</span></div>
+    <div class="hero-kpi"><span class="hero-kpi-label">Paid</span><span class="hero-kpi-value">KES {{ "{:,.0f}".format(total_paid) }}</span></div>
+    <div class="hero-kpi"><span class="hero-kpi-label">Pending</span><span class="hero-kpi-value">KES {{ "{:,.0f}".format(total_pending) }}</span></div>
+    <div class="hero-kpi"><span class="hero-kpi-label">Total Bills</span><span class="hero-kpi-value">{{ bills|length }}</span></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for cat, msg in messages %}
+    <div style="margin-bottom:14px;padding:11px 16px;border-radius:9px;font-size:13px;
+         background:{% if cat=='success' %}#d1fae5{% else %}#fee2e2{% endif %};
+         color:{% if cat=='success' %}#065f46{% else %}#991b1b{% endif %};">{{ msg }}</div>
+  {% endfor %}{% endif %}
+{% endwith %}
+
+<div class="filter-bar">
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <input class="filter-input" id="billSearch" placeholder="Search tenant, property, bill type...">
+  </div>
+  <select class="filter-select" onchange="window.location.href='{{ url_for('landlord.landlord_bills') }}?status='+this.value">
+    <option value="" {% if not status_filter %}selected{% endif %}>All Statuses</option>
+    <option value="pending" {% if status_filter=='pending' %}selected{% endif %}>Pending</option>
+    <option value="paid" {% if status_filter=='paid' %}selected{% endif %}>Paid</option>
+    <option value="overdue" {% if status_filter=='overdue' %}selected{% endif %}>Overdue</option>
+  </select>
+  <a href="{{ url_for('landlord.rent_collection') }}" class="tbl-btn" style="text-decoration:none;">
+    <i data-lucide="plus" width="13" height="13"></i> Create Bill
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-head"><span class="card-title">Bills ({{ bills|length }})</span></div>
+  <table class="tbl" id="billsTable">
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Property / Unit</th>
+        <th>Type</th>
+        <th>Amount</th>
+        <th>Due Date</th>
+        <th>Month</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th style="text-align:right">Action</th>
+      </tr>
+    </thead>
+    <tbody id="billsTbody">
+      {% if bills %}
+        {% for b in bills %}
+        <tr data-search="{{ (b.tenant_name or '')|lower }} {{ (b.property_name or '')|lower }} {{ (b.bill_type or '')|lower }}">
+          <td><strong>{{ b.tenant_name or '-' }}</strong></td>
+          <td>{{ b.property_name or '-' }}{% if b.unit_number %} · {{ b.unit_number }}{% endif %}</td>
+          <td>{{ b.bill_type or '-' }}</td>
+          <td style="font-weight:600;">KES {{ "{:,.0f}".format(b.amount or 0) }}</td>
+          <td>{{ (b.due_date|string)[:10] if b.due_date else '-' }}</td>
+          <td>{{ b.month or '-' }}</td>
+          <td>
+            {% set st = (b.status or 'Pending')|lower %}
+            <span class="badge {% if st == 'paid' %}b-green{% elif st == 'overdue' %}b-red{% else %}b-amber{% endif %}">
+              {{ b.status or 'Pending' }}
+            </span>
+          </td>
+          <td style="color:var(--text-3);font-size:12px;">{{ (b.created_at|string)[:10] if b.created_at else '-' }}</td>
+          <td style="text-align:right;">
+            <form method="POST" action="{{ url_for('landlord.landlord_delete_bill', bill_id=b.id) }}"
+                  onsubmit="return confirm('Delete this bill for {{ b.tenant_name|e }}?')">
+              <button class="tbl-btn danger" type="submit">
+                <i data-lucide="trash-2" width="12" height="12"></i> Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="9" style="padding:24px;color:var(--text-3);text-align:center;">No bills found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.getElementById('billSearch')?.addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#billsTbody tr[data-search]').forEach(row => {
+    row.style.display = !q || row.dataset.search.includes(q) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

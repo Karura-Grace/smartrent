@@ -389,6 +389,111 @@ def ensure_transactions_table():
             pass
 
 
+def ensure_bills_amount_paid_column():
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'bills'
+              AND COLUMN_NAME = 'amount_paid'
+        """)
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE bills ADD COLUMN amount_paid DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER amount_due")
+            conn.commit()
+            print("Added amount_paid column to bills")
+    except Exception as e:
+        print(f"ensure_bills_amount_paid_column skipped: {e}")
+        try:
+            if conn: conn.rollback()
+        except Exception:
+            pass
+    finally:
+        try:
+            if cur: cur.close()
+        except Exception:
+            pass
+        try:
+            if conn: conn.close()
+        except Exception:
+            pass
+
+
+def ensure_lease_tenant_signature_columns():
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'leases'
+              AND COLUMN_NAME IN ('tenant_signed_name','tenant_signed_at')
+        """)
+        existing = {r[0] if not isinstance(r, dict) else r['COLUMN_NAME'] for r in cur.fetchall()}
+        if 'tenant_signed_name' not in existing:
+            cur.execute("ALTER TABLE leases ADD COLUMN tenant_signed_name VARCHAR(191) NULL")
+            conn.commit()
+        if 'tenant_signed_at' not in existing:
+            cur.execute("ALTER TABLE leases ADD COLUMN tenant_signed_at DATETIME NULL")
+            conn.commit()
+    except Exception as e:
+        print(f"ensure_lease_tenant_signature_columns skipped: {e}")
+        try:
+            if conn: conn.rollback()
+        except Exception:
+            pass
+    finally:
+        try:
+            if cur: cur.close()
+        except Exception:
+            pass
+        try:
+            if conn: conn.close()
+        except Exception:
+            pass
+
+
+def ensure_maintenance_assigned_to_column():
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'maintenance_requests'
+              AND COLUMN_NAME = 'assigned_to'
+        """)
+        if not cur.fetchone():
+            cur.execute("""
+                ALTER TABLE maintenance_requests
+                ADD COLUMN assigned_to INT NULL
+            """)
+            conn.commit()
+            print("Added assigned_to column to maintenance_requests")
+    except Exception as e:
+        print(f"ensure_maintenance_assigned_to_column skipped: {e}")
+        try:
+            if conn: conn.rollback()
+        except Exception:
+            pass
+    finally:
+        try:
+            if cur: cur.close()
+        except Exception:
+            pass
+        try:
+            if conn: conn.close()
+        except Exception:
+            pass
+
+
 def record_transaction(payment_id, tenant_id, property_id, amount, status, method=None, reference=None, due_date=None, paid_on=None, penalty_amount=0):
     conn = None
     cur = None

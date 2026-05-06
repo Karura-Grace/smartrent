@@ -5,6 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SmartRent{% endblock %}</title>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+// Tab isolation: each tab gets a unique ID stored in sessionStorage.
+// It is appended to every navigation link and form so the server
+// can route requests to the correct per-tab session.
+(function() {
+  var TAB_KEY = 'smartrent_tab_id';
+  var tabId = sessionStorage.getItem(TAB_KEY);
+  if (!tabId) {
+    tabId = 'tab_' + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+    sessionStorage.setItem(TAB_KEY, tabId);
+  }
+  window.__tabId = tabId;
+
+  function appendTabId(url) {
+    if (!url || url.startsWith('#') || url.startsWith('javascript')) return url;
+    var sep = url.indexOf('?') === -1 ? '?' : '&';
+    if (url.indexOf('tab_id=') !== -1) return url;
+    return url + sep + 'tab_id=' + encodeURIComponent(tabId);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Patch all <a> hrefs
+    document.querySelectorAll('a[href]').forEach(function(a) {
+      a.href = appendTabId(a.getAttribute('href'));
+    });
+    // Patch all <form> actions and add hidden input
+    document.querySelectorAll('form').forEach(function(form) {
+      if (form.action) form.action = appendTabId(form.action);
+      if (!form.querySelector('input[name="tab_id"]')) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'tab_id'; inp.value = tabId;
+        form.appendChild(inp);
+      }
+    });
+  });
+
+  // Also patch dynamically added elements via MutationObserver
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      m.addedNodes.forEach(function(node) {
+        if (node.nodeType !== 1) return;
+        node.querySelectorAll && node.querySelectorAll('a[href]').forEach(function(a) {
+          a.href = appendTabId(a.getAttribute('href'));
+        });
+        node.querySelectorAll && node.querySelectorAll('form').forEach(function(form) {
+          if (form.action) form.action = appendTabId(form.action);
+          if (!form.querySelector('input[name="tab_id"]')) {
+            var inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = 'tab_id'; inp.value = tabId;
+            form.appendChild(inp);
+          }
+        });
+        if (node.tagName === 'A' && node.href) node.href = appendTabId(node.getAttribute('href'));
+        if (node.tagName === 'FORM') {
+          if (node.action) node.action = appendTabId(node.action);
+          if (!node.querySelector('input[name="tab_id"]')) {
+            var inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = 'tab_id'; inp.value = tabId;
+            node.appendChild(inp);
+          }
+        }
+      });
+    });
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
    
     <style>
         :root {
@@ -491,17 +558,22 @@
         <div class="nav-ico"><i data-lucide="layout-dashboard"></i></div>
         <span class="nav-txt">Dashboard</span>
     </a>
-
     <a href="{{ url_for('tenant.payments') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="credit-card"></i></div>
         <span class="nav-txt">Payments</span>
     </a>
-  
-     <a href="{{ url_for("tenant.bills") }}" class="nav-item">
+    <a href="{{ url_for('tenant.bills') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="file-text"></i></div>
-        <span class="nav-txt">My bills</span>
+        <span class="nav-txt">My Bills</span>
     </a>
-
+    <a href="{{ url_for('tenant.tenant_lease') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="file-signature"></i></div>
+        <span class="nav-txt">My Lease</span>
+    </a>
+    <a href="{{ url_for('tenant.notices') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="message-circle"></i></div>
+        <span class="nav-txt">Messages</span>
+    </a>
 {% elif user.role == 'landlord' %}
     <a href="{{ url_for('landlord.landlord_dashboard') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="layout-dashboard"></i></div>
@@ -584,16 +656,19 @@
         <span class="nav-txt">leases</span>
     </a>
 
+    <a href="{{ url_for('landlord.landlord_bills') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="receipt"></i></div>
+        <span class="nav-txt">Bills</span>
+    </a>
+
 {% elif user.role == 'tenant' %}
     <a href="{{ url_for('tenant.services') }}" class="nav-item">
         <div class="nav-ico"><i data-lucide="wrench"></i></div>
-        <span class="nav-txt">Services $ Repairs</span>
+        <span class="nav-txt">Maintenance</span>
     </a>
-
-   <a href="{{ url_for('tenant.documents') }}" class="nav-item">
-        <div class="nav-ico"><i data-lucide="file-text"></i></div>
+    <a href="{{ url_for('tenant.documents') }}" class="nav-item">
+        <div class="nav-ico"><i data-lucide="receipt"></i></div>
         <span class="nav-txt">Documents & Receipts</span>
-     
     </a>
 
 {% elif user.role == 'agent' %}
@@ -667,13 +742,45 @@
     </div>
 
     <div class="topbar-right">
-       <button class="icon-btn" title="Notifications">
-    <i data-lucide="bell" width="16" height="16"></i>
-    <div class="dot"></div>
-</button>
-<button class="icon-btn" title="Search">
-    <i data-lucide="search" width="16" height="16"></i>
-</button>
+        <!-- Search -->
+        <div id="searchWrap" style="position:relative;">
+            <button class="icon-btn" id="searchToggle" title="Search" onclick="toggleSearch()">
+                <i data-lucide="search" width="16" height="16"></i>
+            </button>
+            <div id="searchBox" style="display:none;position:absolute;right:0;top:42px;width:280px;
+                background:var(--surface);border:1px solid var(--border);border-radius:10px;
+                box-shadow:var(--sh-md);padding:10px;z-index:300;">
+                <input id="globalSearch" type="text" placeholder="Search pages..."
+                    style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;
+                           font-size:13px;outline:none;font-family:inherit;"
+                    oninput="runSearch(this.value)">
+                <div id="searchResults" style="margin-top:8px;display:flex;flex-direction:column;gap:2px;"></div>
+            </div>
+        </div>
+
+        <!-- Notifications bell -->
+        <div id="notifWrap" style="position:relative;">
+            <button class="icon-btn" id="notifToggle" title="Notifications" onclick="toggleNotif()">
+                <i data-lucide="bell" width="16" height="16"></i>
+                <div class="dot" id="notifDot" style="display:none;"></div>
+            </button>
+            <div id="notifDropdown" style="display:none;position:absolute;right:0;top:42px;width:320px;
+                background:var(--surface);border:1px solid var(--border);border-radius:12px;
+                box-shadow:var(--sh-md);z-index:300;overflow:hidden;">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:13px;font-weight:700;color:var(--text);">Notifications</span>
+                    <span id="notifCount" style="font-size:11px;color:var(--text-3);"></span>
+                </div>
+                <div id="notifList" style="max-height:320px;overflow-y:auto;"></div>
+                <div style="padding:10px 16px;border-top:1px solid var(--border);text-align:center;">
+                    {% if user.role == 'tenant' %}
+                    <a href="{{ url_for('tenant.notices') }}" style="font-size:12px;color:var(--blue-600);font-weight:600;text-decoration:none;">View all messages</a>
+                    {% elif user.role == 'landlord' %}
+                    <a href="{{ url_for('landlord.send_notices') }}" style="font-size:12px;color:var(--blue-600);font-weight:600;text-decoration:none;">Go to Notices</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
 
         <div class="topbar-profile">
             <div class="topbar-profile-avatar" id="tbAvatar"></div>
@@ -681,9 +788,9 @@
         </div>
 
         <a href="{{ url_for('auth.logout') }}" class="btn-logout">
-    <i data-lucide="log-out" width="14" height="14"></i>
-    <span>Sign Out</span>
-</a>
+            <i data-lucide="log-out" width="14" height="14"></i>
+            <span>Sign Out</span>
+        </a>
     </div>
 </header>
 
@@ -759,6 +866,126 @@
     }
 </script>
 <script>lucide.createIcons();</script>
+
+<script>
+// ---- SEARCH ----
+const SEARCH_PAGES = [
+    {% if user.role == 'landlord' %}
+    { label: 'Dashboard',      url: "{{ url_for('landlord.landlord_dashboard') }}" },
+    { label: 'Properties',     url: "{{ url_for('properties.properties') }}" },
+    { label: 'Units',          url: "{{ url_for('landlord.units') }}" },
+    { label: 'Tenants',        url: "{{ url_for('landlord.tenant') }}" },
+    { label: 'Rent Collection',url: "{{ url_for('landlord.rent_collection') }}" },
+    { label: 'Maintenance',    url: "{{ url_for('landlord.maintenance') }}" },
+    { label: 'Notices',        url: "{{ url_for('landlord.send_notices') }}" },
+    { label: 'Leases',         url: "{{ url_for('landlord.lease_agreements') }}" },
+    { label: 'Bills',          url: "{{ url_for('landlord.landlord_bills') }}" },
+    { label: 'Analytics',      url: "{{ url_for('landlord.reports') }}" },
+    {% elif user.role == 'tenant' %}
+    { label: 'Dashboard',      url: "{{ url_for('tenant.tenant_dashboard') }}" },
+    { label: 'Payments',       url: "{{ url_for('tenant.payments') }}" },
+    { label: 'My Bills',       url: "{{ url_for('tenant.bills') }}" },
+    { label: 'My Lease',       url: "{{ url_for('tenant.tenant_lease') }}" },
+    { label: 'Messages',       url: "{{ url_for('tenant.notices') }}" },
+    { label: 'Maintenance',    url: "{{ url_for('tenant.services') }}" },
+    { label: 'Documents',      url: "{{ url_for('tenant.documents') }}" },
+    {% elif user.role == 'agent' %}
+    { label: 'Dashboard',      url: "{{ url_for('agent.agent_dashboard') }}" },
+    { label: 'Properties',     url: "{{ url_for('agent.agent_properties') }}" },
+    { label: 'Units',          url: "{{ url_for('agent.agent_units') }}" },
+    { label: 'Tenants',        url: "{{ url_for('agent.agent_tenant') }}" },
+    { label: 'Payments',       url: "{{ url_for('agent.agent_payments') }}" },
+    { label: 'Maintenance',    url: "{{ url_for('agent.agent_maintenance') }}" },
+    {% endif %}
+    { label: 'Settings',       url: "{{ url_for('auth.settings') }}" },
+    { label: 'Help',           url: "{{ url_for('auth.help') }}" },
+];
+
+function toggleSearch() {
+    const box = document.getElementById('searchBox');
+    const notif = document.getElementById('notifDropdown');
+    notif.style.display = 'none';
+    const open = box.style.display === 'none';
+    box.style.display = open ? 'block' : 'none';
+    if (open) { document.getElementById('globalSearch').focus(); }
+}
+
+function runSearch(q) {
+    const res = document.getElementById('searchResults');
+    q = q.trim().toLowerCase();
+    if (!q) { res.innerHTML = ''; return; }
+    const matches = SEARCH_PAGES.filter(p => p.label.toLowerCase().includes(q));
+    if (!matches.length) {
+        res.innerHTML = '<div style="padding:8px 4px;font-size:12px;color:var(--text-3);">No results found.</div>';
+        return;
+    }
+    res.innerHTML = matches.map(p =>
+        `<a href="${p.url}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;
+            border-radius:7px;text-decoration:none;color:var(--text);font-size:13px;
+            transition:background 0.12s;" onmouseover="this.style.background='var(--blue-50)'"
+            onmouseout="this.style.background=''">
+            <i data-lucide="arrow-right" width="13" height="13" style="color:var(--blue-600);flex-shrink:0;"></i>
+            ${p.label}
+        </a>`
+    ).join('');
+    lucide.createIcons();
+}
+
+// ---- NOTIFICATIONS ----
+async function loadNotifications() {
+    const list = document.getElementById('notifList');
+    const dot  = document.getElementById('notifDot');
+    const count = document.getElementById('notifCount');
+    try {
+        const res = await fetch('/api/notifications');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const items = data.notifications || [];
+        count.textContent = items.length ? `${items.length} new` : 'No new';
+        dot.style.display = items.length ? 'block' : 'none';
+        if (!items.length) {
+            list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);font-size:13px;">No new notifications</div>';
+            return;
+        }
+        list.innerHTML = items.map(n => `
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border-lt);display:flex;gap:10px;align-items:flex-start;">
+                <div style="width:8px;height:8px;border-radius:50%;background:${
+                    n.type === 'urgent' ? 'var(--red)' : n.type === 'info' ? 'var(--amber)' : 'var(--blue-600)'
+                };flex-shrink:0;margin-top:5px;"></div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:12.5px;font-weight:600;color:var(--text);">${n.title || 'Notice'}</div>
+                    <div style="font-size:11.5px;color:var(--text-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n.message || ''}</div>
+                    <div style="font-size:10.5px;color:var(--text-3);margin-top:4px;">${(n.sent_at || '').slice(0,16)}</div>
+                </div>
+            </div>`).join('');
+    } catch(e) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);font-size:13px;">Could not load notifications</div>';
+    }
+}
+
+function toggleNotif() {
+    const dd = document.getElementById('notifDropdown');
+    const searchBox = document.getElementById('searchBox');
+    searchBox.style.display = 'none';
+    const open = dd.style.display === 'none';
+    dd.style.display = open ? 'block' : 'none';
+    if (open) loadNotifications();
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!document.getElementById('searchWrap').contains(e.target))
+        document.getElementById('searchBox').style.display = 'none';
+    if (!document.getElementById('notifWrap').contains(e.target))
+        document.getElementById('notifDropdown').style.display = 'none';
+});
+
+// Show dot on load if there are notifications
+fetch('/api/notifications').then(r => r.json()).then(d => {
+    if ((d.notifications || []).length)
+        document.getElementById('notifDot').style.display = 'block';
+}).catch(() => {});
+</script>
 
 </body>
 </html>
