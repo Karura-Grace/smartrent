@@ -49,3 +49,4 @@ virtualenv==20.29.3
 virtualenvwrapper-win==1.2.7
 Werkzeug==3.1.6
 WTForms==3.2.1
+gunicorn==23.0.0
