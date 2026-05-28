@@ -8,10 +8,10 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_hex(32)
 
     # MySQL Configuration
-    MYSQL_HOST     = os.getenv('MYSQL_HOST', 'localhost')
+    MYSQL_HOST     = os.getenv('MYSQL_HOST')
     MYSQL_USER     = os.getenv('MYSQL_USER', 'root')
     MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
-    MYSQL_DB       = os.getenv('MYSQL_DB', 'smartrent')
+    MYSQL_DB       = os.getenv('MYSQL_DB', 'railway')
     MYSQL_CURSORCLASS = 'DictCursor'
 
     # SQLAlchemy (connects to the same MySQL DB you manage in phpMyAdmin)
