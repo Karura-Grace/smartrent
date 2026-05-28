@@ -11,7 +11,7 @@ class Config:
     MYSQL_HOST     = os.getenv('MYSQL_HOST')
     MYSQL_USER     = os.getenv('MYSQL_USER', 'root')
     MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
-    MYSQL_DB       = os.getenv('MYSQL_DB', 'railway')
+    MYSQL_DB       = os.getenv('MYSQL_DB')
     MYSQL_CURSORCLASS = 'DictCursor'
 
     # SQLAlchemy (connects to the same MySQL DB you manage in phpMyAdmin)
